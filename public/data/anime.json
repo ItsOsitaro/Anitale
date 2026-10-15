@@ -1,0 +1,170 @@
+[
+  {
+    "slug": "solo-leveling",
+    "title": "Solo Leveling",
+    "category": "Action",
+    "year": "2025",
+    "format": "TV series",
+    "sampleScore": 8.7,
+    "genres": ["Action", "Adventure", "Fantasy"],
+    "synopsis": "After surviving a deadly dungeon, hunter Sung Jinwoo gains a power no one else has: the ability to grow stronger without limits. He sets out to uncover the mystery behind his new abilities and the gates appearing around the world."
+  },
+  {
+    "slug": "demon-slayer",
+    "title": "Demon Slayer",
+    "category": "Fantasy",
+    "year": "2024",
+    "format": "TV series",
+    "sampleScore": 8.6,
+    "genres": ["Action", "Fantasy", "Historical"],
+    "synopsis": "After a demon attack changes his family forever, Tanjiro joins the Demon Slayer Corps. He travels with his allies in search of a way to restore his sister and confront the demons threatening people across Japan."
+  },
+  {
+    "slug": "fullmetal-alchemist",
+    "title": "Fullmetal Alchemist",
+    "category": "Adventure",
+    "year": "2023",
+    "format": "TV series",
+    "sampleScore": 9.1,
+    "genres": ["Adventure", "Fantasy", "Drama"],
+    "synopsis": "Brothers Edward and Alphonse Elric set out to restore what they lost in a forbidden alchemical experiment. Their search for the Philosopher's Stone leads them into a larger conspiracy woven through their country."
+  },
+  {
+    "slug": "jujutsu-kaisen",
+    "title": "Jujutsu Kaisen",
+    "category": "Action",
+    "year": "2024",
+    "format": "TV series",
+    "sampleScore": 8.5,
+    "genres": ["Action", "Supernatural", "Dark fantasy"],
+    "synopsis": "Yuji Itadori enters the hidden world of jujutsu sorcerers after becoming the host of a powerful curse. At Tokyo Jujutsu High, he trains to fight curses while facing the danger within himself."
+  },
+  {
+    "slug": "vinland-saga",
+    "title": "Vinland Saga",
+    "category": "Drama",
+    "year": "2025",
+    "format": "TV series",
+    "sampleScore": 8.8,
+    "genres": ["Action", "Adventure", "Historical drama"],
+    "synopsis": "Growing up amid Viking warfare, Thorfinn pursues a life shaped by revenge and survival. His journey across a turbulent era forces him to reconsider what strength, freedom, and peace mean."
+  },
+  {
+    "slug": "frieren",
+    "title": "Frieren",
+    "category": "Fantasy",
+    "year": "2024",
+    "format": "TV series",
+    "sampleScore": 9.3,
+    "genres": ["Adventure", "Fantasy", "Drama"],
+    "synopsis": "Long after her party's great adventure ends, elf mage Frieren begins a new journey. Traveling with younger companions, she discovers how brief human lives can reshape the way she understands her own past."
+  },
+  {
+    "slug": "spy-x-family",
+    "title": "Spy x Family",
+    "category": "Comedy",
+    "year": "2024",
+    "format": "TV series",
+    "sampleScore": 8.4,
+    "genres": ["Comedy", "Action", "Family"],
+    "synopsis": "To complete a mission for world peace, spy Twilight creates a pretend family. His new wife and daughter each have secrets of their own, turning everyday family life into an unpredictable operation."
+  },
+  {
+    "slug": "blue-lock",
+    "title": "Blue Lock",
+    "category": "Sports",
+    "year": "2024",
+    "format": "TV series",
+    "sampleScore": 8.1,
+    "genres": ["Sports", "Drama"],
+    "synopsis": "After Japan's national team falls short, a bold training program gathers young strikers to compete for one place. Isagi must sharpen his instincts and ambition in a high-pressure fight to become the team's leading forward."
+  },
+  {
+    "slug": "one-piece",
+    "title": "One Piece",
+    "category": "Adventure",
+    "year": "2025",
+    "format": "TV series",
+    "sampleScore": 8.7,
+    "genres": ["Adventure", "Action", "Fantasy"],
+    "synopsis": "Monkey D. Luffy sails toward the Grand Line with a growing crew, searching for the legendary One Piece. Each island brings new allies, rival pirates, and another step toward his dream of becoming King of the Pirates."
+  },
+  {
+    "slug": "chainsaw-man",
+    "title": "Chainsaw Man",
+    "category": "Horror",
+    "year": "2025",
+    "format": "TV series",
+    "sampleScore": 8.5,
+    "genres": ["Action", "Horror", "Supernatural"],
+    "synopsis": "After a desperate life as a devil hunter, Denji is brought back with the power to transform into Chainsaw Man. Recruited into a government unit, he faces devils while trying to build an ordinary life."
+  },
+  {
+    "slug": "my-hero-academia",
+    "title": "My Hero Academia",
+    "category": "Action",
+    "year": "2024",
+    "format": "TV series",
+    "sampleScore": 8.1,
+    "genres": ["Action", "Superhero", "School"],
+    "synopsis": "In a world where superpowers are common, Izuku Midoriya pursues his dream of becoming a hero despite being born without a quirk. His path leads to U.A. High School and a new generation of heroes in training."
+  },
+  {
+    "slug": "attack-on-titan",
+    "title": "Attack on Titan",
+    "category": "Action",
+    "year": "2023",
+    "format": "TV series",
+    "sampleScore": 9.0,
+    "genres": ["Action", "Drama", "Dark fantasy"],
+    "synopsis": "Humanity lives behind enormous walls built to keep out the Titans. After a breach shatters that fragile safety, Eren Yeager and his friends join the fight and uncover truths that reshape their world."
+  },
+  {
+    "slug": "apothecary-diaries-season-3",
+    "title": "Kusuriya no Hitorigoto 3rd Season",
+    "category": "Drama",
+    "year": "2026",
+    "format": "TV",
+    "genres": ["Drama", "Mystery"],
+    "synopsis": "Pharmacist Maomao returns to the inner court, where a small detail leads her into a new mystery. As questions ripple through the palace, her careful observations and partnership with Jinshi guide the investigation.",
+    "alternativeTitles": {
+      "synonyms": ["The Pharmacist's Monologue", "Drugstore Soliloquy"],
+      "japanese": "\u85ac\u5c4b\u306e\u3072\u3068\u308a\u3054\u3068 \u7b2c3\u671f",
+      "english": "The Apothecary Diaries Season 3"
+    },
+    "information": [
+      {"label": "Type", "value": "TV"},
+      {"label": "Episodes", "value": "12"},
+      {"label": "Status", "value": "Currently Airing"},
+      {"label": "Aired", "value": "Oct 2, 2026 to ?"},
+      {"label": "Premiered", "value": "Fall 2026"},
+      {"label": "Broadcast", "value": "Fridays at 23:00 (JST)"},
+      {"label": "Producers", "value": "Dentsu, Square Enix, Nippon Television Network, Sound Team Don Juan, Shogakukan, Imagica Infos"},
+      {"label": "Licensors", "value": "None found, add some"},
+      {"label": "Studios", "value": "OLM"},
+      {"label": "Source", "value": "Light novel"},
+      {"label": "Genres", "value": "Drama, Mystery"},
+      {"label": "Themes", "value": "Historical, Medical"},
+      {"label": "Duration", "value": "24 min. per episode"},
+      {"label": "Rating", "value": "PG-13 - Teens 13 or older"}
+    ],
+    "statistics": {
+      "score": "8.661",
+      "scoredBy": "11,057 users",
+      "ranked": "#872",
+      "popularity": "#1429",
+      "members": "200,308",
+      "favorites": "1,025"
+    },
+    "availableAt": [
+      {"label": "Official Site", "icon": "↗"},
+      {"label": "@kusuriya_PR", "icon": "X", "href": "https://x.com/kusuriya_PR"}
+    ],
+    "resources": [
+      {"label": "AniDB", "icon": "A"},
+      {"label": "ANN", "icon": "N"}
+    ],
+    "streamingPlatforms": ["Crunchyroll", "Netflix", "Amazon Prime Video", "Apple TV Store"],
+    "streamingNotice": "May be unavailable in your region."
+  }
+]
