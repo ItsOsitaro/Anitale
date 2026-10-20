@@ -9,8 +9,36 @@ const fetchJson = async (url) => {
   return response.json();
 };
 
+// Queue 28: ETag-backed catalog cache. The first visit stores { etag, data }
+// in localStorage; later visits revalidate with If-None-Match and, on 304,
+// hydrate instantly from the stored copy without re-parsing 240 KB of JSON.
+const CATALOG_CACHE_KEYS = {
+  '/api/anime': 'malCatalogCacheAnime',
+  '/api/manga': 'malCatalogCacheManga',
+};
+
+const fetchJsonCached = async (url) => {
+  const cacheKey = CATALOG_CACHE_KEYS[url];
+  if (!cacheKey) return fetchJson(url);
+
+  let cached = null;
+  try { cached = JSON.parse(localStorage.getItem(cacheKey) || 'null'); } catch { cached = null; }
+  if (cached && !Array.isArray(cached.data)) cached = null;
+
+  const headers = cached?.etag ? { 'if-none-match': cached.etag } : undefined;
+  const response = await fetch(url, { headers });
+  if (response.status === 304 && cached) return cached.data;
+  if (!response.ok) throw new Error(`Failed to load ${url}: ${response.status}`);
+  const data = await response.json();
+  const etag = response.headers.get('etag');
+  if (etag) {
+    try { localStorage.setItem(cacheKey, JSON.stringify({ etag, data })); } catch { /* quota — cache is best effort */ }
+  }
+  return data;
+};
+
 const fromApi = async () => {
-  const items = await fetchJson('/api/anime');
+  const items = await fetchJsonCached('/api/anime');
   if (!Array.isArray(items)) throw new Error('Unexpected API response');
   return items.map((item) => ({
     ...item,
@@ -42,7 +70,7 @@ export const loadAnimeCatalog = async () => {
 
 export const loadMangaCatalog = async () => {
   try {
-    const items = await fetchJson('/api/manga');
+    const items = await fetchJsonCached('/api/manga');
     if (!Array.isArray(items)) throw new Error('Unexpected API response');
     return items;
   } catch (error) {
