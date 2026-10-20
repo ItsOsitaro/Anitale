@@ -1,6 +1,6 @@
 Add-Type -AssemblyName System.Drawing
 
-$coverDir = Join-Path $PSScriptRoot 'assets\covers'
+$coverDir = Join-Path $PSScriptRoot 'public\covers'
 New-Item -ItemType Directory -Path $coverDir -Force | Out-Null
 
 function Get-Color([string]$Hex) {

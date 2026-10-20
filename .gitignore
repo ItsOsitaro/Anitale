@@ -1,3 +1,9 @@
 node_modules/
 dist/
 .venv/
+server/.env
+server/*.db*
+server/tmp/
+public/covers/
+.claude/
+*.log

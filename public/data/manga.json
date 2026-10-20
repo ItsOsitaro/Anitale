@@ -1,0 +1,97 @@
+[
+  {
+    "slug": "one-piece",
+    "title": "One Piece",
+    "category": "Adventure",
+    "year": "1997",
+    "format": "Manga",
+    "genres": [
+      "Adventure",
+      "Action",
+      "Fantasy"
+    ],
+    "synopsis": {
+      "fa": "دزد دریایی جوانی با خدمه‌ی رو به رشدش میان جزیره‌های عجیب سفر می‌کند تا رویایی ناممکن و گنجی را بجوید که گفته می‌شود جهان را تغییر می‌دهد.",
+      "en": "A young pirate and his growing crew sail between strange islands in pursuit of an impossible dream and the treasure said to change the world."
+    }
+  },
+  {
+    "slug": "fullmetal-alchemist",
+    "title": "Fullmetal Alchemist",
+    "category": "Adventure",
+    "year": "2001",
+    "format": "Manga",
+    "genres": [
+      "Adventure",
+      "Fantasy",
+      "Drama"
+    ],
+    "synopsis": {
+      "fa": "دو برادر برای ترمیم پیامدهای کیمیای ممنوعه می‌گردند و توطئه‌ای را کشف می‌کنند که از سالن‌های نظامی تا مرزهای کشورشان کشیده شده است.",
+      "en": "Two brothers search for a way to repair the consequences of forbidden alchemy, uncovering a conspiracy that reaches from military halls to the borders of their country."
+    }
+  },
+  {
+    "slug": "frieren",
+    "title": "Frieren: Beyond Journey’s End",
+    "category": "Fantasy",
+    "year": "2020",
+    "format": "Manga",
+    "genres": [
+      "Adventure",
+      "Fantasy",
+      "Drama"
+    ],
+    "synopsis": {
+      "fa": "پس از پایان سفرِ افسانه‌ای، جادوگری یکه‌سا دوباره سفر می‌کند و می‌آموزد انسان‌ها و لحظه‌های گذرایی را که روزی بدیهی می‌پنداشت بفهمد.",
+      "en": "After a legendary quest is over, an elf mage travels again and learns to understand the people and passing moments she once took for granted."
+    }
+  },
+  {
+    "slug": "vinland-saga",
+    "title": "Vinland Saga",
+    "category": "Historical",
+    "year": "2005",
+    "format": "Manga",
+    "genres": [
+      "Action",
+      "Adventure",
+      "Historical"
+    ],
+    "synopsis": {
+      "fa": "جنگجوی جوانی در میان حملات وایکینگ‌ها بزرگ می‌شود و از چرخه‌ی خشونتی که زندگی‌اش را شکل داده می‌پرسد.",
+      "en": "A young warrior grows up among Viking expeditions and begins to question the cycle of violence that has shaped his life."
+    }
+  },
+  {
+    "slug": "demon-slayer",
+    "title": "Demon Slayer",
+    "category": "Fantasy",
+    "year": "2016",
+    "format": "Manga",
+    "genres": [
+      "Action",
+      "Fantasy",
+      "Historical"
+    ],
+    "synopsis": {
+      "fa": "پسری مصمم به شمشیرزنانی محرمانه می‌پیوندد و در نسخه‌ای فراواقعی از اوایل قرن بیستم ژاپن سفر می‌کند.",
+      "en": "A determined boy joins a secret corps of swordspeople and journeys through a supernatural version of early twentieth-century Japan."
+    }
+  },
+  {
+    "slug": "blue-lock",
+    "title": "Blue Lock",
+    "category": "Sports",
+    "year": "2018",
+    "format": "Manga",
+    "genres": [
+      "Sports",
+      "Drama"
+    ],
+    "synopsis": {
+      "fa": "آزمایش آموزشی ملی مهاجمان جوان را در رقابت مستقیم می‌نشاند تا بلندپروازی و توانشان در لحظه‌ی سرنوشت‌ساز آزموده شود.",
+      "en": "A national training experiment places young forwards in direct competition, testing their ambition and ability to seize the decisive moment."
+    }
+  }
+]

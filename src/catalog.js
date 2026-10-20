@@ -1,99 +1,88 @@
-import axios from 'axios';
+// The catalog comes from the local CMS API (/api/anime, /api/manga). If the API is not running,
+// it falls back to the static JSON files in public/data so the site still works.
+const baseUrl = import.meta.env.BASE_URL;
+const PLACEHOLDER = `${baseUrl}covers/placeholder.svg`;
 
-// Jikan API base URL
-const JIKAN_API_BASE = 'https://api.jikan.moe/v4';
+const fetchJson = async (url) => {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Failed to load ${url}: ${response.status}`);
+  return response.json();
+};
 
-// Function to load anime catalog from Jikan API
+const fromApi = async () => {
+  const items = await fetchJson('/api/anime');
+  if (!Array.isArray(items)) throw new Error('Unexpected API response');
+  return items.map((item) => ({
+    ...item,
+    image: item.image ? `${baseUrl.replace(/\/$/, '')}${item.image}?v=${encodeURIComponent(item.updatedAt || '')}` : PLACEHOLDER,
+  }));
+};
+
+const fromStaticFiles = async () => {
+  const [anime, details] = await Promise.all([
+    fetchJson(`${baseUrl}data/anime.json`),
+    fetchJson(`${baseUrl}data/anime-details.json`).catch(() => []),
+  ]);
+  const detailsBySlug = new Map(details.map((entry) => [entry.slug, entry]));
+  return anime.map((item) => ({
+    ...item,
+    ...detailsBySlug.get(item.slug),
+    image: `${baseUrl}covers/${item.slug}.png`,
+  }));
+};
+
 export const loadAnimeCatalog = async () => {
   try {
-    // Fetch top anime items from Jikan API
-    const response = await axios.get(`${JIKAN_API_BASE}/top/anime`, {
-      params: {
-        limit: 50, // Get 50 top anime
-      }
-    });
-    
-    // Process the API response to match our expected data structure
-    return response.data.data.map((anime) => ({
-      slug: anime.slug,
-      title: anime.title,
-      image: anime.images?.jpg?.image_url || anime.images?.webp?.image_url || '',
-      category: anime.type || 'TV',
-      year: anime.year ? anime.year.toString() : 'Unknown',
-      genres: anime.genres?.map(genre => genre.name) || [],
-      sampleScore: anime.score || 0,
-      synopsis: anime.synopsis || 'No description available.',
-      alternativeTitles: anime.titles || [],
-      format: anime.type || 'TV',
-      episodes: anime.episodes || 0,
-      status: anime.status || 'Unknown',
-      aired: anime.aired ? anime.aired.from : null,
-      duration: anime.duration || 'Unknown',
-      rating: anime.rating || 'Unknown'
-    }));
+    return await fromApi();
   } catch (error) {
-    console.error('Error loading anime catalog from API:', error);
-    
-    // Fallback to original mock data in case of API failure
-    return [
-      {
-        slug: 'attack-on-titan',
-        title: 'Attack on Titan',
-        image: 'https://cdn.myanimelist.net/images/anime/10/80745.jpg',
-        category: 'TV',
-        year: '2013',
-        genres: ['Action', 'Drama', 'Fantasy'],
-        sampleScore: 9.0,
-        synopsis: 'In a world where humanity lives behind walled cities...',
-        alternativeTitles: [{ type: 'Default', title: 'Shingeki no Kyojin' }],
-        format: 'TV',
-        episodes: 88,
-        status: 'Finished Airing',
-        aired: '2013-04-07 to 2023-03-26',
-        duration: '24 min. per ep.',
-        rating: 'R'
-      },
-      {
-        slug: 'one-piece',
-        title: 'One Piece',
-        image: 'https://cdn.myanimelist.net/images/anime/10/80745.jpg',
-        category: 'TV',
-        year: '1999',
-        genres: ['Action', 'Adventure', 'Comedy'],
-        sampleScore: 9.2,
-        synopsis: 'Monkey D. Luffy and his pirate crew explore the Grand Line...',
-        alternativeTitles: [{ type: 'Default', title: 'One Piece' }],
-        format: 'TV',
-        episodes: 1000,
-        status: 'Currently Airing',
-        aired: '1999-10-20 to Present',
-        duration: '24 min. per ep.',
-        rating: 'PG'
-      },
-      {
-        slug: 'demon-slayer',
-        title: 'Demon Slayer',
-        image: 'https://cdn.myanimelist.net/images/anime/10/80745.jpg',
-        category: 'TV',
-        year: '2019',
-        genres: ['Action', 'Supernatural', 'Adventure'],
-        sampleScore: 8.7,
-        synopsis: 'Tanjiro Kamado joins the Demon Slayer Corps to save his sister...',
-        alternativeTitles: [{ type: 'Default', title: 'Kimetsu no Yaiba' }],
-        format: 'TV',
-        episodes: 26,
-        status: 'Finished Airing',
-        aired: '2019-04-06 to 2020-07-18',
-        duration: '24 min. per ep.',
-        rating: 'R'
-      }
-    ];
+    console.warn('CMS API unavailable, using static data files.', error);
+    return fromStaticFiles();
   }
 };
 
-export const schedule = [
-  { slug: 'frieren', title: 'Frieren', day: 'Mon' },
-  { slug: 'blue-lock', title: 'Blue Lock', day: 'Tue' },
-  { slug: 'solo-leveling', title: 'Solo Leveling', day: 'Wed' },
-  { slug: 'my-hero-academia', title: 'My Hero Academia', day: 'Thu' },
-];
+export const loadMangaCatalog = async () => {
+  try {
+    const items = await fetchJson('/api/manga');
+    if (!Array.isArray(items)) throw new Error('Unexpected API response');
+    return items;
+  } catch (error) {
+    console.warn('Manga API unavailable, using the static file.', error);
+    return (await fetchJson(`${baseUrl}data/manga.json`)) || [];
+  }
+};
+
+export const WEEKDAY_ORDER = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// MAL-style hrefs: /anime/136/Hunter_x_Hunter when the entry has a MyAnimeList id,
+// otherwise the classic /anime/{slug} form. x becomes _ with other non-alphanumerics.
+export const seoTitle = (title) => (
+  String(title || '').replace(/[^A-Za-z0-9]+/g, '_').replace(/^_+|_+$/g, '')
+) || 'title';
+
+export const mediaHref = (item, mediaType = 'anime') => {
+  const base = mediaType === 'manga' ? '/manga' : '/anime';
+  return item.malId ? `${base}/${item.malId}/${seoTitle(item.title)}` : `${base}/${item.slug}`;
+};
+
+// The weekly airing schedule lives in the database (anime.airing_day, editable from the
+// admin panel); this derives it from the loaded catalog instead of hardcoding it.
+// Current weekday in the schedule's canonical short form ('Mon'…'Sun'),
+// evaluated on the viewer's clock so the «airing today» highlight follows it.
+export const currentWeekday = () => new Date().toLocaleDateString('en-US', { weekday: 'short' });
+
+export const buildSchedule = (items) => items
+  .filter((item) => item.airingDay && WEEKDAY_ORDER.includes(item.airingDay))
+  .sort((a, b) => WEEKDAY_ORDER.indexOf(a.airingDay) - WEEKDAY_ORDER.indexOf(b.airingDay))
+  .map((item) => ({ slug: item.slug, title: item.title, day: item.airingDay }));
+
+// Forgiving title matching: lowercase, strip Arabic diacritics, fold Alef/Ee
+// variants, unify Persian/Arabic Yeh, drop the soft hyphen and the
+// zero-width joiners so «فریرن, فريرن» or «soûsou» all match the same title.
+export const foldTitle = (value) => String(value || '')
+  .normalize('NFKD')
+  .replace(/[\u0300-\u036F\u064B-\u0652]/g, '')
+  .toLocaleLowerCase()
+  .replace(/[\u0622\u0623\u0625]/g, '\u0627')
+  .replace(/\u064A/g, '\u06CC')
+  .replace(/\u0643/g, '\u06A9')
+  .replace(/[\u0640\u200B\u200C\u200D\u200E\u200F]/g, '');
