@@ -74,3 +74,22 @@ instead point the server at its local proxy by setting `PROXY_URL` in `server/.e
 - The server listens on 127.0.0.1 only (not reachable from other devices).
 - Scripts: `npm run seed` (re-import JSON, skips existing), `npm run hash-password -- <pw>`.
 - Stack: React 19, react-router, Vite 7, Express 5, Node built-in SQLite (needs Node >= 22.13), zod, multer, bcryptjs.
+
+### Storage: SQLite locally, Neon Postgres on Vercel
+
+The same SQL runs on two engines behind one synchronous handle (`server/db.js`):
+
+- **Local development** keeps Node's built-in SQLite (`server/data.db`) — no network dependency,
+  nothing to configure.
+- **The Vercel deployment** runs on [Neon Postgres](https://neon.tech), provisioned once through the
+  Vercel Marketplace (`vercel integration add neon`). The connection string arrives as `POSTGRES_URL`
+  and is never stored in the repo. When that variable is present, `server/pg.js` (a worker-thread
+  bridge mirroring node:sqlite's API, with the sqlite→postgres dialect translation) serves every
+  existing database call site, and writes persist across instances and restarts.
+
+Migrating data between the engines (or refreshing the deployment copy) is idempotent:
+
+```bash
+node scripts/pg-migrate.mjs   # reads server/data.db, upserts into POSTGRES_URL (from .env.local)
+```
+
