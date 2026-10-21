@@ -93,3 +93,9 @@ Migrating data between the engines (or refreshing the deployment copy) is idempo
 node scripts/pg-migrate.mjs   # reads server/data.db, upserts into POSTGRES_URL (from .env.local)
 ```
 
+Cover files stay durable on the deployment too: writes keep their synchronous
+`/tmp` API and mirror into [Vercel Blob](https://vercel.com/docs/vercel-blob) (store
+`anitale-covers`, `BLOB_READ_WRITE_TOKEN` from the Marketplace link). The `/covers/:name`
+route serves the warm-instance copy first, else redirects to the store's public CDN
+URL — local development and the committed covers never use it.
+
