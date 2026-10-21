@@ -6,4 +6,8 @@ server/*.db*
 server/tmp/
 public/covers/
 .claude/
+.opencode/
 *.log
+.vercel/
+.vercel
+.env*

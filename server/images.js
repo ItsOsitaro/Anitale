@@ -1,6 +1,29 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { COVERS_DIR, TMP_DIR } from './db.js';
+import { ROOT_DIR, SERVER_DIR } from './db.js';
+
+// On Vercel the bundle is read-only; covers live in a writable /tmp mirror that
+// lazy-stages files from the bundled public/covers folder. Locally nothing changes.
+const VERCEL = process.env.VERCEL === '1';
+export const COVERS_DIR = VERCEL ? '/tmp/anitale-covers' : path.join(ROOT_DIR, 'public', 'covers');
+export const TMP_DIR = VERCEL ? '/tmp/anitale-tmp' : path.join(SERVER_DIR, 'tmp');
+const BUNDLED_COVERS = path.join(ROOT_DIR, 'public', 'covers');
+
+// Called once at serverless boot: mirror the committed cover files into the
+// writable dir (missing-only copies, so warm instances stay cheap).
+export const stageBundledCovers = () => {
+  if (!VERCEL || !fs.existsSync(BUNDLED_COVERS)) return 0;
+  fs.mkdirSync(COVERS_DIR, { recursive: true });
+  let staged = 0;
+  for (const name of fs.readdirSync(BUNDLED_COVERS)) {
+    const dest = path.join(COVERS_DIR, name);
+    if (!fs.existsSync(dest)) {
+      fs.copyFileSync(path.join(BUNDLED_COVERS, name), dest);
+      staged += 1;
+    }
+  }
+  return staged;
+};
 
 fs.mkdirSync(COVERS_DIR, { recursive: true });
 fs.mkdirSync(TMP_DIR, { recursive: true });

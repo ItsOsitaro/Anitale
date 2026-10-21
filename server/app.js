@@ -53,6 +53,10 @@ const renameCover = (cover, newSlug) => {
 export const createApp = () => {
   const app = express();
   app.disable('x-powered-by');
+  // Behind Vercel's proxy every request arrives from the platform; with
+  // TRUST_PROXY=1 the rate limiters key on the real client instead of one
+  // shared platform IP (and the CSRF host check can read x-forwarded-host).
+  if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
   // Baseline browser hardening; CSP (SPA + inline styles) is a manual follow-up.
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');

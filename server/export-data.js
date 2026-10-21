@@ -18,7 +18,10 @@ const writeJsonAtomic = (target, value) => {
 // (and the empty-database seed) never drift from admin edits. A write failure
 // is logged but not rethrown: export runs inside already-committed mutation
 // handlers and must not turn a saved change into a 500.
+// On Vercel (serverless) the bundle is read-only and static /data/*.json is
+// served from the deployment snapshot, so the regenerating write is skipped.
 export const exportData = () => {
+  if (process.env.VERCEL) return null;
   try {
     const dataDir = path.join(ROOT_DIR, 'public', 'data');
     fs.mkdirSync(dataDir, { recursive: true });

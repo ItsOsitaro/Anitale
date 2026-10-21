@@ -1,0 +1,15 @@
+# Vercel deploy input. When this file exists it OVERRIDES .gitignore for what
+# gets uploaded, so the tracked database snapshot and the cover assets ride
+# along for the serverless bundle — while secrets and junk stay excluded.
+node_modules/
+.venv/
+dist/
+.claude/
+.opencode/
+.vscode/
+.git/
+server/.env
+server/tmp/
+*.log
+scripts/
+api/**/*.test.*
