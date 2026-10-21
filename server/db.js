@@ -7,13 +7,25 @@ export const ROOT_DIR = path.resolve(SERVER_DIR, '..');
 export const COVERS_DIR = path.join(ROOT_DIR, 'public', 'covers');
 export const TMP_DIR = path.join(SERVER_DIR, 'tmp');
 
-// Node's built-in SQLite (Node >= 22.13) - no native module to compile or download.
+// Two engines behind one handle: the Vercel deployment runs Postgres (Neon)
+// when POSTGRES_URL/DATABASE_URL is set; every other environment keeps Node's
+// built-in SQLite (>= 22.13, no native module). Both expose the same
+// prepare(...).all/get/run surface — server/pg.js performs the dialect
+// translation for the Postgres path, so repo/users/auth/app SQL is shared.
+let db;
+export { db };
+
+if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
+  const pg = await import('./pg.js');
+  await pg.ensurePgSchema();
+  db = pg.db;
+} else {
 const originalEmitWarning = process.emitWarning;
 process.emitWarning = (warning, ...rest) => (String(warning).includes('SQLite') ? undefined : originalEmitWarning.call(process, warning, ...rest));
 const { DatabaseSync } = await import('node:sqlite');
 process.emitWarning = originalEmitWarning;
 
-export const db = new DatabaseSync(process.env.DB_FILE || path.join(SERVER_DIR, 'data.db'));
+db = new DatabaseSync(process.env.DB_FILE || path.join(SERVER_DIR, 'data.db'));
 db.exec('PRAGMA journal_mode = WAL');
 
 db.exec(`
@@ -173,3 +185,4 @@ if (userEntriesSql && !userEntriesSql.includes("'on_hold'")) {
     COMMIT;
   `);
 }
+} // end sqlite branch (Postgres branch returns the pg shim above)

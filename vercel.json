@@ -8,7 +8,7 @@
   ],
   "functions": {
     "api/index.js": {
-      "includeFiles": "{server/*.js,server/data.db*,public/data/**,public/covers/**}"
+      "includeFiles": "{server/*.js,server/*.mjs,server/data.db*,public/data/**,public/covers/**}"
     }
   }
 }

@@ -12,7 +12,12 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const taskRoot = path.resolve(here, '..');
 
-if (process.env.VERCEL) {
+const PG_URL = process.env.POSTGRES_URL || process.env.DATABASE_URL || '';
+if (process.env.VERCEL && !PG_URL) {
+  // SQLite fallback (no Neon attached): stage a writable copy of the bundled
+  // snapshot in /tmp before server/db.js evaluates (it reads DB_FILE at
+  // import time). With POSTGRES_URL set, db.js connects to Neon instead and
+  // no database file is staged at all — writes persist across instances.
   const bundledDb = path.join(taskRoot, 'server', 'data.db');
   const tmpDb = '/tmp/anitale-data.db';
   try {

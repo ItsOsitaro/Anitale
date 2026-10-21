@@ -13,3 +13,4 @@ server/tmp/
 *.log
 scripts/
 api/**/*.test.*
+.env*
