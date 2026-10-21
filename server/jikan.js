@@ -4,8 +4,28 @@ import { fetch, ProxyAgent } from 'undici';
 const BASE = (process.env.JIKAN_BASE_URL || 'https://api.jikan.moe/v4').replace(/\/$/, '');
 const dispatcher = process.env.PROXY_URL ? new ProxyAgent(process.env.PROXY_URL) : undefined;
 const MIN_GAP_MS = 400; // Jikan allows 3 requests/second and 60/minute
-const TIMEOUT_MS = 10_000;
+const TIMEOUT_MS = Number(process.env.JIKAN_TIMEOUT_MS) || 7_000;
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+// Circuit breaker: when Jikan is unreachable (blocked/VPN off), every import
+// would otherwise pay the full connection timeout before the AniList fallback
+// runs. After the first network failure we skip Jikan instantly; the breaker
+// half-heartedly probes again with exponential backoff (60s -> 10min).
+const DOWN_TTL_INITIAL_MS = 60_000;
+const DOWN_TTL_MAX_MS = 10 * 60_000;
+let downUntil = 0;
+let downTtl = DOWN_TTL_INITIAL_MS;
+const OPEN_MESSAGE = 'Jikan is unreachable right now (recently failed). Skipping straight to the AniList fallback.';
+
+const isJikanDown = () => Date.now() < downUntil || String(process.env.JIKAN_DISABLED) === '1';
+const noteJikanDown = () => {
+  downUntil = Date.now() + downTtl;
+  downTtl = Math.min(downTtl * 2, DOWN_TTL_MAX_MS);
+};
+const noteJikanUp = () => {
+  downUntil = 0;
+  downTtl = DOWN_TTL_INITIAL_MS;
+};
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fail = (message, status = 502, extra = {}) => Object.assign(new Error(message), { status, ...extra });
@@ -29,6 +49,7 @@ const request = async (url, retried = false) => {
   try {
     response = await fetch(url, { dispatcher, signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
   } catch {
+    noteJikanDown();
     throw fail('Cannot reach Jikan. Check your internet/VPN, or set PROXY_URL in server/.env.', 502, { network: true });
   }
   if ((response.status === 429 || response.status >= 500) && !retried) {
@@ -37,13 +58,18 @@ const request = async (url, retried = false) => {
     lastCall = Date.now();
     return request(url, true);
   }
+  noteJikanUp();
   if (response.status === 404) throw fail('Not found on MyAnimeList', 404);
   if (response.status === 429) throw fail('Jikan rate limit reached, try again in a moment', 429);
   if (!response.ok) throw fail(`Jikan returned HTTP ${response.status}`);
   return response.json();
 };
 
-const jikanGet = (path) => enqueue(() => request(`${BASE}${path}`));
+const jikanGet = (path) => {
+  // Fail fast while the breaker is open — no fetch, no timeout, no queue gap.
+  if (isJikanDown()) return Promise.reject(fail(OPEN_MESSAGE, 502, { network: true }));
+  return enqueue(() => request(`${BASE}${path}`));
+};
 
 export const searchAnime = async (query) => {
   const body = await jikanGet(`/anime?q=${encodeURIComponent(query)}&limit=10`);
@@ -58,6 +84,9 @@ export const searchAnime = async (query) => {
 
 export const fetchAnimeFull = async (malId) => (await jikanGet(`/anime/${Number(malId)}/full`)).data;
 export const fetchMangaFull = async (malId) => (await jikanGet(`/manga/${Number(malId)}/full`)).data;
+// Exposed for the bulk-import fast path: when the breaker is open (or disabled via JIKAN_DISABLED),
+// batched AniList fetching is used instead of per-item Jikan probes.
+export const jikanCircuitOpen = isJikanDown;
 
 export const downloadImage = async (url) => {
   let response;

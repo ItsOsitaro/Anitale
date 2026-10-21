@@ -3,7 +3,7 @@ import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 
-const CHUNK = 5; // ids per request — keeps each HTTP call short so progress updates live
+const CHUNK = 50; // ids per request — the server resolves a whole chunk in ONE batched provider query
 const TOTAL_MAX = 400; // runaway guard: the whole run, not one chunk
 
 export default function BulkImport() {

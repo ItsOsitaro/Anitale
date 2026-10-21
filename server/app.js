@@ -17,8 +17,9 @@ import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminLi
 import { exportData } from './export-data.js';
 import { coverUrlFor,  cleanupTemp, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover,
 } from './images.js';
-import { downloadImage, fetchAnimeFull, fetchMangaFull, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
-import { anilistFacetSearch, anilistImport, anilistMangaDraft, anilistSearch } from './anilist.js';
+import { downloadImage, fetchAnimeFull, fetchMangaFull, jikanCircuitOpen, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
+import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
+import { mapPool } from './pool.js';
 
 const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } });
@@ -654,10 +655,15 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   const BULK_MAX = 50;
 
   // Shared manga fetch: Jikan first, AniList on network failure (draft keys: malId, title, category, year, format, score, genres, synopsis, information, availableAt, coverUrl).
+  // PROVIDER=anilist and the Jikan breaker both switch this to AniList directly —
+  // a fresh server otherwise pays a connection timeout per import before the fallback.
+  const anilistDirect = () => jikanCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
+
   const fetchMangaDraft = async (malId) => {
     let payload;
     try {
-      payload = mapJikanMangaToDraft(await fetchMangaFull(malId));
+      if (anilistDirect()) payload = await anilistMangaDraft(malId);
+      else payload = mapJikanMangaToDraft(await fetchMangaFull(malId));
     } catch (error) {
       if (!error?.network) throw error;
       console.log(`[bulk] Jikan unreachable, falling back to AniList for manga ${malId}`);
@@ -689,19 +695,107 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     const preview = req.body?.preview === true;
     cleanupTemp();
 
+    // One query resolves which of the requested ids already live in the catalog —
+    // the per-item existence probe becomes a Map read.
+    const knownRows = (() => {
+      const table = mediaType === 'anime' ? 'anime' : 'manga';
+      const placeholders = ids.map(() => '?').join(',');
+      return new Map(db.prepare(
+        `SELECT mal_id, slug, title FROM ${table} WHERE mal_id IS NOT NULL AND mal_id IN (${placeholders})`,
+      ).all(...ids).map((r) => [r.mal_id, r]));
+    })();
+
+    // Fast path (batched AniList): when Jikan is not usable (breaker open,
+    // JIKAN_DISABLED=1, or PROVIDER=anilist), every missing id resolves in ONE
+    // batched GraphQL query and covers download concurrently — instead of N
+    // serial Jikan connection timeouts + N throttled AniList queries.
+    // With a healthy Jikan, per-item Jikan-first behavior is preserved.
+    const fastMode = jikanCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
+    let fastDrafts = new Map();   // malId -> draft (same shape as single import)
+    const fastMissing = new Set(); // ids the provider has no row for
+    const fastCovers = new Map(); // malId -> { token, warning } (staged temp covers)
+    if (fastMode) {
+      const need = ids.filter((id) => !knownRows.has(id));
+      const tProvider = Date.now();
+      const many = mediaType === 'anime'
+        ? await anilistImportMany(need)
+        : await anilistMangaDraftMany(need);
+      const providerMs = Date.now() - tProvider;
+      fastDrafts = many.found;
+      for (const id of many.missing) fastMissing.add(id);
+      // Preview never touches the filesystem; real imports stage covers
+      // concurrently (6 at a time) so cdn latency is not serial.
+      if (!preview && fastDrafts.size > 0) {
+        const NO_COVER = 'MyAnimeList has no cover for this title';
+        const tCovers = Date.now();
+        await mapPool([...fastDrafts.values()], 6, async (draft) => {
+          let token = '';
+          let warning = NO_COVER;
+          if (draft.coverUrl) {
+            try { token = saveTempCover(await downloadImage(draft.coverUrl)); warning = ''; }
+            catch (error) { warning = error.message; }
+          }
+          fastCovers.set(draft.malId, { token, warning });
+        });
+        console.log(`[bulk] fast path: ${need.length} ids in one provider query (${providerMs}ms), covers ${fastDrafts.size} concurrent (${Date.now() - tCovers}ms)`);
+      }
+    }
+
     const results = [];
     let imported = 0;
     let exists = 0;
     let failed = 0;
     for (const malId of ids) {
       try {
-        if (mediaType === 'anime') {
-          const existing = getByMalId(malId);
-          if (existing) {
-            exists += 1;
-            results.push({ malId, status: 'exists', title: existing.title, slug: existing.slug });
+        const existing = knownRows.get(malId);
+        if (existing) {
+          exists += 1;
+          results.push({ malId, status: 'exists', title: existing.title, slug: existing.slug });
+          continue;
+        }
+        if (fastMode) {
+          if (fastMissing.has(malId)) {
+            failed += 1;
+            results.push({ malId, status: 'failed', error: 'Not found on MyAnimeList' });
             continue;
           }
+          const draft = fastDrafts.get(malId);
+          if (!draft) {
+            failed += 1;
+            results.push({ malId, status: 'failed', error: 'Provider did not return this id' });
+            continue;
+          }
+          if (preview) {
+            results.push({ malId, status: 'ok', title: draft.title, year: draft.year, category: draft.category, score: draft.score ?? null });
+            continue;
+          }
+          const coverInfo = fastCovers.get(malId) || { token: '', warning: '' };
+          if (mediaType === 'anime') {
+            const slug = uniqueSlug(draft.title);
+            // The AniList fallback uses null airingDay for finished shows; the
+            // form flow never parses that, but bulk persists directly.
+            const draftForParse = { ...draft, slug, airingDay: typeof draft.airingDay === 'string' ? draft.airingDay : '' };
+            const tempCover = coverInfo.token;
+            const input = animeInput.parse(tempCover ? { ...draftForParse, tempCover } : draftForParse);
+            const cover = input.tempCover ? promoteTempCover(slug, input.tempCover) || '' : '';
+            const created = insertAnime(slug, input, cover);
+            imported += 1;
+            results.push({ malId, status: 'imported', title: created.title, slug, ...(coverInfo.warning ? { warning: coverInfo.warning } : {}) });
+          } else {
+            const slug = uniqueMangaSlug(draft.title);
+            let cover = '';
+            try { cover = coverInfo.token ? (promoteTempCover(slug, coverInfo.token) || '') : ''; }
+            catch (error) { coverInfo.warning = coverInfo.warning || error.message; }
+            const created = insertManga(
+              { slug, title: draft.title, category: draft.category, year: draft.year, format: 'Manga', genres: draft.genres, synopsis: draft.synopsis },
+              { malId: draft.malId, score: draft.score, cover, publicationStatus: draft.publicationStatus || '', chapters: draft.chapters ?? null },
+            );
+            imported += 1;
+            results.push({ malId, status: 'imported', title: created.title, slug, ...(coverInfo.warning ? { warning: coverInfo.warning } : {}) });
+          }
+          continue;
+        }
+        if (mediaType === 'anime') {
           const { draft, tempCover, coverWarning } = await fetchExternalDraft(malId);
           if (preview) {
             // No slug/cover side effects: just the facts the admin eyeballs.
@@ -721,12 +815,6 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           imported += 1;
           results.push({ malId, status: 'imported', title: created.title, slug, ...(coverWarning ? { warning: coverWarning } : {}) });
         } else {
-          const existing = getMangaByMalId(malId);
-          if (existing) {
-            exists += 1;
-            results.push({ malId, status: 'exists', title: existing.title, slug: existing.slug });
-            continue;
-          }
           const payload = await fetchMangaDraft(malId);
           if (preview) {
             results.push({ malId, status: 'ok', title: payload.title, year: payload.year, category: payload.category, score: payload.score ?? null });
@@ -757,11 +845,13 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     res.json({ mediaType, preview, imported, exists, failed, results });
   });
 
-  // Shared: fetch an anime's latest external data (Jikan first, transparent AniList fallback) + temp cover.
+  // Shared: fetch an anime's latest external data (Jikan first unless disabled/broken,
+  // transparent AniList fallback) + temp cover.
   const fetchExternalDraft = async (malId) => {
     let payload;
     try {
-      payload = mapJikanToDraft(await fetchAnimeFull(malId));
+      if (anilistDirect()) payload = await anilistImport(malId);
+      else payload = mapJikanToDraft(await fetchAnimeFull(malId));
     } catch (error) {
       if (!error?.network) throw error;
       console.log(`[import] Jikan unreachable, falling back to AniList for MAL ${malId}`);

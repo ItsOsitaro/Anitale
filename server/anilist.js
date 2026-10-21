@@ -121,28 +121,47 @@ export const anilistFacetSearch = async ({ mediaType = 'MANGA', genre, year, min
 
 // Fallback import used when Jikan is unreachable. Maps AniList data straight to the
 // admin draft shape (same keys as mapJikanToDraft => { coverUrl, ...draft }).
-export const anilistImport = async (malId) => {
-  const data = await enqueue(() => gql(`query ($idMal: Int) {
-    Media(idMal: $idMal, type: ANIME) {
-      idMal
-      title { english romaji native }
-      synonyms genres
-      format status source
-      episodes duration season seasonYear
-      startDate { year month day } endDate { year month day }
-      averageScore popularity favourites
-      rankings { rank type allTime context }
-      nextAiringEpisode { airingAt }
-      studios { nodes { name isAnimationStudio } }
-      externalLinks { site type url }
-      coverImage { extraLarge large }
-      description
+const ANIME_FIELDS = `
+  idMal
+  title { english romaji native }
+  synonyms genres
+  format status source
+  episodes duration season seasonYear
+  startDate { year month day } endDate { year month day }
+  averageScore popularity favourites
+  rankings { rank type allTime context }
+  nextAiringEpisode { airingAt }
+  studios { nodes { name isAnimationStudio } }
+  externalLinks { site type url }
+  coverImage { extraLarge large }
+  description
+`;
+
+// Shared mapper: one AniList "anime" Media object -> admin draft (with coverUrl).
+// One batched query for up to ~50 ids — the same payloads anilistImport would
+// One batched query for up to ~50 ids — the same payloads anilistImport would
+// return per id, resolved in a single AniList round trip. Missing ids come
+// back in `missing` (status 'Not found on MyAnimeList', like the single path).
+export const anilistImportMany = async (malIds) => {
+  const ids = [...new Set(malIds.map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+  if (ids.length === 0) return { found: new Map(), missing: [] };
+  const data = await enqueue(() => gql(`query ($ids: [Int]) {
+    Page(perPage: ${ids.length}) {
+      media(idMal_in: $ids, type: ANIME, isAdult: false) { ${ANIME_FIELDS} }
     }
-  }`, { idMal: Number(malId) }));
+  }`, { ids }));
+  const found = new Map((data?.Page?.media || []).filter((m) => m.idMal).map((m) => [m.idMal, mapAniListAnime(m)]));
+  return { found, missing: ids.filter((id) => !found.has(id)) };
+};
 
-  const m = data?.Media;
-  if (!m || !m.idMal) throw fail('Not found on MyAnimeList', 404);
+export const anilistImport = async (malId) => {
+  const { found } = await anilistImportMany([malId]);
+  const draft = found.get(Number(malId));
+  if (!draft) throw fail('Not found on MyAnimeList', 404);
+  return draft;
+};
 
+const mapAniListAnime = (m) => {
   const english = m.title?.english || '';
   const title = english || m.title?.romaji || '';
   const japanese = m.title?.native || '';
@@ -231,25 +250,21 @@ export const anilistImport = async (malId) => {
 };
 
 // Fallback manga import (Jikan unreachable). Same draft keys as mapJikanMangaToDraft.
-export const anilistMangaDraft = async (malId) => {
-  const data = await enqueue(() => gql(`query ($idMal: Int) {
-    Media(idMal: $idMal, type: MANGA) {
-      idMal
-      title { english romaji native }
-      synonyms genres format
-      volumes chapters status
-      averageScore favourites popularity
-      startDate { year } endDate { year }
-      externalLinks { site url }
-      staff { edges { role node { name { full } } } }
-      coverImage { extraLarge large }
-      description
-    }
-  }`, { idMal: Number(malId) }));
+const MANGA_FIELDS = `
+  idMal
+  title { english romaji native }
+  synonyms genres format
+  volumes chapters status
+  averageScore favourites popularity
+  startDate { year } endDate { year }
+  externalLinks { site url }
+  staff { edges { role node { name { full } } } }
+  coverImage { extraLarge large }
+  description
+`;
 
-  const m = data?.Media;
-  if (!m || !m.idMal) throw fail('Not found on MyAnimeList', 404);
-
+// One AniList "manga" Media object -> bulk draft (with coverUrl).
+const mapAniListManga = (m) => {
   const english = m.title?.english || '';
   const title = english || m.title?.romaji || '';
   const genres = Array.isArray(m.genres) ? m.genres.filter(Boolean) : [];
@@ -291,4 +306,24 @@ export const anilistMangaDraft = async (malId) => {
     ],
     coverUrl: m.coverImage?.extraLarge || m.coverImage?.large || '',
   };
+};
+
+// Same key set as anilistMangaDraft, but resolved for many ids in ONE query.
+export const anilistMangaDraftMany = async (malIds) => {
+  const ids = [...new Set(malIds.map(Number).filter((n) => Number.isInteger(n) && n > 0))];
+  if (ids.length === 0) return { found: new Map(), missing: [] };
+  const data = await enqueue(() => gql(`query ($ids: [Int]) {
+    Page(perPage: ${ids.length}) {
+      media(idMal_in: $ids, type: MANGA) { ${MANGA_FIELDS} }
+    }
+  }`, { ids }));
+  const found = new Map((data?.Page?.media || []).filter((m) => m.idMal).map((m) => [m.idMal, mapAniListManga(m)]));
+  return { found, missing: ids.filter((id) => !found.has(id)) };
+};
+
+export const anilistMangaDraft = async (malId) => {
+  const { found } = await anilistMangaDraftMany([malId]);
+  const draft = found.get(Number(malId));
+  if (!draft) throw fail('Not found on MyAnimeList', 404);
+  return draft;
 };
