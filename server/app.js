@@ -715,16 +715,26 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     // batched GraphQL query and covers download concurrently — instead of N
     // serial Jikan connection timeouts + N throttled AniList queries.
     // With a healthy Jikan, per-item Jikan-first behavior is preserved.
-    const fastMode = jikanCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
+    let fastMode = jikanCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
     let fastDrafts = new Map();   // malId -> draft (same shape as single import)
     const fastMissing = new Set(); // ids the provider has no row for
     const fastCovers = new Map(); // malId -> { token, warning } (staged temp covers)
     if (fastMode) {
       const need = ids.filter((id) => !knownRows.has(id));
       const tProvider = Date.now();
-      const many = mediaType === 'anime'
-        ? await anilistImportMany(need)
-        : await anilistMangaDraftMany(need);
+      let many;
+      try {
+        many = mediaType === 'anime' ? await anilistImportMany(need) : await anilistMangaDraftMany(need);
+      } catch (error) {
+        // AniList down (routine outage / datacenter block): hand the batch back
+        // to the per-item loop, which transparently uses Jikan where it's
+        // reachable (the deployment's datacenter IPs usually can). With
+        // JIKAN_DISABLED the caller asked for AniList-only, so rethrow.
+        if (process.env.JIKAN_DISABLED === '1') throw error;
+        fastMode = false;
+        console.log(`[bulk] AniList batch unavailable (${error.message}); falling back to per-item providers`);
+      }
+      if (fastMode) {
       const providerMs = Date.now() - tProvider;
       fastDrafts = many.found;
       for (const id of many.missing) fastMissing.add(id);
@@ -743,6 +753,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           fastCovers.set(draft.malId, { token, warning });
         });
         console.log(`[bulk] fast path: ${need.length} ids in one provider query (${providerMs}ms), covers ${fastDrafts.size} concurrent (${Date.now() - tCovers}ms)`);
+      }
       }
     }
 

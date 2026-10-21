@@ -42,7 +42,15 @@ const gql = async (query, variables, retried = false) => {
     await sleep(Math.min(retryAfter, 5) * 1000);
     return gql(query, variables, true);
   }
-  if (!response.ok) throw fail(`AniList data provider returned HTTP ${response.status}`);
+  if (!response.ok) {
+    const text = await response.text().catch(() => '');
+    // AniList takes the whole API down during severe incidents and answers 403
+    // with an explanatory body — surface it as a known outage, not as a mystery.
+    if (/temporarily disabled/i.test(text)) {
+      throw fail('AniList has temporarily disabled its API (their current outage). Try again later, or add the title manually.', 503);
+    }
+    throw fail(`AniList data provider returned HTTP ${response.status}`);
+  }
   const body = await response.json();
   if (body.errors?.length) {
     const [err] = body.errors;
