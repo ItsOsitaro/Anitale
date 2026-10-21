@@ -151,7 +151,7 @@ export default function BulkImport() {
         <button className="adm-btn" type="button" disabled={running || !total} onClick={(event) => run(event, true)}>
           {running ? t('bulkRunning') : t('bulkPreview')}
         </button>
-        <button className="adm-btn primary" type="submit" disabled={running || !total || !previewDone}>
+        <button className="adm-btn adm-primary" type="submit" disabled={running || !total || !previewDone}>
           {running ? t('bulkRunning') : t('bulkSaveNow')}
         </button>
       </form>
@@ -217,7 +217,7 @@ export default function BulkImport() {
                     </li>
                   ))}
                 </ul>
-                <button className="adm-btn primary" type="button" disabled={running || selected.length === 0} onClick={runSelectedIds}>
+                <button className="adm-btn adm-primary" type="button" disabled={running || selected.length === 0} onClick={runSelectedIds}>
                   {running ? t('bulkRunning') : t('bulkImportSelected', { n: selected.length })}
                 </button>
               </>
