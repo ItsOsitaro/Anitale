@@ -21,9 +21,9 @@ export const L = (value, lang) => {
 
 export const messages = {
   fa: {
-    siteName: 'مال کلون',
+    siteName: 'پنیم',
     siteTagline: 'انیمه و مانگا',
-    brandAria: 'خانه‌ی مال کلون',
+    brandAria: 'خانه‌ی پنیم',
     // Header
     searchPlaceholder: 'جستجوی عنوان…',
     searchAria: 'جستجوی عنوان',
@@ -154,15 +154,15 @@ export const messages = {
     userNotFound: 'چنین کاربری نیست.',
     // document titles
     pageTitles: {
-      home: 'مال کلون | انیمه و مانگا',
-      suffix: '| مال کلون',
-      notFoundTitle: 'صفحه‌ای پیدا نشد | مال کلون',
+      home: 'پنیم | انیمه و مانگا',
+      suffix: '| پنیم',
+      notFoundTitle: 'صفحه‌ای پیدا نشد | پنیم',
     },
   },
   en: {
-    siteName: 'MAL Clone',
+    siteName: 'Panime',
     siteTagline: 'Anime & Manga',
-    brandAria: 'MAL Clone home',
+    brandAria: 'Panime home',
     searchPlaceholder: 'Search titles…',
     searchAria: 'Search titles',
     noMatch: 'No matching title found in this catalog.',
@@ -280,9 +280,9 @@ export const messages = {
     ownProfile: 'This is your profile', profileOf: 'Profile', profileLists: 'Lists',
     userNotFound: 'No such user.',
     pageTitles: {
-      home: 'MAL Clone | Anime & Manga',
-      suffix: '| MAL Clone',
-      notFoundTitle: 'Page Not Found | MAL Clone',
+      home: 'Panime | Anime & Manga',
+      suffix: '| Panime',
+      notFoundTitle: 'Page Not Found | Panime',
     },
   },
 };

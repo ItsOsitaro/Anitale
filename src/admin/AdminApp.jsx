@@ -31,7 +31,7 @@ export default function AdminApp({ theme, onThemeChange }) {
   }, []);
 
   useEffect(() => {
-    document.title = `${t('adminTitle')} | MAL Clone`;
+    document.title = `${t('adminTitle')} | Panime`;
   }, [t]);
 
   useEffect(() => {
@@ -64,7 +64,7 @@ export default function AdminApp({ theme, onThemeChange }) {
     <AdminContext.Provider value={{ t, lang, toast }}>
       <div className="admin-root" dir={lang === 'fa' ? 'rtl' : 'ltr'} lang={lang}>
         <header className="adm-header">
-          <Link className="adm-brand" to="/admin"><span className="brand-mark">M</span> {t('adminTitle')}</Link>
+          <Link className="adm-brand" to="/admin"><span className="brand-mark">P</span> {t('adminTitle')}</Link>
           {user && (
             <nav className="adm-nav" aria-label="Admin">
               <NavLink to="/admin" end>{t('titles')}</NavLink>

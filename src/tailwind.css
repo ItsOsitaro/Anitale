@@ -1,7 +1,7 @@
 @import 'tailwindcss';
 @import '@fontsource-variable/vazirmatn';
 
-/* ==== MAL Clone design tokens — «بانکِ گل» (Sakura & Ink) ==== */
+/* ==== Panime design tokens — «بانکِ گل» (Sakura & Ink) ==== */
 @custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
 
 :root {

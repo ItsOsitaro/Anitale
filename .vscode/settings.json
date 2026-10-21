@@ -1,6 +1,6 @@
 {
     "chat.tools.terminal.autoApprove": {
-        "/^cmd /c \"cd /d D:\\\\Projects\\\\WebSites\\\\MAL Clone && C:\\\\Users\\\\Island\\\\\\.local\\\\bin\\\\python3\\.14\\.exe download_anime_images\\.py\"$/": {
+        "/^cmd /c \"cd /d D:\\\\Projects\\\\WebSites\\\\Panime && C:\\\\Users\\\\Island\\\\\\.local\\\\bin\\\\python3\\.14\\.exe download_anime_images\\.py\"$/": {
             "approve": true,
             "matchCommandLine": true
         },
