@@ -21,9 +21,9 @@ export const L = (value, lang) => {
 
 export const messages = {
   fa: {
-    siteName: 'پنیم',
+    siteName: 'انی‌تیل',
     siteTagline: 'انیمه و مانگا',
-    brandAria: 'خانه‌ی پنیم',
+    brandAria: 'خانه‌ی انی‌تیل',
     // Header
     searchPlaceholder: 'جستجوی عنوان…',
     searchAria: 'جستجوی عنوان',
@@ -154,15 +154,15 @@ export const messages = {
     userNotFound: 'چنین کاربری نیست.',
     // document titles
     pageTitles: {
-      home: 'پنیم | انیمه و مانگا',
-      suffix: '| پنیم',
-      notFoundTitle: 'صفحه‌ای پیدا نشد | پنیم',
+      home: 'انی‌تیل | انیمه و مانگا',
+      suffix: '| انی‌تیل',
+      notFoundTitle: 'صفحه‌ای پیدا نشد | انی‌تیل',
     },
   },
   en: {
-    siteName: 'Panime',
+    siteName: 'Anitale',
     siteTagline: 'Anime & Manga',
-    brandAria: 'Panime home',
+    brandAria: 'Anitale home',
     searchPlaceholder: 'Search titles…',
     searchAria: 'Search titles',
     noMatch: 'No matching title found in this catalog.',
@@ -280,9 +280,9 @@ export const messages = {
     ownProfile: 'This is your profile', profileOf: 'Profile', profileLists: 'Lists',
     userNotFound: 'No such user.',
     pageTitles: {
-      home: 'Panime | Anime & Manga',
-      suffix: '| Panime',
-      notFoundTitle: 'Page Not Found | Panime',
+      home: 'Anitale | Anime & Manga',
+      suffix: '| Anitale',
+      notFoundTitle: 'Page Not Found | Anitale',
     },
   },
 };

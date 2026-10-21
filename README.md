@@ -1,4 +1,4 @@
-# Panime
+# Anitale
 
 A MyAnimeList-style anime site (React + Vite) with a small local CMS: Express + SQLite backend and a bilingual (Persian / English) admin panel.
 

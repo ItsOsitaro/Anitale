@@ -159,7 +159,7 @@ function SiteHeader() {
     <header className="topbar">
       <div className="topbar-inner">
         <Link className="brand" to="/">
-          <span className="brand-mark" aria-hidden="true">{lang === 'fa' ? 'پ' : 'P'}</span>
+          <span className="brand-mark" aria-hidden="true">{lang === 'fa' ? 'ا' : 'A'}</span>
           <span className="brand-copy">
             <strong>{t('siteName')}</strong>
             <small>{t('siteTagline')}</small>
