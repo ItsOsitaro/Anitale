@@ -1,8 +1,12 @@
 import crypto from 'node:crypto';
 import bcrypt from 'bcryptjs';
+import { db } from './db.js';
 
 const COOKIE = 'mal_admin';
 const TTL_SECONDS = 7 * 24 * 60 * 60;
+// Admin cookies cover every mutation on the site; a daily expiry bounds how
+// long a stolen or stale session stays useful.
+const ADMIN_TTL_SECONDS = 24 * 60 * 60;
 
 let secret = process.env.SESSION_SECRET;
 if (!secret) {
@@ -18,8 +22,8 @@ const safeEqual = (a, b) => {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 };
 
-const createToken = (user) => {
-  const body = b64(JSON.stringify({ u: user, exp: Math.floor(Date.now() / 1000) + TTL_SECONDS }));
+const createToken = (user, extra = {}, ttlSeconds = TTL_SECONDS) => {
+  const body = b64(JSON.stringify({ u: user, exp: Math.floor(Date.now() / 1000) + ttlSeconds, ...extra }));
   return `${body}.${hmac(body)}`;
 };
 
@@ -53,43 +57,73 @@ export const verifyCredentials = async (username, password) => {
   return userOk && passOk;
 };
 
-export const setSession = (res, user) => {
-  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${TTL_SECONDS}`);
+// Cookie security flags: non-loopback requests always get Secure (HTTPS-only).
+// Production deployments running behind PLAIN HTTP (LAN) must set
+// NODE_ENV=development, otherwise cookies are marked Secure and browsers on
+// http:// will drop them.
+const secureFlag = (req) => {
+  if (process.env.NODE_ENV === 'production') return '; Secure';
+  const host = String(req?.host || '');
+  const local = ['127.0.0.1', '::1', 'localhost'].includes(host.replace(/:\d+$/, ''));
+  return local ? '' : '; Secure';
 };
 
-export const clearSession = (res) => {
-  res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);
+export const setSession = (req, res, user) => {
+  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user, {}, ADMIN_TTL_SECONDS)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ADMIN_TTL_SECONDS}${secureFlag(req)}`);
+};
+
+export const clearSession = (req, res) => {
+  res.setHeader('Set-Cookie', `${COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureFlag(req)}`);
 };
 
 // ---------- Site-user sessions (separate cookie, same signing machinery) ----------
 const USER_COOKIE = 'mal_user';
+const userTokenVersion = (username) => db
+  .prepare('SELECT token_version FROM users WHERE username = ? COLLATE NOCASE')
+  .get(String(username || '').trim())?.token_version ?? 0;
 
-export const setUserSession = (res, username) => {
-  res.setHeader('Set-Cookie', `${USER_COOKIE}=${createToken(username)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${TTL_SECONDS * 4}`);
+export const setUserSession = (req, res, username) => {
+  const maxAge = TTL_SECONDS * 4;
+  res.setHeader('Set-Cookie', `${USER_COOKIE}=${createToken(username, { v: userTokenVersion(username) }, maxAge)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secureFlag(req)}`);
 };
 
-export const clearUserSession = (res) => {
-  res.setHeader('Set-Cookie', `${USER_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0`);
+export const clearUserSession = (req, res) => {
+  res.setHeader('Set-Cookie', `${USER_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureFlag(req)}`);
 };
 
 export const currentSiteUser = (req) => readToken(parseCookies(req.headers.cookie)[USER_COOKIE])?.u || null;
 
+// Verifies the cookie AND that the user row still exists with the token
+// version current (password changes / deletes bump or remove the row).
 export const requireSiteUser = (req, res, next) => {
-  if (!currentSiteUser(req)) return res.status(401).json({ error: 'Not logged in' });
+  const username = currentSiteUser(req);
+  const payload = readToken(parseCookies(req.headers.cookie)[USER_COOKIE]);
+  if (!username || !payload) return res.status(401).json({ error: 'Not logged in' });
+  const row = db.prepare('SELECT token_version FROM users WHERE username = ? COLLATE NOCASE').get(username);
+  // Tokens issued before this column existed carry no v; they read as version 0.
+  if (!row || Number(row.token_version ?? 0) !== Number(payload.v ?? 0)) return res.status(401).json({ error: 'Not logged in' });
   return next();
 };
 
+export const userTokenValid = (userRow, req) => {
+  const username = currentSiteUser(req);
+  return Boolean(username && userRow && username === String(userRow.username) && Number(userRow.token_version ?? 0) === Number(readToken(parseCookies(req.headers.cookie)[USER_COOKIE])?.v ?? 0));
+};
+
 // Blocks cross-site writes (extra protection on top of SameSite=Strict).
+// GET/HEAD/OPTIONS stay open; every state-changing method must carry a
+// same-origin Origin or Referer header (browsers always send one).
 export const sameOriginOnly = (req, res, next) => {
-  const origin = req.headers.origin;
-  if (origin && !['GET', 'HEAD', 'OPTIONS'].includes(req.method)) {
-    try {
-      // Behind the Vite dev proxy the Host header is rewritten, so the proxy forwards the browser's host separately.
-      const expectedHost = req.headers['x-forwarded-host'] || req.headers.host;
-      if (new URL(origin).host !== expectedHost) return res.status(403).json({ error: 'Cross-origin request blocked' });
-    } catch {
-      return res.status(403).json({ error: 'Bad origin' });
-    }
+  if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  const source = req.headers.origin || req.headers.referer;
+  if (!source) return res.status(403).json({ error: 'Missing Origin/Referer header' });
+  try {
+    // Behind the Vite dev proxy the Host header is rewritten, so the proxy forwards the browser's host separately.
+    // Only honour that forwarded host when the deployment explicitly trusts its proxy.
+    const expectedHost = (process.env.TRUST_PROXY === '1' ? req.headers['x-forwarded-host'] : undefined) || req.headers.host;
+    if (new URL(source).host !== expectedHost) return res.status(403).json({ error: 'Cross-origin request blocked' });
+  } catch {
+    return res.status(403).json({ error: 'Bad origin' });
   }
   return next();
 };

@@ -90,15 +90,6 @@ export const insertManga = (item, { malId = null, score = null, cover = '', titl
   return db.prepare('SELECT * FROM manga WHERE slug = ?').get(item.slug);
 };
 
-// Queue 19: partial fa edits (Persian title + Persian synopsis) on manga rows.
-export const patchMangaBilingual = (id, { titleFa, synopsis }) => {
-  const row = db.prepare('SELECT * FROM manga WHERE id = ?').get(id);
-  if (!row) return undefined;
-  db.prepare("UPDATE manga SET title_fa = ?, synopsis = ?, updated_at = datetime('now') WHERE id = ?")
-    .run(titleFa ?? row.title_fa, synopsis ?? row.synopsis, id);
-  return db.prepare('SELECT * FROM manga WHERE id = ?').get(id);
-};
-
 // Queue 25: full admin edit. Fields come pre-validated; synopsis is the JSON
 // envelope { fa, en } when provided (plain source text is stored inside en).
 export const adminUpdateManga = (id, patch, { score } = {}) => {

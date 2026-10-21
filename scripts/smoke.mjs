@@ -1,7 +1,10 @@
 // Queue 27: API smoke test — exercise every admin/public surface that must
 // stay healthy. Uses one throwaway manga row that the test itself removes, so
 // the DB is byte-for-byte back to its starting state afterwards. Run with the
-// server already up: node scripts/smoke.mjs [baseUrl]
+// server already up:
+//   SMOKE_ADMIN_USER=<user> SMOKE_ADMIN_PASS=<plaintext> node scripts/smoke.mjs [baseUrl]
+// Credentials are never stored: server/.env only keeps ADMIN_PASSWORD_HASH,
+// so the plaintext password must be passed explicitly on every run.
 const BASE = process.argv[2] || 'http://127.0.0.1:3000';
 const results = [];
 const check = (name, ok, detail = '') => {
@@ -9,21 +12,32 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'PASS' : 'FAIL'} ${name}${detail ? ` — ${detail}` : ''}`);
 };
 
-const adminUser = process.env.SMOKE_ADMIN_USER || 'ItsOsitaro';
-const adminPass = process.env.SMOKE_ADMIN_PASS || 'REDACTED';
+// Fail fast: no hardcoded credentials. server/.env cannot provide the
+// plaintext (only ADMIN_PASSWORD_HASH is stored there), so both vars must
+// always be passed explicitly on the command line.
+const adminUser = process.env.SMOKE_ADMIN_USER;
+const adminPass = process.env.SMOKE_ADMIN_PASS;
+if (!adminUser || !adminPass) {
+  console.error('Set SMOKE_ADMIN_USER and SMOKE_ADMIN_PASS and run again.');
+  console.error('Hint: the username is ADMIN_USER in server/.env, but the password itself is NOT stored there (only ADMIN_PASSWORD_HASH) — SMOKE_ADMIN_PASS must be passed manually.');
+  console.error('Example: SMOKE_ADMIN_USER=admin SMOKE_ADMIN_PASS=yourpassword node scripts/smoke.mjs');
+  process.exit(1);
+}
+// State-changing requests must carry a same-origin Origin header (CSRF guard).
+const ORIGIN = new URL(BASE).origin;
 
 // -------- auth --------
 {
-  const bad = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: 'nope', password: 'nope' }) });
+  const bad = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json', origin: ORIGIN }, body: JSON.stringify({ username: 'nope', password: 'nope' }) });
   check('login rejects bad credentials', bad.status === 401);
 }
 let adminCookie = '';
 {
-  const res = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ username: adminUser, password: adminPass }) });
+  const res = await fetch(`${BASE}/api/auth/login`, { method: 'POST', headers: { 'content-type': 'application/json', origin: ORIGIN }, body: JSON.stringify({ username: adminUser, password: adminPass }) });
   adminCookie = (res.headers.get('set-cookie') || '').split(';')[0];
   check('admin login', res.status === 200 && Boolean(adminCookie), `status ${res.status}`);
 }
-const admin = (method, p, body) => fetch(`${BASE}${p}`, { method, headers: { 'content-type': 'application/json', cookie: adminCookie }, body: body ? JSON.stringify(body) : undefined });
+const admin = (method, p, body) => fetch(`${BASE}${p}`, { method, headers: { 'content-type': 'application/json', origin: ORIGIN, cookie: adminCookie }, body: body ? JSON.stringify(body) : undefined });
 
 {
   const guardRes = await fetch(`${BASE}/api/admin/users`);

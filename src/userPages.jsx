@@ -546,20 +546,28 @@ export function UserPublicProfile() {
   const { animeBySlug, mangaBySlug } = useEntryCatalogs();
   const [data, setData] = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [loadFailed, setLoadFailed] = useState(false);
   const [tab, setTab] = useState('anime');
   // Follow-graph state: null until the profile loads, then a local override
   // { followers, following, isFollowing } after a follow/unfollow action.
   const [followCountsState, setFollowCountsState] = useState(null);
 
   useEffect(() => {
+    let alive = true;
     setData(null);
     setNotFound(false);
+    setLoadFailed(false);
     userApi.publicProfile(username)
       .then((result) => {
+        if (!alive) return;
         setData(result);
         document.title = `${t('profileOf')} ${result.user.username} · ${t('siteName')}`;
       })
-      .catch((error) => { if (error.status === 404) setNotFound(true); });
+      .catch((error) => {
+        if (!alive) return;
+        if (error.status === 404) setNotFound(true); else setLoadFailed(true);
+      });
+    return () => { alive = false; };
   }, [username, t]);
 
   if (notFound) {
@@ -569,6 +577,13 @@ export function UserPublicProfile() {
           <h1 id="profileMissingHeading">{t('userNotFound')}</h1>
           <p className="auth-switch"><Link to="/">{t('backHome')}</Link></p>
         </section>
+      </main>
+    );
+  }
+  if (loadFailed) {
+    return (
+      <main className="profile-shell">
+        <p className="media-note" role="alert">{t('authGenericError')}</p>
       </main>
     );
   }

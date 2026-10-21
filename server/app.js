@@ -8,9 +8,9 @@ import path from 'node:path';
 import { db, COVERS_DIR, ROOT_DIR, TMP_DIR } from './db.js';
 import {
   clearSession, clearUserSession, currentSiteUser, currentUser, isAuthConfigured, requireAdmin, requireSiteUser,
-  sameOriginOnly, setSession, setUserSession, verifyCredentials,
+  sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials,
 } from './auth.js';
-import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteProfileInput, siteRegisterInput, siteUserEntryInput, slugPattern, WEEKDAYS } from './schemas.js';
+import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteProfileInput, siteRegisterInput, siteUserEntryInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, createUser, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
@@ -53,19 +53,27 @@ const renameCover = (cover, newSlug) => {
 export const createApp = () => {
   const app = express();
   app.disable('x-powered-by');
+  // Baseline browser hardening; CSP (SPA + inline styles) is a manual follow-up.
+  app.use((req, res, next) => {
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
   app.use(express.json({ limit: '1mb' }));
   app.use('/api', sameOriginOnly);
 
   // ---------- Auth ----------
   const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many login attempts. Try again later.' } });
+  // Moderate limiter for the heavy write endpoints (bulk imports + refreshes).
+  const writeLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many write requests' } });
   app.post('/api/auth/login', loginLimiter, async (req, res) => {
     if (!isAuthConfigured()) throw httpError(503, 'Admin login is not configured. Run: npm run setup-admin');
     const { username, password } = loginInput.parse(req.body);
     if (!(await verifyCredentials(username, password))) throw httpError(401, 'Wrong username or password');
-    setSession(res, username);
+    setSession(req, res, username);
     res.json({ user: username });
   });
-  app.post('/api/auth/logout', (req, res) => { clearSession(res); res.json({ ok: true }); });
+  app.post('/api/auth/logout', (req, res) => { clearSession(req, res); res.json({ ok: true }); });
   app.get('/api/auth/me', (req, res) => {
     const user = currentUser(req);
     if (!user) return res.status(401).json({ error: 'Not logged in', configured: isAuthConfigured() });
@@ -80,7 +88,7 @@ export const createApp = () => {
     const input = siteRegisterInput.parse(req.body);
     if (getUserByUsername(input.username)) throw httpError(409, `Username "${input.username}" is already taken`);
     const user = await createUser(input);
-    setUserSession(res, user.username);
+    setUserSession(req, res, user.username);
     res.status(201).json({ user });
   });
 
@@ -88,7 +96,7 @@ export const createApp = () => {
     const { username, password } = loginInput.parse(req.body);
     const result = await verifySiteCredentials(username, password);
     if (!result.ok) throw httpError(401, 'Wrong username or password');
-    setUserSession(res, result.username);
+    setUserSession(req, res, result.username);
     res.json({ user: publicUser(getUserByUsername(result.username)), ok: true });
   });
 
@@ -96,6 +104,8 @@ export const createApp = () => {
     const username = currentSiteUser(req);
     const row = username ? getUserByUsername(username) : null;
     if (!row) return res.json({ user: null });
+    // Stale token (password changed meanwhile) counts as logged out here too.
+    if (!userTokenValid(row, req)) return res.json({ user: null });
     res.json({ user: publicUser(row), entries: listEntries(row.id) });
   });
 
@@ -109,7 +119,7 @@ export const createApp = () => {
   });
 
   app.post('/api/user/logout', (req, res) => {
-    clearUserSession(res);
+    clearUserSession(req, res);
     res.json({ ok: true });
   });
 
@@ -169,9 +179,15 @@ export const createApp = () => {
     const counts = followCounts(row.id);
     const viewerName = currentSiteUser(req);
     const viewer = viewerName ? getUserByUsername(viewerName) : null;
+    // Notes are private (see the feed comment below): strip them the same way
+    // for public profiles; status/rating/progress stay public by design.
+    const mine = listEntries(row.id);
     res.json({
       user: publicUser(row),
-      entries: listEntries(row.id),
+      entries: {
+        anime: mine.anime.map(({ note, ...rest }) => rest),
+        manga: mine.manga.map(({ note, ...rest }) => rest),
+      },
       followers: counts.followers,
       following: counts.following,
       ...(viewer && viewer.id !== row.id ? { isFollowing: isFollowing(viewer.id, row.id) } : {}),
@@ -183,6 +199,7 @@ export const createApp = () => {
     const target = getUserByUsername(req.params.username);
     if (!target) throw httpError(404, 'User not found');
     const viewer = getUserByUsername(currentSiteUser(req));
+    if (!viewer) throw httpError(401, 'Not logged in');
     if (viewer.id === target.id) throw httpError(400, 'You cannot follow yourself');
     followUser(viewer.id, target.id);
     res.json({ following: true, followers: followCounts(target.id).followers });
@@ -192,6 +209,7 @@ export const createApp = () => {
     const target = getUserByUsername(req.params.username);
     if (!target) throw httpError(404, 'User not found');
     const viewer = getUserByUsername(currentSiteUser(req));
+    if (!viewer) throw httpError(401, 'Not logged in');
     unfollowUser(viewer.id, target.id);
     res.json({ following: false, followers: followCounts(target.id).followers });
   });
@@ -212,6 +230,7 @@ export const createApp = () => {
   // both keep on their lists (any statuses; the view shows whose is where).
   app.get('/api/user/common-lists', requireSiteUser, (req, res) => {
     const viewer = getUserByUsername(currentSiteUser(req));
+    if (!viewer) throw httpError(401, 'Not logged in');
     const mine = listEntries(viewer.id);
     const mineByType = new Map([['anime', new Map(mine.anime.map((entry) => [entry.slug, entry]))], ['manga', new Map(mine.manga.map((entry) => [entry.slug, entry]))]]);
     const matches = [];
@@ -233,7 +252,7 @@ export const createApp = () => {
         }
       }
     }
-    matches.sort((first, second) => second.added.localeCompare(first.added));
+    matches.sort((first, second) => (second.added > first.added ? 1 : second.added < first.added ? -1 : 0));
     res.json({ count: matches.length, items: matches.slice(0, 60) });
   });
 
@@ -242,6 +261,7 @@ export const createApp = () => {
   // are intentionally not included — they stay private.
   app.get('/api/feed', requireSiteUser, (req, res) => {
     const viewer = getUserByUsername(currentSiteUser(req));
+    if (!viewer) throw httpError(401, 'Not logged in');
     res.json({ items: friendFeed(viewer.id) });
   });
 
@@ -352,13 +372,11 @@ export const createApp = () => {
         .map(foldTitle);
     };
 
+    // One pass builds the anime cover fallback map AND the anime hits.
     const animeBase = new Map();
-    for (const item of db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem)) {
-      animeBase.set(item.slug, item.image || '');
-    }
-
     const hits = [];
     for (const item of db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem)) {
+      animeBase.set(item.slug, item.image || '');
       const titles = titlesOf(item);
       if (!titles.includes(query) && !titles.some((value) => value.includes(query))) continue;
       hits.push({
@@ -440,6 +458,10 @@ export const createApp = () => {
     if (other && other.id !== row.id) throw httpError(409, `This MyAnimeList title is already in the catalog ("${other.title}")`, { existingSlug: other.slug });
     let cover = renameCover(row.cover, slug);
     if (input.tempCover) cover = promoteTempCover(slug, input.tempCover) || cover;
+    // Keep user list rows joined to the right slug before the anime row moves.
+    if (slug !== row.slug) {
+      db.prepare("UPDATE user_entries SET slug = ? WHERE media_type = 'anime' AND slug = ?").run(slug, row.slug);
+    }
     const updated = updateAnime(row.id, slug, input, cover);
     exportData();
     res.json(rowToItem(updated));
@@ -459,6 +481,7 @@ export const createApp = () => {
   app.delete('/api/anime/:slug', requireAdmin, (req, res) => {
     const row = getBySlug(req.params.slug);
     if (!row) throw httpError(404, 'Anime not found');
+    removeCoversForSlug(row.slug); // cover files must not outlive the row
     deleteAnime(row.id);
     exportData();
     res.json({ ok: true });
@@ -521,7 +544,7 @@ export const createApp = () => {
       year: payload.year || row.year,
       format: 'Manga',
       genres: payload.genres,
-      publicationStatus: payload.publicationStatus || '',
+      publicationStatus: payload.publicationStatus || row.publication_status || '',
       chapters: payload.chapters ?? null,
       // Only borrowed rows get raw source text; seeded bilingual synopsis keeps its fa, en.
       synopsis: payload.synopsis || row.synopsis,
@@ -546,7 +569,7 @@ export const createApp = () => {
   };
 
   // Refresh every manga row that has a MyAnimeList id (admin bulk action).
-  app.post('/api/admin/manga/refresh-all', requireAdmin, async (req, res) => {
+  app.post('/api/admin/manga/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM manga WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
     const results = [];
@@ -562,7 +585,7 @@ export const createApp = () => {
   });
 
 // Queue 25: refresh one manga row (its button in the admin manga list).
-app.post('/api/admin/manga/:slug/refresh', requireAdmin, async (req, res) => {
+app.post('/api/admin/manga/:slug/refresh', requireAdmin, writeLimiter, async (req, res) => {
   try {
     const row = getMangaBySlug(req.params.slug);
     if (!row) throw httpError(404, 'Manga not found');
@@ -570,8 +593,11 @@ app.post('/api/admin/manga/:slug/refresh', requireAdmin, async (req, res) => {
     const { item, coverWarning, changes } = await refreshMangaFromSource(row);
     res.json({ ok: true, item, coverWarning, changes });
   } catch (error) {
+    // Log with the route tag, then answer inline (the global error middleware
+    // would only see a rethrow and double-log the same failure).
     console.error('[manga refresh]', error);
-    throw error;
+    const status = error?.status && error.status < 600 ? error.status : 500;
+    res.status(status).json({ error: status === 500 ? 'Internal server error' : error.message });
   }
 });
 
@@ -603,6 +629,7 @@ app.patch('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     synopsis,
   }, { score: input.score });
   if (!updated) throw httpError(404, 'Manga not found');
+  exportData();
   res.json({ ok: true, item: mangaRowToItem(updated) });
 });
 
@@ -640,7 +667,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     return payload;
   };
 
-  app.post('/api/admin/anime/import-bulk', requireAdmin, async (req, res) => {
+  app.post('/api/admin/anime/import-bulk', requireAdmin, writeLimiter, async (req, res) => {
     const mediaType = req.body?.mediaType === 'manga' ? 'manga' : 'anime';
     // Queue 26: facet discovery mode — returns candidate rows, writes nothing.
     if (req.body?.discover) {
@@ -651,16 +678,16 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
       return;
     }
     // Queue 26: explicit id list (selected from discovery) instead of from/to.
-    const idList = Array.isArray(req.body?.ids) ? [...new Set(req.body.ids.map((id) => Math.floor(Number(id))))].filter((id) => Number.isInteger(id) && id > 0) : null;
+    // An empty array is not a valid selector — treat it like an absent one.
+    const idList = Array.isArray(req.body?.ids) && req.body.ids.length > 0 ? [...new Set(req.body.ids.map((id) => Math.floor(Number(id))))].filter((id) => Number.isInteger(id) && id > 0) : null;
     const from = idList ? idList[0] : Math.floor(Number(req.body?.from));
     const to = idList ? idList[idList.length - 1] : Math.floor(Number(req.body?.to));
-    if (!idList && idList === null && (!Number.isInteger(from) || from <= 0 || !Number.isInteger(to) || to <= 0)) throw httpError(400, 'Range must be positive integers');
+    if (!idList && (!Number.isInteger(from) || from <= 0 || !Number.isInteger(to) || to <= 0)) throw httpError(400, 'Range must be positive integers');
     if (!idList && to < from) throw httpError(400, 'Range end must be equal to or greater than range start');
     const ids = idList || Array.from({ length: to - from + 1 }, (_, index) => from + index);
     if (ids.length > BULK_MAX) throw httpError(400, `Import at most ${BULK_MAX} ids per call — larger ranges are split by the admin UI`);
     // Queue 24: preview=true resolves each id against the provider but writes nothing.
     const preview = req.body?.preview === true;
-    void from; void to;
     cleanupTemp();
 
     const results = [];
@@ -679,6 +706,8 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           const { draft, tempCover, coverWarning } = await fetchExternalDraft(malId);
           if (preview) {
             // No slug/cover side effects: just the facts the admin eyeballs.
+            // The temp cover was saved for the form flow; discard it.
+            if (tempCover) { try { fs.rmSync(path.join(TMP_DIR, tempCover), { force: true }); } catch { /* ignore */ } }
             results.push({ malId, status: 'ok', title: draft.title, year: draft.year, category: draft.category, score: draft.score ?? null });
             continue;
           }
@@ -779,7 +808,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   };
 
   // Refresh a single entry (its row button in the admin list).
-  app.post('/api/admin/anime/:slug/refresh', requireAdmin, async (req, res) => {
+  app.post('/api/admin/anime/:slug/refresh', requireAdmin, writeLimiter, async (req, res) => {
     const row = getBySlug(req.params.slug);
     if (!row) throw httpError(404, 'Anime not found');
     if (!row.mal_id) throw httpError(400, 'This entry has no MyAnimeList id stored; import it once from the edit form first.');
@@ -790,7 +819,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   });
 
   // Refresh every entry that has a MyAnimeList id (admin bulk action).
-  app.post('/api/admin/anime/refresh-all', requireAdmin, async (req, res) => {
+  app.post('/api/admin/anime/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM anime WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
     const results = [];

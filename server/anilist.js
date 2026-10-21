@@ -34,8 +34,8 @@ const gql = async (query, variables, retried = false) => {
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
   } catch {
-    // Same user-visible message as the Jikan failure path (client i18n matches on it).
-    throw fail('Cannot reach Jikan. Check your internet/VPN, or set PROXY_URL in server/.env.', 502, { network: true });
+    // Mirror the Jikan failure path's tone (network flag, 502 — client i18n keys off `network`).
+    throw fail('Cannot reach data provider (AniList). Check your internet/VPN, or set PROXY_URL in server/.env.', 502, { network: true });
   }
   if ((response.status === 429 || response.status >= 500) && !retried) {
     const retryAfter = Number(response.headers.get('retry-after')) || 1.5;
@@ -88,6 +88,9 @@ export const anilistSearch = async (query) => {
 // search). Returns light preview rows; no MAL id => skipped.
 export const anilistFacetSearch = async ({ mediaType = 'MANGA', genre, year, minScore, perPage = 30 }) => {
   if (genre && !/^[a-z0-9 -]{2,40}$/i.test(genre)) throw fail('Invalid genre filter', 400);
+  // Caller may pass lowercase 'manga'/'anime' — normalize here so facet
+  // discovery actually queries the requested media type.
+  const type = String(mediaType).toUpperCase() === 'MANGA' ? 'MANGA' : 'ANIME';
   const data = await enqueue(() => gql(`query ($type: MediaType, $genre: String, $year: FuzzyDateInt, $score: Int, $perPage: Int) {
     Page(perPage: $perPage) {
       media(type: $type, genre: $genre, startDate_greater: $year, averageScore_greater: $score, sort: SCORE_DESC, isAdult: false) {
@@ -98,7 +101,7 @@ export const anilistFacetSearch = async ({ mediaType = 'MANGA', genre, year, min
       }
     }
   }`, {
-    type: mediaType === 'MANGA' ? 'MANGA' : 'ANIME',
+    type,
     genre: genre || undefined,
     // FuzzyDateInt expects the YYYYMMDD form (DD/00 treated like Jan 1 that year).
     year: Number(year) > 1900 ? Math.floor(Number(year)) * 10000 + 1 : undefined,

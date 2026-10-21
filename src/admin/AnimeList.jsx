@@ -21,7 +21,10 @@ export default function AnimeList() {
   }, [query]);
 
   const load = useCallback(() => {
-    api.list(debounced, page).then((result) => { setData(result); setError(''); }).catch((err) => setError(errText(err, t)));
+    // alive-guard: a stale response must not overwrite a newer one.
+    let active = true;
+    api.list(debounced, page).then((result) => { if (active) { setData(result); setError(''); } }).catch((err) => { if (active) setError(errText(err, t)); });
+    return () => { active = false; };
   }, [debounced, page, t]);
   useEffect(load, [load]);
 

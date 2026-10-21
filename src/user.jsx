@@ -128,10 +128,14 @@ export function UserProvider({ children }) {
       setEntries(normalized);
       if (user) mirrorToLocalStorage(normalized);
       return user;
-    } catch {
-      setMe(null);
-      // Not logged in — fall back to the guest's localStorage lists (statuses kept).
-      setEntries({ anime: readGuestEntries('anime'), manga: readGuestEntries('manga') });
+    } catch (error) {
+      // Only a 401 means we are signed out; a network hiccup should keep the
+      // current state instead of wiping the signed-in user.
+      if (error?.status === 401) {
+        setMe(null);
+        // Not logged in — fall back to the guest's localStorage lists (statuses kept).
+        setEntries({ anime: readGuestEntries('anime'), manga: readGuestEntries('manga') });
+      }
       return null;
     } finally {
       setChecked(true);

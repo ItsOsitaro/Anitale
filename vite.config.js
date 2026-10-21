@@ -30,11 +30,14 @@ const livePublicCovers = {
         let relative = decodeURIComponent(String(req.url || '').split('?')[0]).replace(/^[/\\]+/, '');
         const file = path.resolve(coversDir, relative);
         if (!file.startsWith(coversDir + path.sep)) return next();
+        // Only serve real image files — nothing else from public/covers.
+        if (!['.jpg', '.jpeg', '.png', '.webp', '.svg'].includes(path.extname(file).toLowerCase())) return next();
         const stat = fs.statSync(file, { throwIfNoEntry: false });
         if (!stat || !stat.isFile()) return next();
         res.writeHead(200, {
           'content-type': MIME[path.extname(file).toLowerCase()] || 'application/octet-stream',
           'cache-control': 'no-cache',
+          'x-content-type-options': 'nosniff',
         });
         res.end(fs.readFileSync(file));
       } catch { next(); }

@@ -310,7 +310,7 @@ function AnimeCard({ item, rank }) {
   return (
     <article className="anime-card">
       {rank && <span className="card-rank">{String(rank).padStart(2, '0')}</span>}
-      <Link className="anime-cover" to={href} aria-label={`${t(lang === 'fa' ? 'breadcrumbAnime' : 'breadcrumbAnime')}: ${title}`}>
+      <Link className="anime-cover" to={href} aria-label={`${t(isManga ? 'breadcrumbManga' : 'breadcrumbAnime')}: ${title}`}>
         <img src={item.image} alt={title} loading="lazy" />
       </Link>
       <div className="anime-info">
@@ -377,7 +377,10 @@ function UserPanel() {
   const counts = { watching: 0, completed: 0, planned: 0 };
   if (user.me) {
     for (const mediaType of ['anime', 'manga']) {
-      for (const entry of user.entries[mediaType]) counts[entry.status || 'watching'] += 1;
+      for (const entry of user.entries[mediaType]) {
+        const status = entry.status || 'watching';
+        counts[status] = (counts[status] || 0) + 1;
+      }
     }
   }
 
@@ -931,6 +934,11 @@ function NotFoundPanel({ children }) {
   return <main className="anime-missing panel">{children}</main>;
 }
 
+function CatalogLoadingFallback() {
+  const { t } = useSiteLang();
+  return <main className="app-state">{t('loadingCatalog')}</main>;
+}
+
 function PageBreadcrumb({ trail }) {
   const { lang } = useSiteLang();
   return (
@@ -963,8 +971,7 @@ function SectionPage({ theme, onThemeChange }) {
   const { pathname } = useLocation();
   const animeCatalog = useCatalog();
   const mangaCatalog = useMangaCatalog();
-  const page = sectionPages[pathname];
-  const [query, setQuery] = useState('');
+  const page = sectionPages[pathname];  const [query, setQuery] = useState('');
   const [genre, setGenre] = useState('All');
   const [format, setFormat] = useState('All');
   const [year, setYear] = useState('All');
@@ -997,7 +1004,7 @@ function SectionPage({ theme, onThemeChange }) {
     );
   }
 
-  const mangaItems = withMangaImages(useMangaCatalog(), animeCatalog);
+  const mangaItems = withMangaImages(mangaCatalog, animeCatalog);
   let items = [];
   if (['anime', 'anime-ranking', 'seasonal', 'adapted'].includes(page.kind)) {
     items = page.kind === 'anime-ranking'
@@ -1428,7 +1435,7 @@ function AppRoutes({ theme, onThemeChange }) {
   return (
     <Routes>
       <Route path="/" element={<HomePage />} />
-      <Route path="/admin/*" element={<Suspense fallback={<main className="app-state">{useSiteLang().t('loadingCatalog')}</main>}><AdminApp theme={theme} onThemeChange={onThemeChange} /></Suspense>} />
+      <Route path="/admin/*" element={<Suspense fallback={<CatalogLoadingFallback />}><AdminApp theme={theme} onThemeChange={onThemeChange} /></Suspense>} />
       <Route path="/anime/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} />} />
       <Route path="/manga/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} mediaType="manga" />} />
       <Route path="/login" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="login" /></WithHeader>} />

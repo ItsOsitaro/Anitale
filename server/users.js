@@ -196,7 +196,8 @@ export const adminAllUsers = () => db
 
 export const adminSetUserPassword = async (userId, password) => {
   const password_hash = await bcrypt.hash(password, 10);
-  db.prepare('UPDATE users SET password_hash = ? WHERE id = ?').run(password_hash, userId);
+  // Bumping the token version revokes every session cookie already issued.
+  db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(password_hash, userId);
 };
 
 // Deleting a user removes their entries too; foreign keys may not be enforced

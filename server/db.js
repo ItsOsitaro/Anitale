@@ -69,6 +69,7 @@ CREATE TABLE IF NOT EXISTS users (
   password_hash TEXT NOT NULL,
   bio TEXT NOT NULL DEFAULT '',
   avatar_color TEXT NOT NULL DEFAULT '',
+  token_version INTEGER NOT NULL DEFAULT 0, -- bumped to revoke issued sessions
   created_at TEXT NOT NULL DEFAULT (datetime('now'))
 );
 CREATE TABLE IF NOT EXISTS user_entries (
@@ -140,6 +141,11 @@ const mangaStatusColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_inf
 if (!mangaStatusColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN publication_status TEXT NOT NULL DEFAULT ''`);
 const mangaChaptersColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('manga') WHERE name = 'chapters'").get();
 if (!mangaChaptersColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN chapters INTEGER`);
+
+// Migration: per-user session token version (security: revoke issued site-user
+// cookies when a password changes or the account is deleted).
+const tokenVersionColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('users') WHERE name = 'token_version'").get();
+if (!tokenVersionColumn.n) db.exec(`ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`);
 
 // Migration: user_entries from the 3-status era needs a rebuild to accept
 // the five list statuses (SQLite cannot alter a CHECK constraint in place).

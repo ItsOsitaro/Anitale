@@ -3,16 +3,11 @@ import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 
-const STATUS_LABELS = {
-  fa: { watching: 'در حال دیدن', completed: 'تمام شده', on_hold: 'معلق', dropped: 'رهاشده', planned: 'برای بعد' },
-  en: { watching: 'Watching', completed: 'Completed', on_hold: 'On-Hold', dropped: 'Dropped', planned: 'Plan to watch' },
-};
-
 const fmtDate = (value, lang) => new Date(`${value.replace(' ', 'T')}Z`).toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-GB');
 
 export default function SiteUsers() {
   const { t, lang, toast } = useAdmin();
-  const statusLabel = (status) => STATUS_LABELS[lang]?.[status] ?? STATUS_LABELS.en[status] ?? status;
+  const statusLabel = (status) => t('statusLabels')?.[status] ?? status;
 
   const [query, setQuery] = useState('');
   const [debounced, setDebounced] = useState('');
@@ -37,7 +32,10 @@ export default function SiteUsers() {
   }, [query]);
 
   const load = useCallback(() => {
-    api.usersList(debounced, page).then((result) => { setData(result); setError(''); }).catch((err) => setError(errText(err, t)));
+    // alive-guard: a stale response must not overwrite a newer one.
+    let active = true;
+    api.usersList(debounced, page).then((result) => { if (active) { setData(result); setError(''); } }).catch((err) => { if (active) setError(errText(err, t)); });
+    return () => { active = false; };
   }, [debounced, page, t]);
   useEffect(load, [load]);
 
@@ -201,7 +199,7 @@ export default function SiteUsers() {
                     <button className="adm-btn" type="button" disabled={busyUsername === user.username} onClick={() => (selected?.user?.username === user.username ? setSelected(null) : openUser(user.username))}>
                       {busyUsername === user.username ? '…' : t('uManage')}
                     </button>
-                    <a className="adm-btn" href={`/members/${encodeURIComponent(user.username)}`} target="_blank" rel="noreferrer">{t('uProfile')}</a>
+                    <a className="adm-btn" href={`/user/${encodeURIComponent(user.username)}`} target="_blank" rel="noreferrer">{t('uProfile')}</a>
                     <button className="adm-btn adm-danger" type="button" onClick={() => removeUser(user)}>{t('delete')}</button>
                   </div></td>
                 </tr>

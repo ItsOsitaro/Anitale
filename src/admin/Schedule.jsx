@@ -15,19 +15,22 @@ export default function Schedule() {
   const [busy, setBusy] = useState('');
   const [toast, setToast] = useState('');
 
-  const load = useCallback(async () => {
+  const load = useCallback(() => {
+    // alive-guard: a stale response must not overwrite a newer one.
+    let active = true;
     setLoading(true);
-    try {
-      const data = await fetch('/api/anime').then((r) => r.json());
+    fetch('/api/anime').then((r) => r.json()).then((data) => {
+      if (!active) return;
       setItems(Array.isArray(data) ? data : (data.items || []));
-    } catch (error) {
-      setToast(error.message || String(error));
-    } finally {
-      setLoading(false);
-    }
+    }).catch((error) => {
+      if (active) setToast(error.message || String(error));
+    }).finally(() => {
+      if (active) setLoading(false);
+    });
+    return () => { active = false; };
   }, []);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(load, [load]);
 
   const changeDay = async (item, nextDay) => {
     setBusy(item.slug);

@@ -54,7 +54,7 @@ export const mangaAdminPatch = z.object({
 export const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,24}$/;
 export const siteRegisterInput = z.object({
   username: z.string().trim().max(24).regex(USERNAME_PATTERN, 'Username may contain only letters, digits, _ and - (3–24 chars)'),
-  password: z.string().min(6, 'Password must be at least 6 characters').max(100),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   bio: text(300).optional(),
 });
 export const siteUserEntryInput = z.object({
@@ -74,12 +74,12 @@ export const siteProfileInput = z.object({
 // bio edit / password reset). Everything is optional because PATCH is partial.
 export const siteAdminUserCreate = z.object({
   username: z.string().trim().max(24).regex(USERNAME_PATTERN, 'Username may contain only letters, digits, _ and - (3–24 chars)'),
-  password: z.string().min(6, 'Password must be at least 6 characters').max(100),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   bio: text(300).optional(),
 });
 export const siteAdminUserPatch = z.object({
   username: z.string().trim().max(24).regex(USERNAME_PATTERN, 'Username may contain only letters, digits, _ and - (3–24 chars)').optional(),
-  password: z.string().min(6, 'Password must be at least 6 characters').max(100).optional(),
+  password: z.string().min(8, 'Password must be at least 8 characters').max(100).optional(),
   // No default here: an absent bio field must stay "not provided", not ''.
   bio: z.string().trim().max(300).optional(),
 });
