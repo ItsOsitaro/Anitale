@@ -15,7 +15,7 @@ import { foldTitle, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, createUser, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { exportData } from './export-data.js';
-import { coverUrlFor,  cleanupTemp, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover,
+import { BLOB_MODE, coverUrlFor,  cleanupTemp, handleCoverRequest, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover, renameBlobCover,
 } from './images.js';
 import { downloadImage, fetchAnimeFull, fetchMangaFull, jikanCircuitOpen, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
 import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
@@ -47,6 +47,7 @@ const renameCover = (cover, newSlug) => {
   const from = path.join(COVERS_DIR, cover);
   if (!fs.existsSync(from)) return cover;
   fs.copyFileSync(from, path.join(COVERS_DIR, next)); // copy: the old file may still be used by the static fallback data
+  renameBlobCover(cover, next);
   return next;
 };
 
@@ -938,7 +939,16 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
 
   // ---------- Static files ----------
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
-  app.use('/covers', express.static(COVERS_DIR));
+  // Blob mode: /covers paths reaching the function (i.e. files absent from the
+  // static layer) resolve from the warm-instance mirror or redirect to the
+  // durable store; every other environment keeps plain static serving.
+  app.use('/covers', (req, res, next) => {
+    if (BLOB_MODE) {
+      handleCoverRequest(req, res).catch(next);
+      return;
+    }
+    next();
+  }, express.static(COVERS_DIR));
   const dist = path.join(ROOT_DIR, 'dist');
   if (fs.existsSync(path.join(dist, 'index.html'))) {
     app.use(express.static(dist, { index: false }));
