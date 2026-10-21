@@ -15,8 +15,7 @@ import { foldTitle, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, createUser, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { exportData } from './export-data.js';
-import {
-  cleanupTemp, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover,
+import { coverUrlFor,  cleanupTemp, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover,
 } from './images.js';
 import { downloadImage, fetchAnimeFull, fetchMangaFull, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
 import { anilistFacetSearch, anilistImport, anilistMangaDraft, anilistSearch } from './anilist.js';
@@ -399,7 +398,7 @@ export const createApp = () => {
         year: item.year,
         format: item.format,
         // Manga covers reuse the matching anime cover; fall back to the plain PNG path.
-        image: item.image || animeBase.get(item.slug) || `/covers/${item.slug}.png`,
+        image: item.image || animeBase.get(item.slug) || coverUrlFor(item.slug),
         rank: titles.some((value) => value.startsWith(query)) ? 0 : 1,
       });
     }

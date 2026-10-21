@@ -15,6 +15,15 @@ export const detectImageExt = (buf) => {
   return null;
 };
 
+// Which extension actually exists on disk for a slug? Search/offline
+// fallbacks use this instead of blindly guessing .png.
+export const coverUrlFor = (slug) => {
+  for (const ext of ['jpg', 'png', 'webp']) {
+    if (fs.existsSync(path.join(COVERS_DIR, `${slug}.${ext}`))) return `/covers/${slug}.${ext}`;
+  }
+  return '';
+};
+
 export const removeCoversForSlug = (slug, keep) => {
   for (const ext of ['jpg', 'png', 'webp']) {
     const name = `${slug}.${ext}`;

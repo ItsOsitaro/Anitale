@@ -52,10 +52,22 @@ const fromStaticFiles = async () => {
     fetchJson(`${baseUrl}data/anime-details.json`).catch(() => []),
   ]);
   const detailsBySlug = new Map(details.map((entry) => [entry.slug, entry]));
-  return anime.map((item) => ({
+  // Covers carry mixed extensions in the wild (.jpg from imports, .png from
+  // seeds): probe cheaply so the offline fallback never shows broken images.
+  const probeCover = async (slug) => {
+    for (const ext of ['jpg', 'png', 'webp']) {
+      try {
+        const res = await fetch(`${baseUrl}covers/${slug}.${ext}`, { method: 'HEAD' });
+        if (res.ok) return `${baseUrl}covers/${slug}.${ext}`;
+      } catch { /* offline probe — keep trying */ }
+    }
+    return null;
+  };
+  const images = await Promise.all(anime.map((item) => probeCover(item.slug)));
+  return anime.map((item, index) => ({
     ...item,
     ...detailsBySlug.get(item.slug),
-    image: `${baseUrl}covers/${item.slug}.png`,
+    image: images[index] || PLACEHOLDER,
   }));
 };
 
