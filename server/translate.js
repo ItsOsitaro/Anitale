@@ -87,7 +87,14 @@ const getLocalTranslator = () => {
     const { pipeline, env } = await import('@huggingface/transformers');
     env.localModelPath = modelsRoot();
     env.allowRemoteModels = false; // strictly offline at translate time
-    return pipeline('translation', NLLB_ID, { dtype: 'q8' });
+    // Session trim: 2 ORT threads + CPU mem arena disabled keep the resident
+    // footprint ~1.8GB (the unrestricted arena climbs to ~2.9GB and OOMs the
+    // serverless memory cap). Serial translations queue above through
+    // localChain, so stripping threads costs latency only, not throughput.
+    return pipeline('translation', NLLB_ID, {
+      dtype: 'q8',
+      session_options: { intra_op_num_threads: 2, enableCpuMemArena: false },
+    });
   })();
   return localTranslatorPromise;
 };
