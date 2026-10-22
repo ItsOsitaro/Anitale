@@ -9,7 +9,7 @@ export const INFO_FIELDS = ['Type', 'Episodes', 'Status', 'Aired', 'Premiered', 
 export const STAT_FIELDS = [['score', 'sScore'], ['scoredBy', 'sScoredBy'], ['ranked', 'sRanked'], ['popularity', 'sPopularity'], ['members', 'sMembers'], ['favorites', 'sFavorites']];
 
 export const emptyForm = () => ({
-  title: '', slug: '', malId: null, format: 'TV', category: '', year: '', score: '', airingDay: '', synopsis: '', genres: [],
+  title: '', slug: '', malId: null, format: 'TV', category: '', year: '', score: '', airingDay: '', synopsis: '', synopsisFa: '', genres: [],
   synonyms: [], japanese: '', romaji: '', english: '',
   info: Object.fromEntries(INFO_FIELDS.map((name) => [name, ''])), extraRows: [],
   stats: { score: '', scoredBy: '', ranked: '', popularity: '', members: '', favorites: '' },
@@ -17,7 +17,8 @@ export const emptyForm = () => ({
   tempCover: '', image: '',
 });
 
-// API item / Jikan draft -> form state
+// API item / Jikan draft -> form state. The synopsis may be a legacy plain
+// string or bilingual { fa, en } — split it into the two form fields.
 export const toForm = (item) => {
   const form = emptyForm();
   const rows = Array.isArray(item.information) ? item.information : [];
@@ -26,10 +27,13 @@ export const toForm = (item) => {
     if (INFO_FIELDS.includes(row.label)) form.info[row.label] = row.value;
     else if (row.label !== 'Genres') extraRows.push(row);
   }
+  const synopsis = item.synopsis && typeof item.synopsis === 'object'
+    ? { en: item.synopsis.en || '', fa: item.synopsis.fa || '' }
+    : { en: item.synopsis || '', fa: '' };
   return {
     ...form,
     title: item.title || '', slug: item.slug || '', malId: item.malId ?? null, format: item.format || '', category: item.category || '',
-    year: item.year || '', score: item.sampleScore ?? item.score ?? '', airingDay: item.airingDay || '', synopsis: item.synopsis || '', genres: item.genres || [],
+    year: item.year || '', score: item.sampleScore ?? item.score ?? '', airingDay: item.airingDay || '', synopsis: synopsis.en, synopsisFa: synopsis.fa, genres: item.genres || [],
     synonyms: item.alternativeTitles?.synonyms || [], japanese: item.alternativeTitles?.japanese || '', romaji: item.alternativeTitles?.romaji || '', english: item.alternativeTitles?.english || '',
     extraRows,
     stats: { ...form.stats, ...(item.statistics || {}) },
@@ -62,6 +66,7 @@ export const toPayload = (form, { omitTempCover = false } = {}) => {
     score: form.score === '' || form.score == null ? null : Number(form.score),
     airingDay: form.airingDay || '',
     synopsis: form.synopsis,
+    synopsisFa: form.synopsisFa,
     genres: form.genres,
     alternativeTitles: { synonyms: form.synonyms, japanese: form.japanese, romaji: form.romaji, english: form.english },
     information,

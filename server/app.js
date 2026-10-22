@@ -11,7 +11,7 @@ import {
   sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials,
 } from './auth.js';
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteProfileInput, siteRegisterInput, siteUserEntryInput, WEEKDAYS } from './schemas.js';
-import { foldTitle, rowToItem, slugify } from './shape.js';
+import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, createUser, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { exportData } from './export-data.js';
@@ -901,10 +901,15 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     const { draft, tempCover, coverWarning } = await fetchExternalDraft(row.mal_id);
     // undefined = unknown source, keep the stored day; null / '' = clear; else the day itself.
     const airingDay = draft.airingDay === undefined ? (row.airing_day || '') : (draft.airingDay || '');
+    // Persian synopsis is admin-authored (the source has none) — a refresh
+    // re-attaches the stored fa to the fresh English text instead of wiping it.
+    const stored = parseSynopsis(row.synopsis);
+    const storedFa = stored && typeof stored === 'object' ? (stored.fa || '') : '';
     const input = animeInput.parse({
       ...draft,
       slug: row.slug,
       airingDay,
+      ...(storedFa ? { synopsisFa: storedFa } : {}),
       ...(tempCover ? { tempCover } : {}),
     });
     let cover = row.cover;
@@ -918,7 +923,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     if (before.format !== after.format) changed.push({ field: 'format', from: before.format, to: after.format });
     if (before.sampleScore !== after.sampleScore) changed.push({ field: 'score', from: before.sampleScore, to: after.sampleScore });
     if ((before.airingDay || '') !== (after.airingDay || '')) changed.push({ field: 'airingDay', from: before.airingDay || '', to: after.airingDay || '' });
-    if (before.synopsis !== after.synopsis) changed.push({ field: 'synopsis' });
+    if (JSON.stringify(before.synopsis) !== JSON.stringify(after.synopsis)) changed.push({ field: 'synopsis' });
     return { item: after, coverWarning, changes: changed };
   };
 

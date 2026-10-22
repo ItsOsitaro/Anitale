@@ -60,6 +60,8 @@ export default function AnimeForm() {
         next.slug = current.slug;
         // A source-provided broadcast day wins; an empty draft keeps the stored day.
         next.airingDay = draft.airingDay === undefined ? current.airingDay : (draft.airingDay || '');
+        // Persian synopsis is admin-authored (the source has none) — keep it.
+        next.synopsisFa = current.synopsisFa;
       }
       return next;
     });
@@ -143,6 +145,7 @@ export default function AnimeForm() {
           <Field id="f-score" label={t('fScore')}><input id="f-score" dir="ltr" type="number" min="0" max="10" step="0.01" value={form.score} onChange={(e) => set({ score: e.target.value })} /></Field>
           <div className="adm-wide"><TagInput id="f-genres" label={t('fGenres')} value={form.genres} onChange={(genres) => set({ genres })} /></div>
           <Field id="f-synopsis" label={t('fSynopsis')} wide><textarea id="f-synopsis" dir="auto" rows={6} value={form.synopsis} onChange={(e) => set({ synopsis: e.target.value })} /></Field>
+          <Field id="f-synopsis-fa" label={t('fSynopsisFa')} hint={t('fSynopsisFaHint')} wide><textarea id="f-synopsis-fa" dir="auto" rows={6} value={form.synopsisFa} onChange={(e) => set({ synopsisFa: e.target.value })} /></Field>
         </div>
       </fieldset>
 

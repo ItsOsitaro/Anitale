@@ -29,6 +29,11 @@ import {
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
 
+// Synopsis value: the catalog stores a legacy plain string OR bilingual JSON
+// { fa, en }. L() resolves the object to the current language with a
+// fa→en fallback; plain strings pass through untouched.
+const synopsisText = (item, lang) => (typeof item?.synopsis === 'string' ? item.synopsis : L(item?.synopsis, lang));
+
 // خورشید/ماه site-native light/dark switch — knob slides, icons crossfade,
 // colors live on the site's own tokens. Context-driven: works on every page.
 function ThemeSwitch() {
@@ -683,7 +688,7 @@ function HomePage() {
                 <div className="hero-content">
                   <Badge variant="secondary" className="hero-eyebrow">{t('featuredLabel')}</Badge>
                   <h1>{featured.title}</h1>
-                  <p>{featured.synopsis}</p>
+                  <p dir="auto">{synopsisText(featured, lang)}</p>
                   <div className="hero-action-row">
                     <Link className="hero-action" to={mediaHref(featured)}>{t('viewAnime')}</Link>
                     <button className="hero-action reroll" type="button" onClick={suggestAnother} aria-label={t('suggestAnother')}>
@@ -1401,9 +1406,14 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   if (idMatch) item = catalog.find((entry) => String(entry.malId) === idMatch[1]) || null;
   if (!item) item = catalog.find((entry) => entry.slug === idOrSlug) || null;
   const resolved = item;
-  item = mediaType === 'manga'
-    ? { ...item, synopsis: item ? (typeof item.synopsis === 'string' ? item.synopsis : L(item.synopsis, lang)) : item, image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item }
-    : item;
+  item = {
+    ...item,
+    // Both media types share the same synopsis contract: a legacy plain string
+    // or bilingual { fa, en } — resolve it to the viewer's language (manga's
+    // seeded rows carry both; anime shows Persian once one is stored).
+    synopsis: synopsisText(item, lang),
+    image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item,
+  };
   // Queue 19: the fa storefront shows the Persian title when manga rows carry one.
   if (mediaType === 'manga' && item && lang === 'fa' && item.titleFa) item = { ...item, title: item.titleFa };
 

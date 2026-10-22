@@ -18,6 +18,9 @@ export const animeInput = z.object({
   score: z.coerce.number().min(0).max(10).nullable().optional(),
   airingDay: z.enum(['', ...WEEKDAYS]).default(''),
   synopsis: text(8000),
+  // Persian synopsis (admin-authored). Persisted together with the English
+  // text as bilingual JSON { fa, en } so the storefront switches by language.
+  synopsisFa: z.string().trim().max(8000).optional(),
   genres: list(z.string().trim().min(1).max(50)),
   alternativeTitles: z.object({
     synonyms: list(z.string().trim().min(1).max(200)),

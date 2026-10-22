@@ -5,6 +5,14 @@ const parse = (text, fallback) => {
 
 const hasValues = (obj) => obj && Object.values(obj).some((value) => String(value ?? '').trim() !== '');
 
+// Anime synopsis column: legacy rows hold a plain string; bilingual rows hold
+// JSON { fa, en }. Return exactly what the viewer-side contract needs.
+export const parseSynopsis = (text) => {
+  const value = parse(text, null);
+  if (value && typeof value === 'object' && !Array.isArray(value)) return value;
+  return typeof text === 'string' ? text : '';
+};
+
 export const rowToItem = (row) => {
   const statistics = parse(row.statistics, null);
   return {
@@ -18,7 +26,7 @@ export const rowToItem = (row) => {
     sampleScore: row.score ?? 0,
     ...(row.airing_day ? { airingDay: row.airing_day } : {}),
     genres: parse(row.genres, []),
-    synopsis: row.synopsis,
+    synopsis: parseSynopsis(row.synopsis),
     alternativeTitles: {
       synonyms: parse(row.alt_synonyms, []),
       japanese: row.alt_japanese,
@@ -38,27 +46,35 @@ export const rowToItem = (row) => {
 };
 
 // Flattens a validated input object into DB column values.
-export const inputToColumns = (input) => ({
-  mal_id: input.malId ?? null,
-  title: input.title,
-  category: input.category,
-  year: input.year,
-  format: input.format,
-  score: input.score ?? null,
-  airing_day: input.airingDay || '',
-  synopsis: input.synopsis,
-  genres: JSON.stringify(input.genres),
-  alt_synonyms: JSON.stringify(input.alternativeTitles.synonyms),
-  alt_japanese: input.alternativeTitles.japanese,
-  alt_romaji: input.alternativeTitles.romaji,
-  alt_english: input.alternativeTitles.english,
-  information: JSON.stringify(input.information),
-  statistics: hasValues(input.statistics) ? JSON.stringify(input.statistics) : null,
-  available_at: JSON.stringify(input.availableAt),
-  resources: JSON.stringify(input.resources),
-  streaming_platforms: JSON.stringify(input.streamingPlatforms),
-  streaming_notice: input.streamingNotice,
-});
+export const inputToColumns = (input) => {
+  // Synopsis: the form sends the English text plus an optional Persian add-on
+  // (synopsisFa). With Persian present both persist as JSON { fa, en } so the
+  // storefront can switch by language; without it we keep the legacy string.
+  const en = typeof input.synopsis === 'string' ? input.synopsis : (input.synopsis?.en || '');
+  const fa = typeof input.synopsis === 'string' ? (input.synopsisFa || '') : (input.synopsis?.fa || input.synopsisFa || '');
+  const synopsis = fa ? JSON.stringify({ fa, en }) : en;
+  return {
+    mal_id: input.malId ?? null,
+    title: input.title,
+    category: input.category,
+    year: input.year,
+    format: input.format,
+    score: input.score ?? null,
+    airing_day: input.airingDay || '',
+    synopsis,
+    genres: JSON.stringify(input.genres),
+    alt_synonyms: JSON.stringify(input.alternativeTitles.synonyms),
+    alt_japanese: input.alternativeTitles.japanese,
+    alt_romaji: input.alternativeTitles.romaji,
+    alt_english: input.alternativeTitles.english,
+    information: JSON.stringify(input.information),
+    statistics: hasValues(input.statistics) ? JSON.stringify(input.statistics) : null,
+    available_at: JSON.stringify(input.availableAt),
+    resources: JSON.stringify(input.resources),
+    streaming_platforms: JSON.stringify(input.streamingPlatforms),
+    streaming_notice: input.streamingNotice,
+  };
+};
 
 export const slugify = (text) => String(text || '')
   .normalize('NFKD')
