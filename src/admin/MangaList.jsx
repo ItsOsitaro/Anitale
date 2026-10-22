@@ -122,11 +122,11 @@ export default function MangaList() {
                     <Link to={`/manga/${row.slug}`} dir="auto"><strong>{row.title}</strong></Link>
                     <div className="adm-muted" dir="ltr">{row.slug}{row.malId ? ` · MAL ${row.malId}` : ''}{row.publicationStatus ? ` · ${row.publicationStatus}` : ''}</div>
                   </td>
-                  <td dir="auto">{row.titleFa || '—'}</td>
-                  <td>{row.year || '—'}</td>
-                  <td>{row.sampleScore != null ? Number(row.sampleScore).toFixed(1) : '—'}</td>
-                  <td>{row.chapters ?? '—'}</td>
-                  <td>
+                  <td data-th={t('mangaColFa')} dir="auto">{row.titleFa || '—'}</td>
+                  <td data-th={t('mangaColYear')}>{row.year || '—'}</td>
+                  <td data-th={t('mangaColScore')}>{row.sampleScore != null ? Number(row.sampleScore).toFixed(1) : '—'}</td>
+                  <td data-th={t('mangaColChapters')}>{row.chapters ?? '—'}</td>
+                  <td data-th={t('mangaColActions')}>
                     <div className="adm-actions">
                       <button className="adm-btn" type="button" disabled={busy === row.slug} onClick={() => (editing?.slug === row.slug ? setEditing(null) : startEdit(row))}>{editing?.slug === row.slug ? t('mangaClose') : t('mangaEdit')}</button>
                       <button className="adm-btn" type="button" disabled={busy === row.slug || !row.malId} title={row.malId ? t('mangaRefreshBtn') : t('mangaRefreshNoId', { title: row.title })} onClick={() => refresh(row)}>{busy === row.slug ? t('mangaBusy') : t('mangaRefreshBtn')}</button>

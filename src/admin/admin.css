@@ -613,9 +613,54 @@ body[data-theme="dark"] .adm-primary:hover:not(:disabled) { background: var(--ac
   .admin-root .adm-header-tools .adm-btn { font-size: .8rem; padding: 5px 8px; }
 }
 
+/* Phones: data tables become stacked cards (labels via data-th attributes) */
+@media (max-width: 700px) {
+  .adm-table-wrap { overflow-x: visible; padding: 12px; }
+  .adm-table { border-collapse: separate; border-spacing: 0; }
+  .adm-table thead { display: none; }
+  .adm-table tbody tr {
+    display: block;
+    margin-block-end: 10px;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-md);
+    background: var(--panel);
+  }
+  .adm-table tbody tr:last-child { margin-block-end: 0; }
+  .adm-table tbody tr:hover > td { background: transparent; }
+  .adm-table td {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 6px 0;
+    border: 0;
+    min-width: 0;
+  }
+  .adm-table td[data-th]::before {
+    content: attr(data-th);
+    flex: none;
+    width: 96px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: .05em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .adm-table td > * { min-width: 0; }
+  .adm-table td strong { overflow-wrap: anywhere; }
+  .adm-table .adm-actions { flex: 1 1 100%; }
+  .adm-actions .adm-btn { min-height: 40px; padding: 7px 12px; font-size: .84rem; }
+
+  /* schedule rows: readable + tappable */
+  .adm-schedule-item { padding: 9px 10px; gap: 8px; }
+  .adm-schedule-title { white-space: normal; overflow: visible; text-overflow: clip; max-width: none; }
+  .adm-schedule-item select { min-height: 36px; font-size: 12px; }
+  .adm-schedule-item .adm-btn { min-height: 36px; padding: 5px 10px; }
+}
+
 /* touch: keep comfortable hit targets for row actions */
 @media (pointer: coarse) {
-  .adm-actions .adm-btn { min-height: 42px; }
+  .adm-actions .adm-btn { min-height: 44px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

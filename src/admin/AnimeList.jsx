@@ -111,11 +111,11 @@ export default function AnimeList() {
               <tr key={item.slug}>
                 <td>{item.image ? <img className="adm-thumb" src={item.image} alt="" /> : <span className="adm-thumb adm-thumb-empty" />}</td>
                 <td><Link to={`/admin/edit/${item.slug}`} dir="auto"><strong>{item.title}</strong></Link><div className="adm-muted" dir="ltr">{item.slug}</div></td>
-                <td>{item.format}</td>
-                <td>{item.year}</td>
-                <td>{item.score ? Number(item.score).toFixed(1) : '—'}</td>
-                <td>{formatDate(item.updatedAt)}</td>
-                <td><div className="adm-actions">
+                <td data-th={t('type')}>{item.format}</td>
+                <td data-th={t('year')}>{item.year}</td>
+                <td data-th={t('score')}>{item.score ? Number(item.score).toFixed(1) : '—'}</td>
+                <td data-th={t('updated')}>{formatDate(item.updatedAt)}</td>
+                <td data-th={t('actions')}><div className="adm-actions">
                   <Link className="adm-btn" to={`/admin/edit/${item.slug}`}>{t('edit')}</Link>
                   <Link className="adm-btn" to={mediaHref(item)} target="_blank">{t('view')}</Link>
                   <button

@@ -2640,18 +2640,61 @@ body[data-theme='dark'] .status-pill.is-active {
 @media (max-width: 520px) {
   .card-grid,
   .loading-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px 10px;
+  }
+
+  /* Compact cards so covers stay useful instead of overwhelming the screen */
+  .anime-cover {
+    height: 150px;
+  }
+
+  .anime-cover::after {
+    inset-block-start: 102px;
+    height: 50px;
+  }
+
+  .anime-info {
+    padding: 10px 10px 12px;
+  }
+
+  .anime-title {
+    font-size: 12px;
+    margin-block-end: 3px;
+  }
+
+  .anime-meta {
+    font-size: 10.5px;
+    gap: 5px;
+  }
+
+  .card-rank {
+    top: 8px;
+    inset-inline-start: 8px;
+    width: 26px;
+    height: 26px;
+    font-size: 10px;
+  }
+
+  .sample-score {
+    font-size: 10.5px;
+    margin-block-start: 7px;
+    padding-block-start: 7px;
   }
 
   .page-shell,
   .anime-page-shell,
   .section-page-shell {
-    margin-block-start: 18px;
-    width: calc(100% - 24px);
+    margin-block-start: 14px;
+    width: calc(100% - 20px);
   }
 
   .hero {
-    padding: 24px 20px;
+    padding: 22px 18px;
+  }
+
+  .featured-series-card img {
+    height: 200px;
   }
 
   .anime-profile {
@@ -2729,6 +2772,32 @@ body[data-theme='dark'] .status-pill.is-active {
 
   .section-rail {
     grid-template-columns: 1fr;
+  }
+
+  /* Directory link piles become scannable two-column lists on phones */
+  .rail-group {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 10px;
+  }
+
+  .rail-group h3 {
+    grid-column: 1 / -1;
+  }
+
+  .rail-group a {
+    padding: 8px 6px;
+    font-size: 12px;
+  }
+
+  .side-list {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 3px 8px;
+  }
+
+  .side-list a {
+    padding: 9px 10px;
   }
 
   .stats {

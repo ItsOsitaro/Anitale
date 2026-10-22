@@ -189,13 +189,13 @@ export default function SiteUsers() {
                   <td>
                     <strong dir="ltr">{user.username}</strong>
                   </td>
-                  <td>{fmtDate(user.joined, lang)}</td>
-                  <td>
+                  <td data-th={t('uJoined')}>{fmtDate(user.joined, lang)}</td>
+                  <td data-th={t('uListCount')}>
                     <span className="adm-chip">{t('uAnime')}: {user.animeCount}</span>
                     <span className="adm-chip">{t('uManga')}: {user.mangaCount}</span>
                   </td>
-                  <td dir="auto">{user.bio ? user.bio.slice(0, 60) : <span className="adm-muted">{t('uNoBio')}</span>}</td>
-                  <td><div className="adm-actions">
+                  <td data-th={t('uBio')} dir="auto">{user.bio ? user.bio.slice(0, 60) : <span className="adm-muted">{t('uNoBio')}</span>}</td>
+                  <td data-th={t('actions')}><div className="adm-actions">
                     <button className="adm-btn" type="button" disabled={busyUsername === user.username} onClick={() => (selected?.user?.username === user.username ? setSelected(null) : openUser(user.username))}>
                       {busyUsername === user.username ? '…' : t('uManage')}
                     </button>
