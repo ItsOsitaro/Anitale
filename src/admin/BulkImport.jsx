@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
@@ -9,12 +10,13 @@ const TOTAL_MAX = 400; // runaway guard: the whole run, not one chunk
 export default function BulkImport() {
   const { t, toast } = useAdmin();
   // Tab switch: the anime and manga halves are the same UI, one type at a time.
-  const [mediaType, setMediaType] = useState('anime');
+  // ?type=manga (from the manga list's "+ new manga" button) preselects the tab.
+  const [searchParams] = useSearchParams();
+  const initialType = searchParams.get('type') === 'manga' ? 'manga' : 'anime';
+  const [mediaType, setMediaType] = useState(initialType);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [running, setRunning] = useState(false);
-  const [refreshing, setRefreshing] = useState(false);
-  const [refreshReport, setRefreshReport] = useState(null);
   const [progress, setProgress] = useState(null); // { done, total }
   const [log, setLog] = useState([]);
   const [summary, setSummary] = useState(null); // { imported, exists, ok, missing, failed }
@@ -102,20 +104,6 @@ export default function BulkImport() {
     setFacetPreviewDone(false);
   }, [selected, facet, mediaType]);
 
-  const runMangaRefresh = async () => {
-    setRefreshing(true);
-    setRefreshReport(null);
-    try {
-      const report = await api.mangaRefreshAll();
-      setRefreshReport(report);
-      toast(t('bulkRefreshDone', { updated: report.updated, failed: report.failed }));
-    } catch (err) {
-      setError(errText(err, t));
-    } finally {
-      setRefreshing(false);
-    }
-  };
-
   // Queue 26: facet discovery — AniList search by genre / year / min score.
   const discover = async () => {
     setDiscovering(true);
@@ -157,10 +145,10 @@ export default function BulkImport() {
 
       {/* Type tabs — both halves get the exact same import UI */}
       <div className="bulk-tabs" role="tablist" aria-label={t('bulkType')}>
-        <button type="button" role="tab" aria-selected={!isManga} disabled={running || refreshing} onClick={() => setMediaType('anime')}>
+        <button type="button" role="tab" aria-selected={!isManga} disabled={running} onClick={() => setMediaType('anime')}>
           {t('bulkAnime')}
         </button>
-        <button type="button" role="tab" aria-selected={isManga} disabled={running || refreshing} onClick={() => setMediaType('manga')}>
+        <button type="button" role="tab" aria-selected={isManga} disabled={running} onClick={() => setMediaType('manga')}>
           {t('bulkManga')}
         </button>
       </div>
@@ -296,22 +284,6 @@ export default function BulkImport() {
             </li>
           ))}
         </ul>
-      )}
-
-      {isManga && (
-        <section className="bulk-refresh">
-          <h3>{t('bulkRefreshMangaTitle')}</h3>
-          <p className="adm-muted">{t('bulkRefreshMangaHint')}</p>
-          <button className="adm-btn" type="button" onClick={runMangaRefresh} disabled={running || refreshing}>
-            {refreshing ? t('bulkRefreshing') : t('bulkRefreshAll')}
-          </button>
-          {refreshReport && (
-            <p className="bulk-summary">
-              <span className="ok">{t('bulkRefreshedCount', { n: refreshReport.updated })}</span>
-              {refreshReport.failed > 0 && <span className="fail">{t('bulkRefreshFailedCount', { n: refreshReport.failed })}</span>}
-            </p>
-          )}
-        </section>
       )}
     </div>
   );

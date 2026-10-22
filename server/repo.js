@@ -49,6 +49,7 @@ export const mangaRowToItem = (row) => ({
   synopsis: parseJson(row.synopsis, ''), // { fa, en } (plain strings are accepted too)
   cover: row.cover || '',
   ...(row.cover ? { image: `/covers/${row.cover}` } : {}),
+  updatedAt: row.updated_at || '',
 });
 
 export const listManga = () => db.prepare('SELECT * FROM manga ORDER BY id ASC').all().map(mangaRowToItem);
