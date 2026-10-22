@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="مرور انیمه و مانگا — کاورها، ژانرها، رتبه‌بندی‌ها و پیشنهادها. / Browse anime & manga — covers, genres, rankings, and recommendations." />
+    <link rel="icon" type="image/svg+xml" href="/logo.svg" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <title>انی‌تیل — انیمه و مانگا / Anitale</title>
+    <script type="module" crossorigin src="/assets/index-CZCTxoiT.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-DS3J7v9U.css">
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
+</html>

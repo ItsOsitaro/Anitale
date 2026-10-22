@@ -1,23 +1,30 @@
-// English -> Persian synopsis translation. No card, no AI required: the
-// pipeline rides ordinary machine-translation services, in a fixed fallback
-// chain —
-//   1. Google Translate (unofficial gtx endpoint): free, keyless, the default.
-//      Unofficial = no SLA; heavy datacenter traffic may hit 429s, in which
-//      case the chain moves on.
-//   2. MyMemory: keyless (larger daily quota with MYMEMORY_EMAIL set), TM-based
-//      quality, needs chunked requests (~500-byte caps).
-//   3. AI Gateway (optional, off by default): only enabled when a translate
-//      provider env (AI_GATEWAY_API_KEY, or TRANSLATE_PROVIDER=ai with Vercel
-//      OIDC on a deployment) says so — the best Persian, needs billing.
-// TRANSLATE_PROVIDER pins one provider strictly: 'google' | 'mymemory' | 'ai'.
+// English -> Persian synopsis translation. Fully local by default: the
+// engine chain is —
+//   1. Local NLLB-200 600M (ONNX, quantized, bundled in models/): runs on the
+//      server itself, zero external calls at translate time. Set up once with
+//      `npm run setup:model`; TRANSLATE_MODELS_DIR overrides its root.
+//      TRANSLATE_FALLBACK_REMOTE=0 forbids every remote engine outright.
+//   2. (fallback only, when the model is absent or errors) Google Translate
+//      (unofficial gtx endpoint, keyless) -> MyMemory (keyless) -> optional
+//      AI Gateway (only with AI_GATEWAY_API_KEY, or TRANSLATE_PROVIDER=ai
+//      with Vercel OIDC — the best Persian, needs billing).
+// TRANSLATE_PROVIDER pins one remote provider strictly: 'google'|'mymemory'|'ai'.
 // Call sites persist the result as the Persian half of the bilingual synopsis,
 // so import (single + bulk), refresh and re-import all fill Persian
 // automatically; a provider failure falls through the chain, and exhaustion
 // leaves the row English-only instead of failing the enclosing flow.
+import fs from 'node:fs';
+import path from 'node:path';
+
+const NLLB_ID = 'Xenova/nllb-200-distilled-600M';
+const NLLB_MODEL_DIR = path.join('Xenova', 'nllb-200-distilled-600M');
 const AI_GATEWAY_URL = () => process.env.AI_GATEWAY_URL || 'https://ai-gateway.vercel.sh/v1/chat/completions';
 const AI_MODEL = () => process.env.TRANSLATE_MODEL || 'google/gemini-3.1-flash-lite';
 const REQUEST_TIMEOUT_MS = 20_000;
 const MYMEMORY_CHUNK = 450;
+// English chars per chunk fed to the local model: each piece stays well under
+// the NLLB 1024-token context window, leaving room for the Persian output.
+const LOCAL_CHUNK = 1100;
 
 // Credits lines the source vendors append — never part of a clean translation.
 const SOURCE_NOISE = /\s*\((?:Source:\s*[^)]+|Written by MAL Rewrite)\s*\)/gi;
@@ -57,6 +64,64 @@ const chunkSource = (text, max) => {
 };
 
 const aiCredential = () => process.env.AI_GATEWAY_API_KEY || (pinnedProvider() === 'ai' ? process.env.VERCEL_OIDC_TOKEN || '' : '');
+
+// ---- engine 0: local NLLB-600M (the default, no network) --------------------
+// Weights ship in models/Xenova/nllb-200-distilled-600M (fetch once via
+// scripts/fetch-model.mjs). The model loads lazily and is memoized per
+// process; translations serialize through a promise chain so the in-process
+// CPU cost stays bounded. allowRemoteModels = false guarantees translate
+// time never phones home.
+const modelsRoot = () => process.env.TRANSLATE_MODELS_DIR || path.resolve('models');
+
+// Cheap probe used by import wiring: bulk import defers its Persian filling
+// to the backfill job while the heavy local engine is what is in charge.
+export const localEngineActive = () => fs.existsSync(path.join(modelsRoot(), NLLB_MODEL_DIR, 'config.json'));
+
+let localTranslatorPromise = null;
+let localChain = Promise.resolve();
+
+const getLocalTranslator = () => {
+  if (localTranslatorPromise) return localTranslatorPromise;
+  if (!localEngineActive()) throw new Error('Local NLLB model is missing — run `npm run setup:model` once');
+  localTranslatorPromise = (async () => {
+    const { pipeline, env } = await import('@huggingface/transformers');
+    env.localModelPath = modelsRoot();
+    env.allowRemoteModels = false; // strictly offline at translate time
+    return pipeline('translation', NLLB_ID, { dtype: 'q8' });
+  })();
+  return localTranslatorPromise;
+};
+
+const localTranslate = async (text) => {
+  const translator = await getLocalTranslator();
+  const chunks = chunkSource(text, LOCAL_CHUNK);
+  const parts = [];
+  for (const chunk of chunks) {
+    const [output] = await translator(chunk, {
+      src_lang: 'eng_Latn',
+      tgt_lang: 'pes_Arab',
+      max_new_tokens: 480,
+      // Counterweight to quantization noise: the untuned q8 run sometimes
+      // doubles words (e.g. «دانشجو دانشجو») — a light repetition penalty
+      // plus an n-gram block removes those artifacts while real repeated
+      // content words survive.
+      repetition_penalty: 1.15,
+      no_repeat_ngram_size: 4,
+    });
+    const piece = String(output?.translation_text || '').trim();
+    if (!piece) throw new Error('Local NLLB returned empty text');
+    parts.push(piece);
+  }
+  return parts.join(' ');
+};
+
+// Serialized facade: concurrent callers wait instead of racing the tokenizer /
+// ORT session (CPU-bound anyway).
+const localTranslateQueued = (text) => {
+  const run = localChain.then(() => localTranslate(text));
+  localChain = run.then(() => undefined, () => undefined); // queue survives errors
+  return run;
+};
 
 // ---- provider 1: Google Translate (gtx) -----------------------------------
 const googleTranslate = async (text) => {
@@ -139,16 +204,25 @@ const aiGatewayTranslate = async (text) => {
 };
 
 const PROVIDERS = {
+  local: localTranslateQueued,
   google: googleTranslate,
   mymemory: myMemoryTranslate,
   ai: aiGatewayTranslate,
 };
 
-// Default chain: keyless machine translation first; the paid AI provider gets
-// a shot only if the deployment carries an explicit gateway key.
+// Engine order: the bundled NLLB model owns every translation; the remote
+// providers exist as error fallbacks while the model is absent or mid-setup.
+// TRANSLATE_FALLBACK_REMOTE=0 makes the chain strictly local.
+const remoteFallbackAllowed = () => String(process.env.TRANSLATE_FALLBACK_REMOTE || '') !== '0';
+
 const defaultChain = () => {
-  const chain = ['google', 'mymemory'];
-  if (process.env.AI_GATEWAY_API_KEY) chain.push('ai');
+  const chain = [];
+  if (localEngineActive()) chain.push('local');
+  else console.error('[translate] local NLLB model missing — falling back to remote providers (run `npm run setup:model`); TRANSLATE_FALLBACK_REMOTE=0 forbids this');
+  if (!localEngineActive() || remoteFallbackAllowed()) {
+    chain.push('google', 'mymemory');
+    if (process.env.AI_GATEWAY_API_KEY) chain.push('ai');
+  }
   return chain;
 };
 
@@ -160,8 +234,12 @@ export const translateSynopsis = async (text) => {
   let lastError = null;
   for (const name of chain) {
     try {
+      const startedAt = Date.now();
       const translated = await PROVIDERS[name](source);
-      if (translated) return translated;
+      if (translated) {
+        console.log(`[translate] ${name} ${Date.now() - startedAt}ms (${Buffer.byteLength(source)}B en)`);
+        return translated;
+      }
       throw new Error(`${name} returned empty text`);
     } catch (error) {
       lastError = error;
@@ -177,7 +255,10 @@ export const translateSynopsis = async (text) => {
 // translation failure never fails the enclosing flow — the row lands with the
 // best Persian it has (its previous auto text, or none).
 // `stored` is the row's current synopsis: object { fa, en, auto? } or plain text.
-export const planPersian = async (freshEn, stored) => {
+// `defer` (used by refresh-all when the local engine owns translation): skip
+// every inline translation — rows land with whatever fa they already had; the
+// backfill job fills the gaps afterwards at its own pace.
+export const planPersian = async (freshEn, stored, { defer = false } = {}) => {
   const obj = stored && typeof stored === 'object' && !Array.isArray(stored) ? stored : null;
   const storedFa = obj ? (obj.fa || '') : '';
   const storedEn = obj ? (obj.en || '') : (stored || '');
@@ -185,7 +266,7 @@ export const planPersian = async (freshEn, stored) => {
   const source = String(freshEn || '').trim();
   if (storedFa && !storedAuto) return { fa: storedFa, auto: false };
   if (storedFa && storedAuto && (!source || source === storedEn)) return { fa: storedFa, auto: true };
-  if (source) {
+  if (source && !defer) {
     try {
       return { fa: await translateSynopsis(source), auto: true };
     } catch (error) {
@@ -193,6 +274,7 @@ export const planPersian = async (freshEn, stored) => {
       if (storedFa) return { fa: storedFa, auto: true };
     }
   }
+  if (storedFa) return { fa: storedFa, auto: true };
   return { fa: '', auto: false };
 };
 

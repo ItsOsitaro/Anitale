@@ -30,6 +30,9 @@ export default function BulkImport() {
   const [discovering, setDiscovering] = useState(false);
   const [candidates, setCandidates] = useState(null);
   const [selected, setSelected] = useState([]);
+  // Persian backfill loop (local engine): fills stored rows lacking Persian
+  // synopsis — bounded batches until the server reports nothing left.
+  const [backfill, setBackfill] = useState(null); // { running, filled, failed, remaining }
 
   const total = useMemo(() => {
     if (!/^\d+$/.test(from) || !/^\d+$/.test(to)) return null;
@@ -77,6 +80,34 @@ export default function BulkImport() {
       else setRangePreviewDone(unlocked);
     }
     if (unlocked) toast(previewMode ? t('bulkPreviewDone', { n: tally.ok }) : t('bulkDone', tally));
+    // Freshly imported rows (local engine) arrive English-only — let the
+    // backfill job ride behind the import without blocking its toasts.
+    if (!previewMode && tally.imported > 0) { void runBackfillLoop(); }
+  };
+
+  const runBackfillLoop = async () => {
+    if (backfill?.running) return;
+    let totalFilled = 0;
+    let totalFailed = 0;
+    let remaining = 0;
+    setBackfill({ running: true, filled: 0, failed: 0, remaining: null });
+    try {
+      for (;;) {
+        const result = await api.backfill();
+        totalFilled += result.translated || 0;
+        totalFailed += result.failed || 0;
+        remaining = result.remaining || 0;
+        setBackfill({ running: true, filled: totalFilled, failed: totalFailed, remaining });
+        // Stop when the catalog is clean, or one round filled nothing
+        // (engine wedged — report and quit instead of a hot loop).
+        if (remaining === 0 || !(result.translated > 0)) break;
+      }
+      toast(t('bulkBackfillDone', { filled: totalFilled, failed: totalFailed, remaining }));
+    } catch (err) {
+      setError(errText(err, t));
+    } finally {
+      setBackfill((current) => ({ ...(current || {}), running: false, remaining: current?.remaining ?? 0 }));
+    }
   };
 
   const runRange = async (event, previewMode = false) => {
@@ -253,6 +284,20 @@ export default function BulkImport() {
             )}
           </div>
         )}
+      </section>
+
+      {/* ---- Persian backfill (local engine): fills stored rows lacking fa ---- */}
+      <section className="bulk-backfill">
+        <h3>{t('bulkBackfillTitle')}</h3>
+        <p className="adm-muted">{t('bulkBackfillHint')}</p>
+        <div className="adm-inline">
+          <button className="adm-btn" type="button" disabled={running || (backfill?.running)} onClick={runBackfillLoop}>
+            {backfill?.running ? t('bulkBackfillRunning') : t('bulkBackfillRun')}
+          </button>
+          {backfill?.running && backfill.remaining != null && (
+            <span className="adm-muted">{t('bulkBackfillStatus', { filled: backfill.filled, remaining: backfill.remaining })}</span>
+          )}
+        </div>
       </section>
 
       {progress && (

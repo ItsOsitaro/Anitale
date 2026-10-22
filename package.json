@@ -14,11 +14,13 @@
     "serve": "npm run build && node server/index.js",
     "seed": "node server/seed.js",
     "setup-admin": "node server/scripts/setup-admin.js",
+    "setup:model": "node scripts/fetch-model.mjs",
     "hash-password": "node server/scripts/hash-password.js"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",
     "@fontsource-variable/vazirmatn": "^5.3.0",
+    "@huggingface/transformers": "^4.3.1",
     "@tailwindcss/vite": "^4.3.3",
     "@vercel/blob": "^2.8.2",
     "axios": "^1.20.0",

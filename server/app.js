@@ -20,7 +20,7 @@ import { BLOB_MODE, coverUrlFor,  cleanupTemp, handleCoverRequest, MAX_IMAGE_BYT
 import { downloadImage, fetchAnimeFull, fetchMangaFull, jikanCircuitOpen, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
 import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
 import { mapPool } from './pool.js';
-import { translateSynopsis, planPersian, draftPersian } from './translate.js';
+import { translateSynopsis, planPersian, draftPersian, localEngineActive } from './translate.js';
 
 const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } });
@@ -538,7 +538,7 @@ export const createApp = () => {
 
   // Refresh overwrite for imported manga (rows with mal_id). Slug, fa content
   // and cover are preserved unless the source itself has something better.
-  const refreshMangaFromSource = async (row) => {
+  const refreshMangaFromSource = async (row, { deferPersian = false } = {}) => {
     const payload = await fetchMangaDraft(row.mal_id);
     let cover = row.cover;
     let coverWarning = '';
@@ -555,7 +555,7 @@ export const createApp = () => {
       } catch { /* plain string source text */ }
       return typeof row.synopsis === 'string' ? row.synopsis : '';
     })();
-    const persian = await planPersian(payload.synopsis, storedMangaSynopsis);
+    const persian = await planPersian(payload.synopsis, storedMangaSynopsis, { defer: deferPersian });
     const sourceEn = payload.synopsis || (storedMangaSynopsis && typeof storedMangaSynopsis === 'object' ? (storedMangaSynopsis.en || '') : storedMangaSynopsis);
     // updateManga stringifies whatever it receives; object = bilingual row.
     const mangaSynopsis = persian.fa
@@ -595,10 +595,11 @@ export const createApp = () => {
   app.post('/api/admin/manga/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM manga WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
+    const deferPersian = localEngineActive();
     const results = [];
     for (const row of rows) {
       try {
-        const { item, coverWarning, changes } = await refreshMangaFromSource(row);
+        const { item, coverWarning, changes } = await refreshMangaFromSource(row, { deferPersian });
         results.push({ slug: row.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) });
       } catch (error) {
         results.push({ slug: row.slug, title: row.title, ok: false, error: error.message || String(error) });
@@ -771,11 +772,11 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           fastCovers.set(draft.malId, { token, warning });
         });
         console.log(`[bulk] fast path: ${need.length} ids in one provider query (${providerMs}ms), covers ${fastDrafts.size} concurrent (${Date.now() - tCovers}ms)`);
-        // Auto Persian synopsis: translate fresh drafts once, pooled 4-way so
-        // bulk stays a single-digit-percent tax on the provider+cover time.
-        // Previews skip it (nothing is displayed), translation failures let
-        // the row through English-only.
-        if (!preview && fastDrafts.size > 0) {
+        // Persian auto-fill: with the heavy local NLLB engine in charge,
+        // translation is deferred to the backfill job (a 50-id batch inline
+        // would blow the function time cap); the remote keyless chain is
+        // fast enough to stay inline. Previews skip it either way.
+        if (!preview && fastDrafts.size > 0 && !localEngineActive()) {
           const translatable = [...fastDrafts.values()].filter((draft) => draft.synopsis);
           const tTranslate = Date.now();
           let translatedFa = 0;
@@ -788,6 +789,8 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
             }
           });
           console.log(`[bulk] fast path: Persian '${translatedFa}/${translatable.length}' (${Date.now() - tTranslate}ms)`);
+        } else if (!preview && fastDrafts.size > 0 && localEngineActive()) {
+          console.log(`[bulk] fast path: Persian deferred to backfill ride (${fastDrafts.size} ids)`);
         }
       }
       }
@@ -874,7 +877,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           const slug = uniqueSlug(draft.title);
           // The AniList fallback uses null airingDay for finished shows; the
           // form flow never parses that, but bulk persists directly.
-          await draftPersian(draft);
+          if (!localEngineActive()) await draftPersian(draft); // local engine: backfill rides later
           const draftForParse = {
             ...draft,
             slug,
@@ -902,7 +905,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           } else {
             warning = 'MyAnimeList has no cover for this title';
           }
-          await draftPersian(payload);
+          if (!localEngineActive()) await draftPersian(payload); // local engine: backfill ride
           const created = insertManga(
             { slug, title: payload.title, category: payload.category, year: payload.year, format: 'Manga', genres: payload.genres, synopsis: payload.synopsisFa ? { fa: payload.synopsisFa, en: payload.synopsis, auto: true } : payload.synopsis },
             { malId: payload.malId, score: payload.score, cover, publicationStatus: payload.publicationStatus || '', chapters: payload.chapters ?? null },
@@ -950,14 +953,16 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   // Shared: overwrite an existing DB row with fresh source data; slug is kept.
   // The airing day follows the source: a live broadcast day updates it, a
   // finished/upcoming show clears it, unknown keeps the stored day.
-  const refreshRowFromSource = async (row) => {
+  const refreshRowFromSource = async (row, { deferPersian = false } = {}) => {
     const { draft, tempCover, coverWarning } = await fetchExternalDraft(row.mal_id);
     // undefined = unknown source, keep the stored day; null / '' = clear; else the day itself.
     const airingDay = draft.airingDay === undefined ? (row.airing_day || '') : (draft.airingDay || '');
     // Persian synopsis self-fills: pipeline-generated fa re-translates when
     // the source English changed; admin-authored fa is preserved verbatim.
+    // deferPersian (refresh-all with the local engine) skips inline
+    // translation entirely — the backfill job fills the gaps afterwards.
     const stored = parseSynopsis(row.synopsis);
-    const persian = await planPersian(draft.synopsis, stored);
+    const persian = await planPersian(draft.synopsis, stored, { defer: deferPersian });
     const input = animeInput.parse({
       ...draft,
       slug: row.slug,
@@ -995,10 +1000,11 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   app.post('/api/admin/anime/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM anime WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
+    const deferPersian = localEngineActive();
     const results = [];
     for (const row of rows) {
       try {
-        const { item, coverWarning, changes } = await refreshRowFromSource(row);
+        const { item, coverWarning, changes } = await refreshRowFromSource(row, { deferPersian });
         results.push({ slug: item.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) });
       } catch (error) {
         results.push({ slug: row.slug, title: row.title, ok: false, error: error.message || String(error) });
@@ -1006,6 +1012,69 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     }
     exportData();
     res.json({ updated: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, results });
+  });
+
+  // ---------- Persian backfill job ----------
+  // With the local NLLB engine, bulk import inserts rows English-only and this
+  // keyed-off admin job fills Persian at its own pace: one call translates as
+  // many rows as fit in a bounded slice of the function time cap (240s), then
+  // reports how many rows are still missing Persian so the admin UI can loop.
+  // Rows whose Persian exists (manual or auto) are never touched here; the
+  // refresh endpoints rule over re-translation.
+  let backfillRunning = false;
+  const needsPersian = (raw) => {
+    try {
+      const parsed = JSON.parse(raw || '');
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return !(parsed.fa || '').trim();
+    } catch { /* plain string source text */ }
+    return true;
+  };
+  const missingPersianRows = (table) => {
+    const rows = db.prepare(
+      `SELECT id, slug, synopsis FROM ${table} WHERE mal_id IS NOT NULL AND synopsis IS NOT NULL AND synopsis != '' ORDER BY id ASC LIMIT 400`,
+    ).all();
+    return rows.filter((row) => needsPersian(row.synopsis));
+  };
+  app.post('/api/admin/translate/backfill', requireAdmin, writeLimiter, async (req, res) => {
+    if (backfillRunning) throw httpError(429, 'A backfill run is already in flight');
+    backfillRunning = true;
+    const startedAt = Date.now();
+    const budgetMs = Number(req.body?.budgetMs) || 240_000; // leave headroom under the 300s cap
+    const results = [];
+    let translated = 0;
+    let failed = 0;
+    try {
+      outer: for (const table of ['anime', 'manga']) {
+        for (const row of missingPersianRows(table)) {
+          if (Date.now() - startedAt > budgetMs) break outer;
+          const en = String(row.synopsis).trim();
+          if (!en) continue;
+          try {
+            const fa = await translateSynopsis(en); // policy: fresh translate with auto flag
+            if (!fa) throw new Error('Empty translation');
+            db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
+              .run(JSON.stringify({ fa, en, auto: true }), row.id);
+            translated += 1;
+            results.push({ table, slug: row.slug, ok: true });
+            console.log(`[backfill] ${table}/${row.slug} filled in ${Date.now() - startedAt}ms cumulative`);
+          } catch (error) {
+            failed += 1;
+            results.push({ table, slug: row.slug, ok: false, error: error.message });
+            console.error(`[backfill] ${table}/${row.slug}: ${error.message}`);
+          }
+        }
+      }
+      if (translated > 0) exportData();
+    } finally {
+      backfillRunning = false;
+    }
+    res.json({
+      translated,
+      failed,
+      remaining: missingPersianRows('anime').length + missingPersianRows('manga').length,
+      elapsedMs: Date.now() - startedAt,
+      results,
+    });
   });
 
   app.get('/api/admin/temp-cover/:token', requireAdmin, (req, res) => {
