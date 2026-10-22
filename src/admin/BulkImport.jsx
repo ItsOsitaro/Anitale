@@ -8,6 +8,7 @@ const TOTAL_MAX = 400; // runaway guard: the whole run, not one chunk
 
 export default function BulkImport() {
   const { t, toast } = useAdmin();
+  // Tab switch: the anime and manga halves are the same UI, one type at a time.
   const [mediaType, setMediaType] = useState('anime');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -16,8 +17,11 @@ export default function BulkImport() {
   const [refreshReport, setRefreshReport] = useState(null);
   const [progress, setProgress] = useState(null); // { done, total }
   const [log, setLog] = useState([]);
-  const [summary, setSummary] = useState(null); // { imported, exists, failed, ok }
-  const [previewDone, setPreviewDone] = useState(false); // queue 24: save unlocks after a clean preview
+  const [summary, setSummary] = useState(null); // { imported, exists, ok, missing, failed }
+  // Two locks: the id-range preview and the facet-selection preview unlock their
+  // own save buttons independently — one preview never blocks the other half.
+  const [rangePreviewDone, setRangePreviewDone] = useState(false); // queue 24
+  const [facetPreviewDone, setFacetPreviewDone] = useState(false); // queue 27
   const [error, setError] = useState('');
   // Queue 26: facet discovery (genre / year / score) + selected ids.
   const [facet, setFacet] = useState({ genre: '', year: '', minScore: '' });
@@ -33,44 +37,29 @@ export default function BulkImport() {
     return b - a + 1;
   }, [from, to]);
 
-  const run = async (event, previewMode = false) => {
-    event.preventDefault();
-    if (!total) return;
-    const a = Number(from);
-    const b = Number(to);
-    if (!total) return;
-    if (total > TOTAL_MAX) { setError(t('bulkTooWide', { max: TOTAL_MAX })); return; }
-    await bulkLoop(Array.from({ length: b - a + 1 }, (_, index) => a + index), mediaType, previewMode);
-  };
-
-  // Queue 26: import a chosen list of MAL ids (from facet discovery).
-  const runSelectedIds = async () => {
-    if (selected.length === 0) return;
-    await bulkLoop(selected, mediaType, false);
-  };
-
-  // Shared chunked run over an explicit id list (queue 26 replaced the pure
-  // range loop). Errors per whole chunk still surface as failed rows.
-  const bulkLoop = async (ids, mediaTypeArg, previewMode) => {
+  // Shared chunked run over an explicit id list. `previewKind` says which save
+  // button a preview run unlocks ('range' | 'facet').
+  const bulkLoop = async (ids, previewMode, previewKind = 'range') => {
     setRunning(true);
     setError('');
     setLog([]);
     setSummary(null);
-    setPreviewDone(false);
+    setRangePreviewDone(false);
+    setFacetPreviewDone(false);
     setProgress({ done: 0, total: ids.length });
 
-    const tally = { imported: 0, exists: 0, ok: 0, failed: 0 };
+    const tally = { imported: 0, exists: 0, ok: 0, missing: 0, failed: 0 };
     for (let start = 0; start < ids.length; start += CHUNK) {
       const slice = ids.slice(start, start + CHUNK);
       try {
-        const { results } = await api.bulkImport({ ids: slice, mediaType: mediaTypeArg, preview: previewMode });
+        const { results } = await api.bulkImport({ ids: slice, mediaType, preview: previewMode });
         setLog((current) => [...current, ...results]);
         for (const row of results) tally[row.status] = (tally[row.status] ?? 0) + 1;
         setSummary({ ...tally });
       } catch (err) {
         const rows = slice.map((malId) => ({ malId, status: 'failed', error: errText(err, t) }));
         setLog((current) => [...current, ...rows]);
-        for (const row of rows) tally[row.status] += 1;
+        tally.failed += rows.length;
         setSummary({ ...tally });
         setError(errText(err, t));
         break; // provider down mid-run: stop instead of hammering the fallback
@@ -79,14 +68,39 @@ export default function BulkImport() {
     }
     setProgress((current) => ({ ...current, done: current ? current.total : 0 }));
     setRunning(false);
-    if (previewMode) setPreviewDone(tally.failed === 0);
-    if (tally.failed === 0) toast(previewMode ? t('bulkPreviewDone', { n: tally.ok }) : t('bulkDone', tally));
+    // "Missing" ids (gaps in the MAL range) never block saving; provider failures do.
+    const unlocked = tally.failed === 0;
+    if (previewMode) {
+      if (previewKind === 'facet') setFacetPreviewDone(unlocked);
+      else setRangePreviewDone(unlocked);
+    }
+    if (unlocked) toast(previewMode ? t('bulkPreviewDone', { n: tally.ok }) : t('bulkDone', tally));
+  };
+
+  const runRange = async (event, previewMode = false) => {
+    event.preventDefault();
+    if (!total) return;
+    const a = Number(from);
+    const b = Number(to);
+    if (total > TOTAL_MAX) { setError(t('bulkTooWide', { max: TOTAL_MAX })); return; }
+    await bulkLoop(Array.from({ length: b - a + 1 }, (_, index) => a + index), previewMode, 'range');
+  };
+
+  // Queue 27: the facet flow mirrors the range flow — preview first, then save.
+  const runSelectedIds = async (previewMode) => {
+    if (selected.length === 0) return;
+    await bulkLoop(selected, previewMode, 'facet');
   };
 
   useEffect(() => {
-    // A changed range or type invalidates the previous preview (queue 24).
-    setPreviewDone(false);
+    // A changed range or tab invalidates the previous preview (queue 24).
+    setRangePreviewDone(false);
   }, [from, to, mediaType]);
+
+  useEffect(() => {
+    // Any selection/filter change invalidates the facet preview.
+    setFacetPreviewDone(false);
+  }, [selected, facet, mediaType]);
 
   const runMangaRefresh = async () => {
     setRefreshing(true);
@@ -118,57 +132,68 @@ export default function BulkImport() {
   };
 
   const toggleCandidate = (malId) => setSelected((current) => (current.includes(malId) ? current.filter((id) => id !== malId) : [...current, malId]));
+  const toggleAllCandidates = (allChecked) => setSelected(allChecked ? (candidates || []).map((row) => row.malId) : []);
+  const allSelected = candidates && candidates.length > 0 && selected.length === candidates.length;
 
-  const statusClass = (status) => (status === 'imported' || status === 'ok' ? 'ok' : (status === 'exists' || status === 'preview' ? 'warn' : 'fail'));
+  const statusClass = (status) => (
+    status === 'imported' || status === 'ok' ? 'ok'
+      : status === 'exists' || status === 'preview' || status === 'missing' ? 'warn'
+        : 'fail'
+  );
   const statusLabel = (row) => (
     row.status === 'imported' ? t('bulkImported')
       : row.status === 'exists' ? t('bulkExists')
-        : row.status === 'ok' ? t('bulkPreviewFound')
-          : t('bulkFailed')
+        : row.status === 'missing' ? t('bulkMissing')
+          : row.status === 'ok' ? t('bulkPreviewFound')
+            : t('bulkFailed')
   );
+
+  const isManga = mediaType === 'manga';
 
   return (
     <div className="adm-bulk">
       <h2>{t('bulkTitle')}</h2>
       <p className="adm-muted">{t('bulkHint')}</p>
 
-      <form className="adm-inline" onSubmit={run}>
-        <label>
-          <span>{t('bulkType')}</span>
-          <select value={mediaType} onChange={(event) => setMediaType(event.target.value)} disabled={running}>
-            <option value="anime">{t('bulkAnime')}</option>
-            <option value="manga">{t('bulkManga')}</option>
-          </select>
-        </label>
-        <label>
-          <span>{t('bulkFrom')}</span>
-          <input type="number" min="1" value={from} onChange={(event) => setFrom(event.target.value)} disabled={running} placeholder="1" />
-        </label>
-        <label>
-          <span>{t('bulkTo')}</span>
-          <input type="number" min="1" value={to} onChange={(event) => setTo(event.target.value)} disabled={running} placeholder="100" />
-        </label>
-        <button className="adm-btn" type="button" disabled={running || !total} onClick={(event) => run(event, true)}>
-          {running ? t('bulkRunning') : t('bulkPreview')}
+      {/* Type tabs — both halves get the exact same import UI */}
+      <div className="bulk-tabs" role="tablist" aria-label={t('bulkType')}>
+        <button type="button" role="tab" aria-selected={!isManga} disabled={running || refreshing} onClick={() => setMediaType('anime')}>
+          {t('bulkAnime')}
         </button>
-        <button className="adm-btn adm-primary" type="submit" disabled={running || !total || !previewDone}>
-          {running ? t('bulkRunning') : t('bulkSaveNow')}
+        <button type="button" role="tab" aria-selected={isManga} disabled={running || refreshing} onClick={() => setMediaType('manga')}>
+          {t('bulkManga')}
         </button>
-      </form>
-      {total > 0 && !running && <p className="adm-muted">{t(previewDone ? 'bulkPreviewReady' : 'bulkPreviewHint')}</p>}
-      {error && <p className="adm-error" role="alert">{error}</p>}
+      </div>
 
+      {/* ---- Id-range import (queue 24) ---- */}
+      <section className="bulk-range">
+        <h3>{t('bulkRangeTitle')}</h3>
+        <form className="adm-inline" onSubmit={(event) => runRange(event, false)}>
+          <label>
+            <span>{t('bulkFrom')}</span>
+            <input type="number" min="1" value={from} onChange={(event) => setFrom(event.target.value)} disabled={running} placeholder="1" />
+          </label>
+          <label>
+            <span>{t('bulkTo')}</span>
+            <input type="number" min="1" value={to} onChange={(event) => setTo(event.target.value)} disabled={running} placeholder="100" />
+          </label>
+          <button className="adm-btn" type="button" disabled={running || !total} onClick={(event) => runRange(event, true)}>
+            {running ? t('bulkRunning') : t('bulkPreview')}
+          </button>
+          <button className="adm-btn adm-primary" type="submit" disabled={running || !total || !rangePreviewDone}>
+            {running ? t('bulkRunning') : t('bulkSaveNow')}
+          </button>
+        </form>
+        {total > 0 && !running && (
+          <p className="adm-muted">{t(rangePreviewDone ? 'bulkPreviewReady' : 'bulkPreviewHint')}</p>
+        )}
+      </section>
+
+      {/* ---- Facet import (queue 26/27): same preview → save flow ---- */}
       <section className="bulk-facet">
         <h3>{t('bulkFacetTitle')}</h3>
         <p className="adm-muted">{t('bulkFacetHint')}</p>
         <div className="adm-inline">
-          <label>
-            <span>{t('bulkType')}</span>
-            <select value={mediaType} onChange={(event) => setMediaType(event.target.value)} disabled={running || discovering}>
-              <option value="anime">{t('bulkAnime')}</option>
-              <option value="manga">{t('bulkManga')}</option>
-            </select>
-          </label>
           <label>
             <span>{t('bulkFacetGenre')}</span>
             <input list="bulk-genre-list" dir="ltr" value={facet.genre} onChange={(event) => setFacet((current) => ({ ...current, genre: event.target.value }))} disabled={running || discovering} />
@@ -200,6 +225,15 @@ export default function BulkImport() {
               <p className="adm-muted">{t('bulkFacetEmpty')}</p>
             ) : (
               <>
+                <label className="bulk-select-all">
+                  <input
+                    type="checkbox"
+                    checked={allSelected}
+                    onChange={(event) => toggleAllCandidates(event.target.checked)}
+                    disabled={running}
+                  />
+                  <span>{t('bulkSelectAll')}</span>
+                </label>
                 <ul className="bulk-candidate-list">
                   {candidates.map((row) => (
                     <li key={row.malId}>
@@ -208,6 +242,7 @@ export default function BulkImport() {
                           type="checkbox"
                           checked={selected.includes(row.malId)}
                           onChange={() => toggleCandidate(row.malId)}
+                          disabled={running}
                         />
                         <span dir="auto">{row.title}</span>
                         <span dir="ltr" className="bulk-candidate-meta">
@@ -217,16 +252,22 @@ export default function BulkImport() {
                     </li>
                   ))}
                 </ul>
-                <button className="adm-btn adm-primary" type="button" disabled={running || selected.length === 0} onClick={runSelectedIds}>
-                  {running ? t('bulkRunning') : t('bulkImportSelected', { n: selected.length })}
-                </button>
+                <div className="adm-inline">
+                  <button className="adm-btn" type="button" disabled={running || selected.length === 0} onClick={() => runSelectedIds(true)}>
+                    {running ? t('bulkRunning') : t('bulkPreview')}
+                  </button>
+                  <button className="adm-btn adm-primary" type="button" disabled={running || selected.length === 0 || !facetPreviewDone} onClick={() => runSelectedIds(false)}>
+                    {running ? t('bulkRunning') : t('bulkSaveNow')}
+                  </button>
+                </div>
+                <p className="adm-muted">{t(facetPreviewDone ? 'bulkPreviewReady' : 'bulkPreviewHint')}</p>
               </>
             )}
           </div>
         )}
       </section>
 
-      {progress && total !== null && (
+      {progress && (
         <div className="bulk-progress" role="progressbar" aria-valuemin="0" aria-valuemax={progress.total} aria-valuenow={progress.done}>
           <div className="bulk-progress-bar" style={{ '--done': `${Math.round((progress.done / Math.max(progress.total, 1)) * 100)}%` }} />
           <span dir="ltr">{progress.done}/{progress.total}</span>
@@ -237,6 +278,7 @@ export default function BulkImport() {
           <span className="ok">{t('bulkImported')}: {summary.imported}</span>
           <span className="warn">{t('bulkExists')}: {summary.exists}</span>
           {summary.ok > 0 && <span className="ok">{t('bulkPreviewFound')}: {summary.ok}</span>}
+          {summary.missing > 0 && <span className="warn">{t('bulkMissing')}: {summary.missing}</span>}
           <span className="fail">{t('bulkFailed')}: {summary.failed}</span>
         </p>
       )}
@@ -256,19 +298,21 @@ export default function BulkImport() {
         </ul>
       )}
 
-      <section className="bulk-refresh">
-        <h3>{t('bulkRefreshMangaTitle')}</h3>
-        <p className="adm-muted">{t('bulkRefreshMangaHint')}</p>
-        <button className="adm-btn" type="button" onClick={runMangaRefresh} disabled={running || refreshing}>
-          {refreshing ? t('bulkRefreshing') : t('bulkRefreshAll')}
-        </button>
-        {refreshReport && (
-          <p className="bulk-summary">
-            <span className="ok">{t('bulkRefreshedCount', { n: refreshReport.updated })}</span>
-            {refreshReport.failed > 0 && <span className="fail">{t('bulkRefreshFailedCount', { n: refreshReport.failed })}</span>}
-          </p>
-        )}
-      </section>
+      {isManga && (
+        <section className="bulk-refresh">
+          <h3>{t('bulkRefreshMangaTitle')}</h3>
+          <p className="adm-muted">{t('bulkRefreshMangaHint')}</p>
+          <button className="adm-btn" type="button" onClick={runMangaRefresh} disabled={running || refreshing}>
+            {refreshing ? t('bulkRefreshing') : t('bulkRefreshAll')}
+          </button>
+          {refreshReport && (
+            <p className="bulk-summary">
+              <span className="ok">{t('bulkRefreshedCount', { n: refreshReport.updated })}</span>
+              {refreshReport.failed > 0 && <span className="fail">{t('bulkRefreshFailedCount', { n: refreshReport.failed })}</span>}
+            </p>
+          )}
+        </section>
+      )}
     </div>
   );
 }

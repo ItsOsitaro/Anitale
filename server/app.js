@@ -757,10 +757,15 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
       }
     }
 
+    // 'missing' = the provider has no such id (gap ids / removed entries) —
+    // reported separately so the admin can still save a previewed run that
+    // merely contained absent ids.
+    const isMissingErr = (error) => error?.status === 404 || /not found/i.test(String(error?.message || ''));
     const results = [];
     let imported = 0;
     let exists = 0;
     let failed = 0;
+    let missing = 0;
     for (const malId of ids) {
       try {
         const existing = knownRows.get(malId);
@@ -771,8 +776,8 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
         }
         if (fastMode) {
           if (fastMissing.has(malId)) {
-            failed += 1;
-            results.push({ malId, status: 'failed', error: 'Not found on MyAnimeList' });
+            missing += 1;
+            results.push({ malId, status: 'missing', error: 'Not on MyAnimeList' });
             continue;
           }
           const draft = fastDrafts.get(malId);
@@ -853,12 +858,17 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           results.push({ malId, status: 'imported', title: created.title, slug, ...(warning ? { warning } : {}) });
         }
       } catch (error) {
-        failed += 1;
-        results.push({ malId, status: 'failed', error: error.message });
+        if (isMissingErr(error)) {
+          missing += 1;
+          results.push({ malId, status: 'missing', error: 'Not on MyAnimeList' });
+        } else {
+          failed += 1;
+          results.push({ malId, status: 'failed', error: error.message });
+        }
       }
     }
     if (imported > 0) exportData();
-    res.json({ mediaType, preview, imported, exists, failed, results });
+    res.json({ mediaType, preview, imported, exists, failed, missing, results });
   });
 
   // Shared: fetch an anime's latest external data (Jikan first unless disabled/broken,

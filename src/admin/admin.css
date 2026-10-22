@@ -548,10 +548,40 @@ body[data-theme="dark"] .adm-primary:hover:not(:disabled) { background: var(--ac
 .bulk-refresh h3 { margin: 0 0 4px; font-size: 1.02rem; }
 .bulk-refresh .adm-btn { margin: 6px 0; }
 
+/* type tabs: the anime and manga halves of the bulk page */
+.bulk-tabs { display: flex; gap: 8px; margin: 0 0 18px; }
+.bulk-tabs button {
+  min-height: 40px;
+  padding: 8px 22px;
+  border: 1px solid var(--line-2);
+  border-radius: var(--r-full);
+  background: var(--panel);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: .92rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: border-color .15s ease, background-color .15s ease, color .15s ease, transform .15s ease;
+}
+.bulk-tabs button:hover:not(:disabled):not([aria-selected="true"]) { border-color: var(--ink-3); color: var(--ink); }
+.bulk-tabs button:active:not(:disabled) { transform: translateY(1px); }
+.bulk-tabs button[aria-selected="true"] {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--on-accent);
+}
+.bulk-tabs button:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+
+/* id-range section */
+.bulk-range { margin-top: 4px; }
+.bulk-range h3 { margin: 0 0 8px; font-size: 1.02rem; }
+
 /* facet discovery */
 .bulk-facet { margin-top: 18px; padding-top: 14px; border-block-start: 1px solid var(--line); }
 .bulk-facet h3 { margin: 0 0 4px; font-size: 1.02rem; }
 .bulk-candidates { margin-top: 10px; }
+.bulk-select-all { display: inline-flex; align-items: center; gap: 8px; padding: 8px 10px; font-size: .88rem; font-weight: 650; cursor: pointer; }
+.bulk-select-all input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); }
 .bulk-candidate-list {
   list-style: none;
   margin: 0 0 10px;
