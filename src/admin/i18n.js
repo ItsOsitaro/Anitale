@@ -1,6 +1,6 @@
 export const messages = {
   en: {
-    adminTitle: 'Admin panel', titles: 'Titles', newAnime: 'Add anime', viewSite: 'View site', logout: 'Log out', loading: 'Loading…',
+    adminTitle: 'Admin panel', titles: 'Manage anime', newAnime: 'Add anime', viewSite: 'View site', logout: 'Log out', loading: 'Loading…',
     theme: 'Theme', light: 'Light', dark: 'Dark',
     navContent: 'Catalog', navOps: 'Operations', navPeople: 'Community', menu: 'Open menu', closeMenu: 'Close menu',
     loginTitle: 'Sign in to the admin panel', username: 'Username', password: 'Password', signIn: 'Sign in',
@@ -56,7 +56,7 @@ export const messages = {
     required: 'Title is required', lang: 'EN',
   },
   fa: {
-    adminTitle: 'پنل مدیریت', titles: 'عناوین', newAnime: 'افزودن انیمه', viewSite: 'مشاهده سایت', logout: 'خروج', loading: 'در حال بارگذاری…',
+    adminTitle: 'پنل مدیریت', titles: 'مدیریت انیمه', newAnime: 'افزودن انیمه', viewSite: 'مشاهده سایت', logout: 'خروج', loading: 'در حال بارگذاری…',
     theme: 'پوسته', light: 'روشن', dark: 'تیره',
     navContent: 'فهرست', navOps: 'گردش کار', navPeople: 'کاربران', menu: 'باز کردن منو', closeMenu: 'بستن منو',
     loginTitle: 'ورود به پنل مدیریت', username: 'نام کاربری', password: 'گذرواژه', signIn: 'ورود',
