@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Anitale">
+  <!-- Official Anitale mark: a notebook card with the indigo A and the crimson flower. -->
+  <!-- Offset back layer (soft periwinkle book stack) -->
+  <rect x="78" y="56" width="120" height="176" rx="20" fill="#c9baf8" />
+  <!-- Front card -->
+  <rect x="68" y="41" width="120" height="176" rx="20" fill="#f5f3fc" />
+  <!-- Notebook spine rule -->
+  <line x1="85" y1="59" x2="85" y2="199" stroke="#d6cff3" stroke-width="6" stroke-linecap="round" />
+  <!-- The A (crossbar-free, flower takes its place) -->
+  <path d="M92 182 L128 73 L164 182" fill="none" stroke="#3a2ca0" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
+  <!-- Crimson flower -->
+  <g fill="#e8506b">
+    <circle cx="121" cy="139" r="8" />
+    <circle cx="129.66" cy="144" r="8" />
+    <circle cx="129.66" cy="153.6" r="8" />
+    <circle cx="121" cy="158.6" r="8" />
+    <circle cx="112.34" cy="153.6" r="8" />
+    <circle cx="112.34" cy="144" r="8" />
+    <circle cx="121" cy="148.8" r="10.5" />
+  </g>
+  <circle cx="121" cy="148.8" r="4.5" fill="#fff" />
+</svg>

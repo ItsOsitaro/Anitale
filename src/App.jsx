@@ -164,7 +164,7 @@ function SiteHeader() {
     <header className="topbar">
       <div className="topbar-inner">
         <Link className="brand" to="/">
-          <span className="brand-mark" aria-hidden="true">{lang === 'fa' ? 'ا' : 'A'}</span>
+          <img className="brand-mark" src="/logo.svg" alt="" aria-hidden="true" width="40" height="40" />
           <span className="brand-copy">
             <strong>{t('siteName')}</strong>
             <small>{t('siteTagline')}</small>
@@ -1460,7 +1460,7 @@ function AppRoutes({ theme, onThemeChange }) {
 function CatalogSkeleton() {
   return (
     <main className="app-loading" aria-busy="true">
-      <div className="loading-brand" aria-hidden="true" />
+      <img className="loading-brand" src="/logo.svg" alt="" aria-hidden="true" width="66" height="66" />
       <div className="loading-grid">
         {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={index} className="loading-card" />

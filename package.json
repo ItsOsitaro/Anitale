@@ -45,6 +45,7 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "@vitejs/plugin-react": "^5.2.0",
     "concurrently": "^10.0.6",
     "gh-pages": "^6.3.0",

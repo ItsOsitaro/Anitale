@@ -157,7 +157,7 @@ export default function AdminApp({ theme, onThemeChange }) {
   const sidebar = user !== null && user !== undefined && (
     <aside className="adm-sidebar" id="adm-sidebar">
       <div className="adm-brand">
-        <span className="brand-mark" aria-hidden="true">A</span>
+        <img className="brand-mark" src="/logo.svg" alt="" aria-hidden="true" width="38" height="38" />
         <span className="adm-brand-text">
           <strong>Anitale</strong>
           <small>{t('adminTitle')}</small>
@@ -255,7 +255,7 @@ export default function AdminApp({ theme, onThemeChange }) {
           <main className="adm-main adm-guest-main">
             <div className="adm-login-wrap">
               <div className="adm-login-brand">
-                <span className="brand-mark brand-mark-lg" aria-hidden="true">A</span>
+                <img className="brand-mark brand-mark-lg" src="/logo.svg" alt="" aria-hidden="true" width="54" height="54" />
               </div>
               <Login onLogin={setUser} configured={configured} />
             </div>
