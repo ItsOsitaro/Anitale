@@ -20,7 +20,7 @@ import { BLOB_MODE, coverUrlFor,  cleanupTemp, handleCoverRequest, MAX_IMAGE_BYT
 import { downloadImage, fetchAnimeFull, fetchMangaFull, jikanCircuitOpen, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
 import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
 import { mapPool } from './pool.js';
-import { translateSynopsis, translationEnabled, planPersian, draftPersian } from './translate.js';
+import { translateSynopsis, planPersian, draftPersian } from './translate.js';
 
 const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } });
