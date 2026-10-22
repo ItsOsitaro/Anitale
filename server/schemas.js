@@ -21,6 +21,9 @@ export const animeInput = z.object({
   // Persian synopsis (admin-authored). Persisted together with the English
   // text as bilingual JSON { fa, en } so the storefront switches by language.
   synopsisFa: z.string().trim().max(8000).optional(),
+  // Marks the Persian text as pipeline-generated (auto translation) so a
+  // later refresh may re-translate it; admin-authored fa loses this flag.
+  synopsisAuto: z.boolean().optional(),
   genres: list(z.string().trim().min(1).max(50)),
   alternativeTitles: z.object({
     synonyms: list(z.string().trim().min(1).max(200)),

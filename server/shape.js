@@ -52,7 +52,13 @@ export const inputToColumns = (input) => {
   // storefront can switch by language; without it we keep the legacy string.
   const en = typeof input.synopsis === 'string' ? input.synopsis : (input.synopsis?.en || '');
   const fa = typeof input.synopsis === 'string' ? (input.synopsisFa || '') : (input.synopsis?.fa || input.synopsisFa || '');
-  const synopsis = fa ? JSON.stringify({ fa, en }) : en;
+  // auto marks pipeline-generated Persian: the refresher may re-translate it
+  // when the source English changes. Manual saves never carry the flag.
+  const synopsis = fa ? JSON.stringify({
+    fa,
+    en,
+    ...(input.synopsisAuto || (typeof input.synopsis === 'object' && input.synopsis?.auto) ? { auto: true } : {}),
+  }) : en;
   return {
     mal_id: input.malId ?? null,
     title: input.title,

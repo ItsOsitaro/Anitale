@@ -20,6 +20,7 @@ import { BLOB_MODE, coverUrlFor,  cleanupTemp, handleCoverRequest, MAX_IMAGE_BYT
 import { downloadImage, fetchAnimeFull, fetchMangaFull, jikanCircuitOpen, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
 import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
 import { mapPool } from './pool.js';
+import { translateSynopsis, translationEnabled, planPersian, draftPersian } from './translate.js';
 
 const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } });
@@ -530,6 +531,8 @@ export const createApp = () => {
     cleanupTemp();
     const { draft, tempCover, coverWarning } = await fetchExternalDraft(malId);
     draft.slug = uniqueSlug(draft.title);
+    // Auto Persian synopsis so the form opens pre-filled (still editable).
+    await draftPersian(draft);
     res.json({ draft, tempCover, coverWarning });
   });
 
@@ -543,6 +546,21 @@ export const createApp = () => {
       try { cover = saveCoverBuffer(row.slug, await downloadImage(payload.coverUrl)); }
       catch (error) { coverWarning = error.message; }
     }
+    // Persian synopsis self-fills like the anime refresh: pipeline-generated fa
+    // re-translates when the source changed; admin-authored fa is preserved.
+    const storedMangaSynopsis = (() => {
+      try {
+        const parsed = JSON.parse(row.synopsis || '');
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+      } catch { /* plain string source text */ }
+      return typeof row.synopsis === 'string' ? row.synopsis : '';
+    })();
+    const persian = await planPersian(payload.synopsis, storedMangaSynopsis);
+    const sourceEn = payload.synopsis || (storedMangaSynopsis && typeof storedMangaSynopsis === 'object' ? (storedMangaSynopsis.en || '') : storedMangaSynopsis);
+    // updateManga stringifies whatever it receives; object = bilingual row.
+    const mangaSynopsis = persian.fa
+      ? { fa: persian.fa, en: sourceEn, ...(persian.auto ? { auto: true } : {}) }
+      : (payload.synopsis || row.synopsis);
     const updated = updateManga(row.id, {
       title: payload.title || row.title,
       category: payload.category || row.category,
@@ -552,7 +570,7 @@ export const createApp = () => {
       publicationStatus: payload.publicationStatus || row.publication_status || '',
       chapters: payload.chapters ?? null,
       // Only borrowed rows get raw source text; seeded bilingual synopsis keeps its fa, en.
-      synopsis: payload.synopsis || row.synopsis,
+      synopsis: mangaSynopsis,
     }, { malId: payload.malId || row.mal_id, score: payload.score ?? row.score, cover });
     exportData();
 
@@ -753,6 +771,24 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           fastCovers.set(draft.malId, { token, warning });
         });
         console.log(`[bulk] fast path: ${need.length} ids in one provider query (${providerMs}ms), covers ${fastDrafts.size} concurrent (${Date.now() - tCovers}ms)`);
+        // Auto Persian synopsis: translate fresh drafts once, pooled 4-way so
+        // bulk stays a single-digit-percent tax on the provider+cover time.
+        // Previews skip it (nothing is displayed), translation failures let
+        // the row through English-only.
+        if (!preview && fastDrafts.size > 0) {
+          const translatable = [...fastDrafts.values()].filter((draft) => draft.synopsis);
+          const tTranslate = Date.now();
+          let translatedFa = 0;
+          await mapPool(translatable, 4, async (draft) => {
+            try {
+              draft.synopsisFa = await translateSynopsis(draft.synopsis);
+              translatedFa += 1;
+            } catch (error) {
+              console.error(`[bulk translate ${draft.malId}] ${error.message}`);
+            }
+          });
+          console.log(`[bulk] fast path: Persian '${translatedFa}/${translatable.length}' (${Date.now() - tTranslate}ms)`);
+        }
       }
       }
     }
@@ -795,7 +831,12 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
             const slug = uniqueSlug(draft.title);
             // The AniList fallback uses null airingDay for finished shows; the
             // form flow never parses that, but bulk persists directly.
-            const draftForParse = { ...draft, slug, airingDay: typeof draft.airingDay === 'string' ? draft.airingDay : '' };
+            const draftForParse = {
+              ...draft,
+              slug,
+              airingDay: typeof draft.airingDay === 'string' ? draft.airingDay : '',
+              ...(draft.synopsisFa ? { synopsisAuto: true } : {}),
+            };
             const tempCover = coverInfo.token;
             const input = animeInput.parse(tempCover ? { ...draftForParse, tempCover } : draftForParse);
             const cover = input.tempCover ? promoteTempCover(slug, input.tempCover) || '' : '';
@@ -807,8 +848,13 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
             let cover = '';
             try { cover = coverInfo.token ? (promoteTempCover(slug, coverInfo.token) || '') : ''; }
             catch (error) { coverInfo.warning = coverInfo.warning || error.message; }
+            // Manga synopsis stays a bilingual { fa, en, auto? } object when the
+            // pipeline produced Persian text; otherwise the legacy plain string.
+            const mangaSynopsis = draft.synopsisFa
+              ? { fa: draft.synopsisFa, en: draft.synopsis, auto: true }
+              : draft.synopsis;
             const created = insertManga(
-              { slug, title: draft.title, category: draft.category, year: draft.year, format: 'Manga', genres: draft.genres, synopsis: draft.synopsis },
+              { slug, title: draft.title, category: draft.category, year: draft.year, format: 'Manga', genres: draft.genres, synopsis: mangaSynopsis },
               { malId: draft.malId, score: draft.score, cover, publicationStatus: draft.publicationStatus || '', chapters: draft.chapters ?? null },
             );
             imported += 1;
@@ -828,7 +874,13 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           const slug = uniqueSlug(draft.title);
           // The AniList fallback uses null airingDay for finished shows; the
           // form flow never parses that, but bulk persists directly.
-          const draftForParse = { ...draft, slug, airingDay: typeof draft.airingDay === 'string' ? draft.airingDay : '' };
+          await draftPersian(draft);
+          const draftForParse = {
+            ...draft,
+            slug,
+            airingDay: typeof draft.airingDay === 'string' ? draft.airingDay : '',
+            ...(draft.synopsisFa ? { synopsisAuto: true } : {}),
+          };
 
           const input = animeInput.parse(tempCover ? { ...draftForParse, tempCover } : draftForParse);
           const cover = input.tempCover ? promoteTempCover(slug, input.tempCover) || '' : '';
@@ -850,8 +902,9 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           } else {
             warning = 'MyAnimeList has no cover for this title';
           }
+          await draftPersian(payload);
           const created = insertManga(
-            { slug, title: payload.title, category: payload.category, year: payload.year, format: 'Manga', genres: payload.genres, synopsis: payload.synopsis },
+            { slug, title: payload.title, category: payload.category, year: payload.year, format: 'Manga', genres: payload.genres, synopsis: payload.synopsisFa ? { fa: payload.synopsisFa, en: payload.synopsis, auto: true } : payload.synopsis },
             { malId: payload.malId, score: payload.score, cover, publicationStatus: payload.publicationStatus || '', chapters: payload.chapters ?? null },
           );
           imported += 1;
@@ -901,15 +954,15 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     const { draft, tempCover, coverWarning } = await fetchExternalDraft(row.mal_id);
     // undefined = unknown source, keep the stored day; null / '' = clear; else the day itself.
     const airingDay = draft.airingDay === undefined ? (row.airing_day || '') : (draft.airingDay || '');
-    // Persian synopsis is admin-authored (the source has none) — a refresh
-    // re-attaches the stored fa to the fresh English text instead of wiping it.
+    // Persian synopsis self-fills: pipeline-generated fa re-translates when
+    // the source English changed; admin-authored fa is preserved verbatim.
     const stored = parseSynopsis(row.synopsis);
-    const storedFa = stored && typeof stored === 'object' ? (stored.fa || '') : '';
+    const persian = await planPersian(draft.synopsis, stored);
     const input = animeInput.parse({
       ...draft,
       slug: row.slug,
       airingDay,
-      ...(storedFa ? { synopsisFa: storedFa } : {}),
+      ...(persian.fa ? { synopsisFa: persian.fa, synopsisAuto: persian.auto } : {}),
       ...(tempCover ? { tempCover } : {}),
     });
     let cover = row.cover;

@@ -15,6 +15,7 @@ export const emptyForm = () => ({
   stats: { score: '', scoredBy: '', ranked: '', popularity: '', members: '', favorites: '' },
   platforms: [], streamingNotice: '', links: [], resources: [], resourceIcons: {},
   tempCover: '', image: '',
+  synopsisAuto: false,
 });
 
 // API item / Jikan draft -> form state. The synopsis may be a legacy plain
@@ -33,7 +34,10 @@ export const toForm = (item) => {
   return {
     ...form,
     title: item.title || '', slug: item.slug || '', malId: item.malId ?? null, format: item.format || '', category: item.category || '',
-    year: item.year || '', score: item.sampleScore ?? item.score ?? '', airingDay: item.airingDay || '', synopsis: synopsis.en, synopsisFa: synopsis.fa, genres: item.genres || [],
+    year: item.year || '', score: item.sampleScore ?? item.score ?? '', airingDay: item.airingDay || '', synopsis: synopsis.en, synopsisFa: synopsis.fa || item.synopsisFa || '', genres: item.genres || [],
+    // Persian picked up by auto-translation keeps flagging itself so future
+    // refreshes may re-translate; any admin edit of the field clears it.
+    synopsisAuto: Boolean(item.synopsisAuto || (item.synopsis && typeof item.synopsis === 'object' && item.synopsis.auto)),
     synonyms: item.alternativeTitles?.synonyms || [], japanese: item.alternativeTitles?.japanese || '', romaji: item.alternativeTitles?.romaji || '', english: item.alternativeTitles?.english || '',
     extraRows,
     stats: { ...form.stats, ...(item.statistics || {}) },
@@ -67,6 +71,7 @@ export const toPayload = (form, { omitTempCover = false } = {}) => {
     airingDay: form.airingDay || '',
     synopsis: form.synopsis,
     synopsisFa: form.synopsisFa,
+    ...(form.synopsisAuto ? { synopsisAuto: true } : {}),
     genres: form.genres,
     alternativeTitles: { synonyms: form.synonyms, japanese: form.japanese, romaji: form.romaji, english: form.english },
     information,
