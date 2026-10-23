@@ -20,7 +20,7 @@ import { BLOB_MODE, coverUrlFor,  cleanupTemp, handleCoverRequest, MAX_IMAGE_BYT
 import { downloadImage, fetchAnimeFull, fetchMangaFull, jikanCircuitOpen, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
 import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
 import { mapPool } from './pool.js';
-import { translateSynopsis, planPersian, draftPersian, localEngineActive } from './translate.js';
+import { translateSynopsis, planPersian, draftPersian, inlinePersianEnabled } from './translate.js';
 
 const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: MAX_IMAGE_BYTES, files: 1 } });
@@ -595,7 +595,7 @@ export const createApp = () => {
   app.post('/api/admin/manga/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM manga WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
-    const deferPersian = localEngineActive();
+    const deferPersian = !inlinePersianEnabled();
     const results = [];
     for (const row of rows) {
       try {
@@ -772,11 +772,12 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           fastCovers.set(draft.malId, { token, warning });
         });
         console.log(`[bulk] fast path: ${need.length} ids in one provider query (${providerMs}ms), covers ${fastDrafts.size} concurrent (${Date.now() - tCovers}ms)`);
-        // Persian auto-fill: with the heavy local NLLB engine in charge,
-        // translation is deferred to the backfill job (a 50-id batch inline
-        // would blow the function time cap); the remote keyless chain is
-        // fast enough to stay inline. Previews skip it either way.
-        if (!preview && fastDrafts.size > 0 && !localEngineActive()) {
+        // Auto Persian synopsis: translate fresh drafts once, pooled 4-way so
+        // bulk stays a single-digit-percent tax on the provider+cover time.
+        // Only the heavy local engine (TRANSLATE_ENGINE=nllb) defers — remote
+        // keyless providers keep turning synopses here inline. Previews skip
+        // it either way.
+        if (!preview && fastDrafts.size > 0 && inlinePersianEnabled()) {
           const translatable = [...fastDrafts.values()].filter((draft) => draft.synopsis);
           const tTranslate = Date.now();
           let translatedFa = 0;
@@ -789,7 +790,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
             }
           });
           console.log(`[bulk] fast path: Persian '${translatedFa}/${translatable.length}' (${Date.now() - tTranslate}ms)`);
-        } else if (!preview && fastDrafts.size > 0 && localEngineActive()) {
+        } else if (!preview && fastDrafts.size > 0) {
           console.log(`[bulk] fast path: Persian deferred to backfill ride (${fastDrafts.size} ids)`);
         }
       }
@@ -877,7 +878,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           const slug = uniqueSlug(draft.title);
           // The AniList fallback uses null airingDay for finished shows; the
           // form flow never parses that, but bulk persists directly.
-          if (!localEngineActive()) await draftPersian(draft); // local engine: backfill rides later
+          if (inlinePersianEnabled()) await draftPersian(draft); // local engine: backfill rides later
           const draftForParse = {
             ...draft,
             slug,
@@ -905,7 +906,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           } else {
             warning = 'MyAnimeList has no cover for this title';
           }
-          if (!localEngineActive()) await draftPersian(payload); // local engine: backfill ride
+          if (inlinePersianEnabled()) await draftPersian(payload); // local engine: backfill ride
           const created = insertManga(
             { slug, title: payload.title, category: payload.category, year: payload.year, format: 'Manga', genres: payload.genres, synopsis: payload.synopsisFa ? { fa: payload.synopsisFa, en: payload.synopsis, auto: true } : payload.synopsis },
             { malId: payload.malId, score: payload.score, cover, publicationStatus: payload.publicationStatus || '', chapters: payload.chapters ?? null },
@@ -1000,7 +1001,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   app.post('/api/admin/anime/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM anime WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
-    const deferPersian = localEngineActive();
+    const deferPersian = !inlinePersianEnabled();
     const results = [];
     for (const row of rows) {
       try {

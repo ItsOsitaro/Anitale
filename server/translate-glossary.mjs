@@ -1,0 +1,112 @@
+// Anime-domain glossary for the Persian synopsis pipeline. The translate
+// engine is an ordinary MT endpoint with no prompt ability, enforcing domain
+// rules therefore happens deterministically in code:
+//   1. Before a translate call, every key found in the source text is replaced
+//      with a blindfold token (⟦n⟧) — the engine cannot mistranslate what it
+//      never sees (Google tends to render e.g. "shinigami" as «خدای مرگ»).
+//   2. After the call, the token is restored to the Persian value below — the
+//      established fandom spelling always wins.
+// `terms` = anime-culture loanwords (case-insensitive, word boundaries).
+// `names` = transliteration standards for characters, places and franchises
+// (Google frequently leaves them in Latin or scrambles their word order).
+// Keys match on capitalization-insensitive word boundaries, longest first;
+// adding or fixing a rule is editing this one file — no code changes.
+// Persian convention used here mirrors what the established Persian anime
+// guides (Persian Wikipedia / Digikala / Bamda) use.
+export const glossaryTerms = {
+  shinigami: 'شینیگامی',
+  shingami: 'شینیگامی', // common engine misspelling guard
+  chakra: 'چاکرا',
+  jutsu: 'جوتسو',
+  genjutsu: 'گنجوتسو',
+  ninjutsu: 'نینجوتسو',
+  taijutsu: 'تایجوتسو',
+  rasengan: 'راسِنگان',
+  chidori: 'چیدوری',
+  sharingan: 'شارینگان',
+  byakugan: 'بیاکوگان',
+  rinnegan: 'رینگان',
+  akatsuki: 'آکاتسوکی',
+  'tailed beast': 'دیوِ دم‌دار',
+  'tailed beasts': 'دیوهای دم‌دار',
+  ninja: 'نینجا',
+  shinobi: 'شینوبی',
+  samurai: 'سامورایی',
+  katana: 'کاتانا',
+  shuriken: 'شوریکن',
+  kunai: 'کونای',
+  dojo: 'دوجو',
+  sensei: 'سِنسِی',
+  senpai: 'سِنپای',
+  sempai: 'سِنپای',
+  kouhai: 'کوهای',
+  shonen: 'شونن',
+  shounen: 'شونن',
+  shoujo: 'شوجو',
+  shojo: 'شوجو',
+  seinen: 'سینن',
+  josei: 'جوسِی',
+  isekai: 'ایسِکای',
+  mecha: 'مِکا',
+  onsen: 'اونسِن',
+  kimono: 'کیمونو',
+  yokai: 'یوکای',
+  yōkai: 'یوکای',
+  kitsune: 'کیتسونه',
+  tanuki: 'تانوکی',
+  kaiju: 'کایجو',
+  kaijū: 'کایجو',
+  nakama: 'ناکاما',
+  mangaka: 'مَنگاکا',
+  manga: 'مانگا',
+  waifu: 'وایفو',
+  tsundere: 'تسوندِرِ',
+  yandere: 'یاندِرِ',
+  quirk: 'کوییرک',
+  quirks: 'کوییرک‌ها',
+  nen: 'نِن',
+  haki: 'هاکی',
+  titan: 'تایتان',
+  titans: 'تایتان‌ها',
+  alchemist: 'کیمیاگر',
+  alchemy: 'کیمیاگری',
+  homunculus: 'هومونکولوس',
+  jujutsu: 'جو-جوتسو',
+  'cursed energy': 'انرژی نفرین‌شده',
+  cursed: 'نفرین‌شده',
+};
+
+export const glossaryNames = {
+  'Light Yagami': 'لایت یاگامی',
+  'Yagami Light': 'لایت یاگامی',
+  Kira: 'کیرا',
+  Ryuk: 'ریوک',
+  'Misa Amane': 'میسا آمانه',
+  'Solo Leveling': 'سولو لولینگ',
+  'Seong Jin-U': 'سونگ جین-یو',
+  'Seong Jin-Woo': 'سونگ جین-وو',
+  'Sung Jin-Woo': 'سونگ جین-وو',
+  'Sung Suho': 'سونگ سوهو',
+  'Cha Hae-In': 'چا هه-این',
+  'Attack on Titan': 'حمله به تایتان',
+  'Shingeki no Kyojin': 'حمله به تایتان',
+  'Demon Slayer': 'شکارچی شیطان',
+  'Kimetsu no Yaiba': 'شکارچی شیطان',
+  'One Piece': 'ون پیس',
+  Naruto: 'ناروتو',
+  'Naruto Shippuden': 'ناروتو شیپودن',
+  'Dragon Ball': 'دراگون بال',
+  'Monkey D. Luffy': 'مونکی دی لوفی',
+  Luffy: 'لوفی',
+  Zoro: 'زورو',
+  'Roronoa Zoro': 'رورونوا زورو',
+  'Eren Yeager': 'ارِن یاگر',
+  Mikasa: 'میکاسا',
+  'Levi Ackerman': 'لِوی آکرمن',
+  'Tanjiro Kamado': 'تانیجیرو کامادو',
+  Nezuko: 'نِزوکو',
+  Kaneki: 'کِنِکی',
+  Deku: 'دِکو',
+  'Izuku Midoriya': 'ایزوکو میدوریا',
+  Kaguya: 'کاگویا',
+};

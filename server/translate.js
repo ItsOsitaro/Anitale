@@ -1,20 +1,26 @@
-// English -> Persian synopsis translation. Fully local by default: the
-// engine chain is —
-//   1. Local NLLB-200 600M (ONNX, quantized, bundled in models/): runs on the
-//      server itself, zero external calls at translate time. Set up once with
-//      `npm run setup:model`; TRANSLATE_MODELS_DIR overrides its root.
-//      TRANSLATE_FALLBACK_REMOTE=0 forbids every remote engine outright.
-//   2. (fallback only, when the model is absent or errors) Google Translate
-//      (unofficial gtx endpoint, keyless) -> MyMemory (keyless) -> optional
-//      AI Gateway (only with AI_GATEWAY_API_KEY, or TRANSLATE_PROVIDER=ai
-//      with Vercel OIDC — the best Persian, needs billing).
+// English -> Persian synopsis translation. Default engine = keyless remote
+// machine translation (no AI, no card):
+//   Google Translate (unofficial gtx endpoint, keyless) -> MyMemory (keyless)
+//   -> optional AI Gateway (only with AI_GATEWAY_API_KEY, or TRANSLATE_PROVIDER=ai
+//   with Vercel OIDC — the best Persian, needs billing).
+// A fully-local NLLB-600M engine ALSO ships in this module (gitignored
+// models/, fetched via `npm run setup:model`) but is opt-in only:
+//   TRANSLATE_ENGINE=nllb → strictly local, zero network calls at translate
+//   time. With the default TRANSLATE_ENGINE=remote the model files are simply
+//   ignored, so a dev machine with fetched models never silently drifts away
+//   from the remote chain.
 // TRANSLATE_PROVIDER pins one remote provider strictly: 'google'|'mymemory'|'ai'.
+// On top of every engine the anime glossary layer runs (see
+// translate-glossary.mjs): protected terms/names are blindfolded before the
+// translate call and restored to established Persian forms afterwards, so the
+// fandom-recognized spelling always wins over whatever the engine guesses.
 // Call sites persist the result as the Persian half of the bilingual synopsis,
 // so import (single + bulk), refresh and re-import all fill Persian
 // automatically; a provider failure falls through the chain, and exhaustion
 // leaves the row English-only instead of failing the enclosing flow.
 import fs from 'node:fs';
 import path from 'node:path';
+import { glossaryNames, glossaryTerms } from './translate-glossary.mjs';
 
 const NLLB_ID = 'Xenova/nllb-200-distilled-600M';
 const NLLB_MODEL_DIR = path.join('Xenova', 'nllb-200-distilled-600M');
@@ -25,6 +31,10 @@ const MYMEMORY_CHUNK = 450;
 // English chars per chunk fed to the local model: each piece stays well under
 // the NLLB 1024-token context window, leaving room for the Persian output.
 const LOCAL_CHUNK = 1100;
+// Blindfold markers wrap glossary keys before a translate call. U+27E6/27E7
+// survive both the gtx wire format and chunk splits (no whitespace inside).
+const BLINDFOLD = (index) => `⟦${index}⟧`;
+const BLINDFOLD_RE = /⟦(\d+)⟧/g;
 
 // Credits lines the source vendors append — never part of a clean translation.
 const SOURCE_NOISE = /\s*\((?:Source:\s*[^)]+|Written by MAL Rewrite)\s*\)/gi;
@@ -65,6 +75,49 @@ const chunkSource = (text, max) => {
 
 const aiCredential = () => process.env.AI_GATEWAY_API_KEY || (pinnedProvider() === 'ai' ? process.env.VERCEL_OIDC_TOKEN || '' : '');
 
+// ---- anime glossary layer (deterministic domain rules) -----------------------
+// An ordinary MT endpoint cannot be prompted, so the rules become code:
+// every glossary key present in the source is blindfolded before the translate
+// call (the engine never sees "shinigami", so it can never render it as
+// «خدای مرگ») and restored to the established Persian spelling afterwards.
+const GLOSSARY_RULES = Object.entries({ ...glossaryTerms, ...glossaryNames })
+  // Longest keys first: "tailed beasts" must win over a partial "beast"...
+  // and "Attack on Titan" over a bare "Titan".
+  .sort((a, b) => b[0].length - a[0].length)
+  .map(([key, persian]) => ({
+    persian,
+    regex: new RegExp(makeWordBoundary(key), 'gi'),
+  }));
+
+// Escape then word-boundary the key; keys are fandom spellings, plain
+// alphanumeric words and optional spaces/hyphens — escape everything else.
+function makeWordBoundary(key) {
+  const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  return `\\b${escaped}\\b`;
+}
+
+const prepareSource = (source) => {
+  const blindfolds = [];
+  let text = source;
+  for (const rule of GLOSSARY_RULES) {
+    text = text.replace(rule.regex, () => BLINDFOLD(blindfolds.length));
+    blindfolds.push(rule.persian);
+  }
+  return { text, blindfolds };
+};
+
+const restoreBlindfolds = (fa, blindfolds) =>
+  fa.replace(BLINDFOLD_RE, (match, index) => blindfolds[Number(index)] || match);
+
+// Engine-level Persian fixes: the Arabic glyphs gtx sometimes mixes in
+// (ی/ک), doubled spaces around punctuation, and stray padding.
+const persianFixes = (fa) => fa
+  .replace(/\u064A/g, 'ی')
+  .replace(/\u0643/g, 'ک')
+  .replace(/\s+([،؛؟!.])/g, '$1')
+  .replace(/\s+/g, ' ')
+  .trim();
+
 // ---- engine 0: local NLLB-600M (the default, no network) --------------------
 // Weights ship in models/Xenova/nllb-200-distilled-600M (fetch once via
 // scripts/fetch-model.mjs). The model loads lazily and is memoized per
@@ -80,11 +133,17 @@ export const localEngineActive = () => fs.existsSync(path.join(modelsRoot(), NLL
 let localTranslatorPromise = null;
 let localChain = Promise.resolve();
 
+// The specifier is built at runtime on purpose: a literal dynamic import would
+// be statically traced by the serverless bundler and pulled the ~300MB
+// transformers/onnxruntime dependency into EVERY production function bundle —
+// even while the engine stays 'remote' and never touches it.
+const TRANSFORMERS_SPECIFIER = '@huggingface' + '/transformers';
+
 const getLocalTranslator = () => {
   if (localTranslatorPromise) return localTranslatorPromise;
   if (!localEngineActive()) throw new Error('Local NLLB model is missing — run `npm run setup:model` once');
   localTranslatorPromise = (async () => {
-    const { pipeline, env } = await import('@huggingface/transformers');
+    const { pipeline, env } = await import(TRANSFORMERS_SPECIFIER);
     env.localModelPath = modelsRoot();
     env.allowRemoteModels = false; // strictly offline at translate time
     // Session trim: 2 ORT threads + CPU mem arena disabled keep the resident
@@ -217,37 +276,46 @@ const PROVIDERS = {
   ai: aiGatewayTranslate,
 };
 
-// Engine order: the bundled NLLB model owns every translation; the remote
-// providers exist as error fallbacks while the model is absent or mid-setup.
-// TRANSLATE_FALLBACK_REMOTE=0 makes the chain strictly local.
-const remoteFallbackAllowed = () => String(process.env.TRANSLATE_FALLBACK_REMOTE || '') !== '0';
+// Engine selection: TRANSLATE_ENGINE defaults to 'remote' — the keyless Google
+// chain owns every translation. 'nllb' opts the deployment into the bundled
+// local model: strictly local, zero network calls at translate time (the model
+// must exist in models/ or every translation fails and the row stays
+// English-only).
+const engineMode = () =>
+  (String(process.env.TRANSLATE_ENGINE || '').trim().toLowerCase() || 'remote');
 
+// Bulk-import wiring probe: with the heavy local engine in charge, import
+// batches defer their Persian filling to the backfill job; remote engines are
+// fast enough to stay inline.
+export const inlinePersianEnabled = () => engineMode() !== 'nllb';
+
+// Engine order: when the remote mode owns translation the local engine is
+// never consulted (models on disk stay inert); the paid AI provider gets a
+// shot only if the deployment carries an explicit gateway key.
 const defaultChain = () => {
-  const chain = [];
-  if (localEngineActive()) chain.push('local');
-  else console.error('[translate] local NLLB model missing — falling back to remote providers (run `npm run setup:model`); TRANSLATE_FALLBACK_REMOTE=0 forbids this');
-  if (!localEngineActive() || remoteFallbackAllowed()) {
-    chain.push('google', 'mymemory');
-    if (process.env.AI_GATEWAY_API_KEY) chain.push('ai');
-  }
+  if (engineMode() === 'nllb') return ['local'];
+  const chain = ['google', 'mymemory'];
+  if (process.env.AI_GATEWAY_API_KEY) chain.push('ai');
   return chain;
 };
 
 export const translateSynopsis = async (text) => {
   const source = cleanSource(text);
   if (!source) throw new Error('Synopsis text is empty');
-  const pinned = pinnedProvider();
-  const chain = PROVIDERS[pinned] ? [pinned] : defaultChain();
+  // Glossary in, blindfolded: the engine must never reimagine protected terms.
+  const { text: blindfolded, blindfolds } = prepareSource(source);
+  const pinned = engineMode() === 'nllb' ? 'local' : (PROVIDERS[pinnedProvider()] ? pinnedProvider() : null);
+  const chain = pinned ? [pinned] : defaultChain();
   let lastError = null;
   for (const name of chain) {
     try {
       const startedAt = Date.now();
-      const translated = await PROVIDERS[name](source);
-      if (translated) {
-        console.log(`[translate] ${name} ${Date.now() - startedAt}ms (${Buffer.byteLength(source)}B en)`);
-        return translated;
-      }
-      throw new Error(`${name} returned empty text`);
+      const raw = await PROVIDERS[name](blindfolded);
+      if (!raw) throw new Error(`${name} returned empty text`);
+      const translated = persianFixes(restoreBlindfolds(raw, blindfolds));
+      if (!translated) throw new Error(`${name} returned empty text after cleanup`);
+      console.log(`[translate] ${name} ${Date.now() - startedAt}ms (${Buffer.byteLength(source)}B en)`);
+      return translated;
     } catch (error) {
       lastError = error;
       console.error(`[translate] ${name}: ${error.message}`);
