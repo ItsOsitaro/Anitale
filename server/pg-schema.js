@@ -90,4 +90,9 @@ export const PG_SCHEMA_SQL = `
     created_at TEXT NOT NULL DEFAULT (to_char((now() at time zone 'UTC'), 'YYYY-MM-DD HH24:MI:SS')),
     PRIMARY KEY (follower_id, following_id)
   );
+
+  CREATE TABLE IF NOT EXISTS settings (
+    key TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+  );
 `;

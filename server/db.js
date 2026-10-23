@@ -29,6 +29,13 @@ db = new DatabaseSync(process.env.DB_FILE || path.join(SERVER_DIR, 'data.db'));
 db.exec('PRAGMA journal_mode = WAL');
 
 db.exec(`
+CREATE TABLE IF NOT EXISTS settings (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);
+`);
+
+db.exec(`
 CREATE TABLE IF NOT EXISTS anime (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   slug TEXT NOT NULL UNIQUE,

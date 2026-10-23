@@ -23,6 +23,7 @@
 // leaves the row English-only instead of failing the enclosing flow.
 import fs from 'node:fs';
 import path from 'node:path';
+import { fetch as undiciFetch, ProxyAgent } from 'undici';
 import { glossaryNames, glossaryTerms } from './translate-glossary.mjs';
 
 const NLLB_ID = 'Xenova/nllb-200-distilled-600M';
@@ -271,16 +272,31 @@ const aiGatewayTranslate = async (text) => {
 // key comes from AI Studio (https://aistudio.google.com/apikey) and has a
 // generous free tier. The strongest Persian; best anime-domain quality. The
 // glossary substitution already runs upstream, and the prompt pins the rest.
-const GEMINI_MODEL = () => process.env.GEMINI_MODEL || 'gemini-flash-latest';
-const GEMINI_URL = () => `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL()}:generateContent`;
+// Regional blocks (e.g. the Iranian exit IP) are routed through PROXY_URL via
+// undici's ProxyAgent with HTTP/2 disabled — the v2Ray-class local proxies
+// close undici's h2 tunnel mid-request, while plain h1.1 CONNECT passes.
 
-const geminiTranslate = async (text) => {
-  const key = process.env.GEMINI_API_KEY;
-  if (!key) throw new Error('GEMINI_API_KEY is not set');
-  const response = await fetch(`${GEMINI_URL()}?key=${encodeURIComponent(key)}`, {
+const GEMINI_MODEL = () => process.env.GEMINI_MODEL || 'gemini-flash-latest';
+// gemini-flash-latest occasionally answers 503 "high demand"; the lite alias
+// is the immediately-available sibling and serves as the fallback shot.
+const GEMINI_FALLBACK_MODEL = 'gemini-flash-lite-latest';
+
+let geminiProxyAgent = null;
+const geminiDispatcher = () => {
+  const proxy = String(process.env.PROXY_URL || '').trim();
+  if (!proxy) return undefined;
+  if (!geminiProxyAgent) geminiProxyAgent = new ProxyAgent({ uri: proxy, connect: { allowH2: false } });
+  return geminiProxyAgent;
+};
+
+const geminiAttempt = async (model, text, key) => {
+  const dispatcher = geminiDispatcher();
+  const backend = dispatcher ? undiciFetch : fetch;
+  const response = await backend(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(key)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS * 3),
+    ...(dispatcher ? { dispatcher } : {}),
     body: JSON.stringify({
       contents: [
         {
@@ -304,8 +320,9 @@ const geminiTranslate = async (text) => {
     }),
   });
   if (!response.ok) {
-    const body = await response.text().catch(() => '');
-    throw new Error(`Gemini ${response.status}: ${body.slice(0, 200)}`);
+    const errBody = await response.text().catch(() => '');
+    const reason = (() => { try { return JSON.parse(errBody)?.error?.message || errBody.slice(0, 160); } catch { return errBody.slice(0, 160); } })();
+    throw new Error(`Gemini ${response.status}: ${reason}`);
   }
   const data = await response.json();
   const translated = (data?.candidates?.[0]?.content?.parts || [])
@@ -314,6 +331,22 @@ const geminiTranslate = async (text) => {
     .trim();
   if (!translated) throw new Error('Gemini returned an empty translation');
   return translated;
+};
+
+const geminiTranslate = async (text) => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('GEMINI_API_KEY is not set');
+  const models = [...new Set([GEMINI_MODEL(), GEMINI_FALLBACK_MODEL])];
+  let lastError = null;
+  for (const model of models) {
+    try {
+      return await geminiAttempt(model, text, key);
+    } catch (error) {
+      lastError = error;
+      console.error(`[translate] gemini/${model}: ${error.message}`);
+    }
+  }
+  throw lastError || new Error('Gemini translation failed');
 };
 
 const PROVIDERS = {
@@ -336,6 +369,25 @@ const engineMode = () =>
 // batches defer their Persian filling to the backfill job; remote engines are
 // fast enough to stay inline.
 export const inlinePersianEnabled = () => engineMode() !== 'nllb';
+
+// Admin Settings page choice, persisted in the settings table. Values other
+// than 'auto'/empty become the PRIMARY provider; the rest of the default chain
+// follows as resilience fallback so a bad pick can never stall imports.
+const adminPreferredProvider = () => {
+  const raw = String(getSetting('translate_provider', '')).trim().toLowerCase();
+  return raw && raw !== 'auto' && PROVIDERS[raw] ? raw : '';
+};
+
+// Runtime state handed to GET /api/admin/settings: what the admin UI shows as
+// the current pick plus which engines are actually usable on this deployment.
+export const translatorState = () => ({
+  provider: () => '',
+  chosen: getSetting('translate_provider', '') || 'auto',
+  engine: engineMode(),
+  geminiKey: Boolean(process.env.GEMINI_API_KEY),
+  gatewayKey: Boolean(process.env.AI_GATEWAY_API_KEY),
+  nllbReady: localEngineActive(),
+});
 
 // Engine order: when the remote mode owns translation the local engine is
 // never consulted (models on disk stay inert); the paid AI provider gets a
