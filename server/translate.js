@@ -11,8 +11,8 @@
 //   from the remote chain.
 // TRANSLATE_PROVIDER pins one remote provider strictly: 'google'|'mymemory'|'ai'.
 // On top of every engine the anime glossary layer runs (see
-// translate-glossary.mjs): protected terms/names are blindfolded before the
-// translate call and restored to established Persian forms afterwards, so the
+// translate-glossary.mjs): protected terms/names are swapped to their
+// established Persian forms before the engine ever sees the text, so the
 // fandom-recognized spelling always wins over whatever the engine guesses.
 // Call sites persist the result as the Persian half of the bilingual synopsis,
 // so import (single + bulk), refresh and re-import all fill Persian
@@ -31,10 +31,6 @@ const MYMEMORY_CHUNK = 450;
 // English chars per chunk fed to the local model: each piece stays well under
 // the NLLB 1024-token context window, leaving room for the Persian output.
 const LOCAL_CHUNK = 1100;
-// Blindfold markers wrap glossary keys before a translate call. U+27E6/27E7
-// survive both the gtx wire format and chunk splits (no whitespace inside).
-const BLINDFOLD = (index) => `⟦${index}⟧`;
-const BLINDFOLD_RE = /⟦(\d+)⟧/g;
 
 // Credits lines the source vendors append — never part of a clean translation.
 const SOURCE_NOISE = /\s*\((?:Source:\s*[^)]+|Written by MAL Rewrite)\s*\)/gi;
@@ -76,10 +72,13 @@ const chunkSource = (text, max) => {
 const aiCredential = () => process.env.AI_GATEWAY_API_KEY || (pinnedProvider() === 'ai' ? process.env.VERCEL_OIDC_TOKEN || '' : '');
 
 // ---- anime glossary layer (deterministic domain rules) -----------------------
-// An ordinary MT endpoint cannot be prompted, so the rules become code:
-// every glossary key present in the source is blindfolded before the translate
-// call (the engine never sees "shinigami", so it can never render it as
-// «خدای مرگ») and restored to the established Persian spelling afterwards.
+// An ordinary MT endpoint cannot be prompted, so the rules become code: every
+// glossary key present in the source is swapped IN PLACE for its established
+// Persian form before the translate call (verified against gtx: embedded
+// Persian words pass through the en->fa pipeline untouched while the sentence
+// grammar adapts around them — «joins the گیلد» -> «به گیلد می‌پیوندد»).
+// Wrapping keys in opaque tokens instead turned out fragile: gtx mangles dense
+// brackets (⟧ -> ⧡, duplicated tokens, dropped sentence parts).
 const GLOSSARY_RULES = Object.entries({ ...glossaryTerms, ...glossaryNames })
   // Longest keys first: "tailed beasts" must win over a partial "beast"...
   // and "Attack on Titan" over a bare "Titan".
@@ -97,17 +96,12 @@ function makeWordBoundary(key) {
 }
 
 const prepareSource = (source) => {
-  const blindfolds = [];
   let text = source;
   for (const rule of GLOSSARY_RULES) {
-    text = text.replace(rule.regex, () => BLINDFOLD(blindfolds.length));
-    blindfolds.push(rule.persian);
+    text = text.replace(rule.regex, rule.persian);
   }
-  return { text, blindfolds };
+  return text;
 };
-
-const restoreBlindfolds = (fa, blindfolds) =>
-  fa.replace(BLINDFOLD_RE, (match, index) => blindfolds[Number(index)] || match);
 
 // Engine-level Persian fixes: the Arabic glyphs gtx sometimes mixes in
 // (ی/ک), doubled spaces around punctuation, and stray padding.
@@ -302,17 +296,18 @@ const defaultChain = () => {
 export const translateSynopsis = async (text) => {
   const source = cleanSource(text);
   if (!source) throw new Error('Synopsis text is empty');
-  // Glossary in, blindfolded: the engine must never reimagine protected terms.
-  const { text: blindfolded, blindfolds } = prepareSource(source);
+  // Glossary in place: swap protected terms to their Persian forms before any
+  // engine sees the text.
+  const prepared = prepareSource(source);
   const pinned = engineMode() === 'nllb' ? 'local' : (PROVIDERS[pinnedProvider()] ? pinnedProvider() : null);
   const chain = pinned ? [pinned] : defaultChain();
   let lastError = null;
   for (const name of chain) {
     try {
       const startedAt = Date.now();
-      const raw = await PROVIDERS[name](blindfolded);
+      const raw = await PROVIDERS[name](prepared);
       if (!raw) throw new Error(`${name} returned empty text`);
-      const translated = persianFixes(restoreBlindfolds(raw, blindfolds));
+      const translated = persianFixes(raw);
       if (!translated) throw new Error(`${name} returned empty text after cleanup`);
       console.log(`[translate] ${name} ${Date.now() - startedAt}ms (${Buffer.byteLength(source)}B en)`);
       return translated;
