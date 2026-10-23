@@ -68,3 +68,12 @@ Anitale — a MyAnimeList-style anime/manga site: React 19 + Vite 7 SPA (`src/`)
 - `FEATURE-QUEUES.md` (Persian) is the feature roadmap; phases 1–2 (queues 1–28) are all done ✅ — check it before building something already shipped.
 - `.opencode/instructions/INSTRUCTIONS.md` (loaded via `opencode.json`) holds generic coding-style rules from the ECC setup; the ECC "80% test coverage" mandate does not apply here — there is no test infra.
 - Back up `server/data.db` and `public/covers/` — both are untracked working files, not in git.
+
+## Mobile UI redesign rules
+- The full design spec is in docs/mobile-ui-spec.md. Always read the relevant section before coding.
+- NEVER change the desktop UI. All new styles apply only at max-width: 820px, and mobile components live in src/components/mobile/.
+- Use only existing CSS tokens (--primary, --card, --border, --secondary, --accent, --muted-foreground...). No hard-coded colors.
+- The site is RTL (dir="rtl"). Use logical properties (margin-inline-start, inset-inline-end, padding-inline). Font is Vazirmatn Variable.
+- Do not add new dependencies unless I approve them.
+- After every task run the build/typecheck and fix errors before reporting done.
+- At the end of every phase, commit with `git add -A` and the commit message I give you. Never commit if the build fails. Never use git push, git reset --hard, or git clean unless I ask explicitly.
