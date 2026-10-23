@@ -10,6 +10,9 @@ if (mangaAdded) console.log(`[seed] Imported ${mangaAdded} manga entries from pu
 cleanupTemp();
 
 const port = Number(process.env.PORT) || 3000;
-createApp().listen(port, '127.0.0.1', () => {
-  console.log(`API + site on http://127.0.0.1:${port}   (admin: /admin)`);
+// HOST=0.0.0.0 opens the site to the local network (phone/other PCs); the
+// default keeps the dev loop bound to loopback only.
+const host = process.env.HOST || '127.0.0.1';
+createApp().listen(port, host, () => {
+  console.log(`API + site on http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}   (admin: /admin)`);
 });
