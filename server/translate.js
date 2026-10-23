@@ -1,8 +1,11 @@
 // English -> Persian synopsis translation. Default engine = keyless remote
 // machine translation (no AI, no card):
-//   Google Translate (unofficial gtx endpoint, keyless) -> MyMemory (keyless)
+//   Gemini API (GEMINI_API_KEY, free tier via aistudio.google.com — the best
+//   Persian; placed first in the chain when the key exists)
+//   -> Google Translate (unofficial gtx endpoint, keyless)
+//   -> MyMemory (keyless)
 //   -> optional AI Gateway (only with AI_GATEWAY_API_KEY, or TRANSLATE_PROVIDER=ai
-//   with Vercel OIDC — the best Persian, needs billing).
+//   with Vercel OIDC — needs billing).
 // A fully-local NLLB-600M engine ALSO ships in this module (gitignored
 // models/, fetched via `npm run setup:model`) but is opt-in only:
 //   TRANSLATE_ENGINE=nllb → strictly local, zero network calls at translate
@@ -263,10 +266,61 @@ const aiGatewayTranslate = async (text) => {
   return translated;
 };
 
+// ---- provider: Google Gemini API (needs GEMINI_API_KEY) ----------------------
+// A consumer "Google AI Pro" subscription does NOT include API access — the
+// key comes from AI Studio (https://aistudio.google.com/apikey) and has a
+// generous free tier. The strongest Persian; best anime-domain quality. The
+// glossary substitution already runs upstream, and the prompt pins the rest.
+const GEMINI_MODEL = () => process.env.GEMINI_MODEL || 'gemini-flash-latest';
+const GEMINI_URL = () => `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL()}:generateContent`;
+
+const geminiTranslate = async (text) => {
+  const key = process.env.GEMINI_API_KEY;
+  if (!key) throw new Error('GEMINI_API_KEY is not set');
+  const response = await fetch(`${GEMINI_URL()}?key=${encodeURIComponent(key)}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS * 3),
+    body: JSON.stringify({
+      contents: [
+        {
+          role: 'user',
+          parts: [
+            {
+              text: [
+                'Translate the anime/manga synopsis below into natural, fluent Persian (فارسی) for a Persian streaming/library site.',
+                'Rules: translate faithfully — no summarizing, no additions, no omissions.',
+                'Persian words already present in the text are fixed anime-glossary terms — keep them EXACTLY as they stand.',
+                'Render remaining character and place names as their established Persian transliteration.',
+                'Strip source-credit lines such as "Source: Crunchyroll" or "Written by MAL Rewrite".',
+                'Return ONLY the translated Persian text — no quotes, no notes, no explanation.',
+              ].join('\n'),
+            },
+            { text },
+          ],
+        },
+      ],
+      generationConfig: { temperature: 0.2, maxOutputTokens: 2500 },
+    }),
+  });
+  if (!response.ok) {
+    const body = await response.text().catch(() => '');
+    throw new Error(`Gemini ${response.status}: ${body.slice(0, 200)}`);
+  }
+  const data = await response.json();
+  const translated = (data?.candidates?.[0]?.content?.parts || [])
+    .map((part) => (typeof part?.text === 'string' ? part.text : ''))
+    .join('')
+    .trim();
+  if (!translated) throw new Error('Gemini returned an empty translation');
+  return translated;
+};
+
 const PROVIDERS = {
   local: localTranslateQueued,
   google: googleTranslate,
   mymemory: myMemoryTranslate,
+  gemini: geminiTranslate,
   ai: aiGatewayTranslate,
 };
 
@@ -288,7 +342,9 @@ export const inlinePersianEnabled = () => engineMode() !== 'nllb';
 // shot only if the deployment carries an explicit gateway key.
 const defaultChain = () => {
   if (engineMode() === 'nllb') return ['local'];
-  const chain = ['google', 'mymemory'];
+  const chain = [];
+  if (process.env.GEMINI_API_KEY) chain.push('gemini');
+  chain.push('google', 'mymemory');
   if (process.env.AI_GATEWAY_API_KEY) chain.push('ai');
   return chain;
 };
