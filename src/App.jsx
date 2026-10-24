@@ -1408,7 +1408,9 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
     // or bilingual { fa, en } — resolve it to the viewer's language (manga's
     // seeded rows carry both; anime shows Persian once one is stored).
     synopsis: synopsisText(item, lang),
-    image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item,
+    ...(mediaType === 'manga'
+      ? { image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item }
+      : {}),
   };
   // Queue 19: the fa storefront shows the Persian title when manga rows carry one.
   if (mediaType === 'manga' && item && lang === 'fa' && item.titleFa) item = { ...item, title: item.titleFa };
