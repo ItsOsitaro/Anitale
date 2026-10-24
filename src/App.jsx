@@ -76,9 +76,8 @@ const highlightMatch = (title, query) => {
 };
 
 function SiteHeader() {
+  const navigate = useNavigate();
   const { lang, setLang, t } = useSiteLang();
-  const isMobile = useIsMobile();
-  if (isMobile) return null;
   const [search, setSearch] = useState('');
   const [searchMessage, setSearchMessage] = useState('');
   const [suggestions, setSuggestions] = useState([]);
