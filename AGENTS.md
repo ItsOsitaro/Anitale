@@ -76,4 +76,10 @@ Anitale — a MyAnimeList-style anime/manga site: React 19 + Vite 7 SPA (`src/`)
 - The site is RTL (dir="rtl"). Use logical properties (margin-inline-start, inset-inline-end, padding-inline). Font is Vazirmatn Variable.
 - Do not add new dependencies unless I approve them.
 - After every task run the build/typecheck and fix errors before reporting done.
-- At the end of every phase, commit with `git add -A` and the commit message I give you. Never commit if the build fails. Never use git push, git reset --hard, or git clean unless I ask explicitly.
+## Project facts
+- Stack: React 19 + Vite 7, plain JSX (NO TypeScript), react-router-dom, Tailwind v4 (only for src/components/ui/* and tokens in src/tailwind.css) plus a large plain CSS file style.css at the repo root.
+- Almost everything lives in src/App.jsx (~1456 lines): SiteHeader (~line 76), HomePage (~629), SectionPage (catalog, ~974), DetailPage (~1122), AnimePage (~1396), AppRoutes (~1444).
+- Legacy mobile CSS is in style.css (media queries at 1100, 900, 820, 520, 700px). It is abandoned: never edit style.css; the new mobile UI replaces it.
+- New mobile code goes in: src/hooks/use-is-mobile.js (named export useIsMobile, matchMedia "(max-width: 820px)"), src/components/mobile/*.jsx and one stylesheet src/components/mobile/mobile.css.
+- Switching desktop/mobile is done with the useIsMobile hook in AppRoutes (render MobileShell on mobile). Never make big edits to src/App.jsx; only small, targeted ones. Never move or rewrite desktop code.
+- server/settings.js is a local file; never commit it.
