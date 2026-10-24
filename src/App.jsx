@@ -630,6 +630,7 @@ function StoryRows({ items, destination }) {
 
 function HomePage() {
   const { lang, t } = useSiteLang();
+  const isMobile = useIsMobile();
   const animeCatalog = useCatalog();
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
   // visit, and manually re-rollable with the dice action in the hero.
@@ -678,7 +679,7 @@ function HomePage() {
 
   return (
     <>
-      <SiteHeader />
+      {!isMobile && <SiteHeader />}
       <div className="page-shell">
         <div className="layout">
           <main className="main-column">
@@ -976,6 +977,7 @@ function PageBreadcrumb({ trail }) {
 function SectionPage({ theme, onThemeChange }) {
   const { lang, t } = useSiteLang();
   const { pathname } = useLocation();
+  const isMobile = useIsMobile();
   const animeCatalog = useCatalog();
   const mangaCatalog = useMangaCatalog();
   const page = sectionPages[pathname];  const [query, setQuery] = useState('');
@@ -1001,7 +1003,7 @@ function SectionPage({ theme, onThemeChange }) {
   if (!page) {
     return (
       <>
-        <SiteHeader theme={theme} onThemeChange={onThemeChange} />
+        {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
         <NotFoundPanel>
           <h1>{t('pageNotFound')}</h1>
           <p>{t('notCatalog')}</p>
@@ -1056,7 +1058,7 @@ function SectionPage({ theme, onThemeChange }) {
 
   return (
     <>
-      <SiteHeader theme={theme} onThemeChange={onThemeChange} />
+      {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
       <div className="section-page-shell">
         <PageBreadcrumb trail={[
           { to: '/', label: t('breadcrumbHome') },
@@ -1123,6 +1125,7 @@ function SidebarDataList({ rows }) {
 
 function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const { lang, t } = useSiteLang();
+  const isMobile = useIsMobile();
   const animeCatalog = useCatalog();
   const user = useUser();
   const me = user.me;
@@ -1210,7 +1213,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
 
   return (
     <>
-      <SiteHeader theme={theme} onThemeChange={onThemeChange} />
+      {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
       <div className="anime-page-shell">
         <PageBreadcrumb trail={[
           { to: '/', label: t('breadcrumbHome') },
@@ -1396,6 +1399,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
 }
 
 function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
+  const isMobile = useIsMobile();
   const { lang, t } = useSiteLang();
   const { idOrSlug } = useParams();
   const animeCatalog = useCatalog();
@@ -1421,7 +1425,7 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
 
   return resolved ? <DetailPage key={`${mediaType}-${resolved.slug}`} item={item} mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} /> : (
     <>
-      <SiteHeader theme={theme} onThemeChange={onThemeChange} />
+      {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
       <NotFoundPanel>
         <h1>{t('titleNotFound')}</h1>
         <p>{t('notLocal')}</p>
@@ -1435,9 +1439,10 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
 
 // Pages that don't render the topbar themselves get it wrapped on the route level.
 function WithHeader({ theme, onThemeChange, children }) {
+  const isMobile = useIsMobile();
   return (
     <>
-      <SiteHeader theme={theme} onThemeChange={onThemeChange} />
+      {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
       {children}
     </>
   );
@@ -1445,6 +1450,7 @@ function WithHeader({ theme, onThemeChange, children }) {
 
 function AppRoutes({ theme, onThemeChange }) {
   const isMobile = useIsMobile();
+  const { pathname } = useLocation();
   const routes = (
     <Routes>
       <Route path="/" element={<HomePage />} />
@@ -1458,7 +1464,7 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="*" element={<SectionPage theme={theme} onThemeChange={onThemeChange} />} />
     </Routes>
   );
-  if (isMobile) {
+  if (isMobile && !pathname.startsWith('/admin')) {
     return <MobileShell>{routes}</MobileShell>;
   }
   return routes;
