@@ -42,7 +42,7 @@ export default function HeroCarousel({ items }) {
   return (
     <section className="mobile-hero">
       <div className="mobile-hero-carousel" ref={listRef} onScroll={onScroll}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           const href = mediaHref(item);
           const title = displayTitle(item, lang);
           return (
@@ -57,7 +57,7 @@ export default function HeroCarousel({ items }) {
                   className="mobile-hero-card__image"
                   src={item.image}
                   alt={title}
-                  loading="lazy"
+                  loading={index === 0 ? 'eager' : 'lazy'}
                   decoding="async"
                 />
               </div>
