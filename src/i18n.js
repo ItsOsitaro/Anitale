@@ -82,6 +82,8 @@ export const messages = {
     filterTitles: 'فیلتر عنوان‌ها', titleOrKeyword: 'عنوان یا کلیدواژه', genreLabel: 'ژانر', allGenres: 'همه‌ی ژانرها',
     formatLabel: 'فرمت', allFormats: 'همه‌ی فرمت‌ها', yearLabel: 'سال', allYears: 'همه‌ی سال‌ها', sortLabel: 'ترتیب', sortScore: 'امتیاز', sortNew: 'جدیدترین', sortOld: 'قدیمی‌ترین', sortAz: 'الفبا',
     titlesCount: '{n} عنوان',
+    mcFilters: 'فیلتر', mcAll: 'همه', mcClose: 'بستن', mcClearAll: 'پاک کردن فیلترها', mcShowResults: 'نمایش {n} نتیجه',
+    mcNoResults: 'نتیجه‌ای پیدا نشد', mcNoResultsHint: 'جست‌وجو را تغییر بدهید یا فیلترها را پاک کنید.', mcLoadMore: 'نمایش بیشتر',
     animeRankingNote: 'امتیازها بر پایه داده واقعی MyAnimeList است و با بروزرسانی خودکار تازه می‌شود.',
     mangaRankingNote: 'این رتبه‌بندی یک فهرست انتخابی محلی است، نه چارت زنده.',
     // Section page
@@ -220,6 +222,8 @@ export const messages = {
     filterTitles: 'Filter titles', titleOrKeyword: 'Title or keyword', genreLabel: 'Genre', allGenres: 'All genres',
     formatLabel: 'Format', allFormats: 'All formats', yearLabel: 'Year', allYears: 'All years', sortLabel: 'Sort', sortScore: 'Score', sortNew: 'Newest', sortOld: 'Oldest', sortAz: 'A–Z',
     titlesCount: '{n} titles',
+    mcFilters: 'Filters', mcAll: 'All', mcClose: 'Close', mcClearAll: 'Clear filters', mcShowResults: 'Show {n} results',
+    mcNoResults: 'No results found', mcNoResultsHint: 'Try a different search or clear the filters.', mcLoadMore: 'Load more',
     animeRankingNote: 'Scores are live MyAnimeList ratings, refreshed automatically.',
     mangaRankingNote: 'This local ranking is a curated sample, not a live chart.',
     pageNotFound: 'Page not found', notCatalog: 'This section is not part of the local catalog.',

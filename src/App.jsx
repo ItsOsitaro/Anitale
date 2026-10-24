@@ -30,6 +30,7 @@ import {
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import MobileShell from '@/components/mobile/MobileShell';
 import MobileHomePage from '@/components/mobile/MobileHomePage';
+import MobileCatalogPage from '@/components/mobile/MobileCatalogPage';
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
 
@@ -1045,6 +1046,21 @@ function SectionPage({ theme, onThemeChange }) {
   const directory = directoryContent[page.directory];
   const title = page.title || editorial?.title || directory?.title;
   const description = page.description || editorial?.description || directory?.description;
+
+  if (isCatalogPage && isMobile) {
+    return (
+      <MobileCatalogPage
+        title={title}
+        items={displayedItems}
+        mediaType={page.kind === 'manga' ? 'manga' : 'anime'}
+        query={query} onQueryChange={setQuery}
+        genre={genre} onGenreChange={setGenre} genres={genres}
+        format={format} onFormatChange={setFormat} formats={formats}
+        year={year} onYearChange={setYear} years={years}
+        sort={sort} onSortChange={setSort}
+      />
+    );
+  }
 
   return (
     <>
