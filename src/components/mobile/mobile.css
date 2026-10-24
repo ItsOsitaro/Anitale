@@ -155,7 +155,9 @@
     height: 66px;
     padding: 7px;
     z-index: 20;
-    display: flex;
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    align-items: stretch;
     gap: 6px;
     border-radius: 26px;
     background: color-mix(in oklch, var(--card) 80%, transparent);
@@ -177,10 +179,13 @@
 
   .bottom-tabbar__link,
   .bottom-tabbar__more {
+    width: 100%;
+    min-width: 0;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 4px;
+    justify-content: center;
+    gap: 3px;
     padding: 6px 4px;
     border-radius: 20px;
     min-inline-size: 44px;
@@ -206,12 +211,17 @@
   .bottom-tabbar__more.is-active {
     background: var(--accent);
     color: var(--accent-foreground);
+    margin: 4px;
   }
 
   .bottom-tabbar__label {
     font-size: 10.5px;
     font-weight: 700;
     line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
 
   .mobile-topbar__icon-btn:focus-visible,
