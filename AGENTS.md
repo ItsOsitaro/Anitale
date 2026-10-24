@@ -76,6 +76,8 @@ Anitale — a MyAnimeList-style anime/manga site: React 19 + Vite 7 SPA (`src/`)
 - The site is RTL (dir="rtl"). Use logical properties (margin-inline-start, inset-inline-end, padding-inline). Font is Vazirmatn Variable.
 - Do not add new dependencies unless I approve them.
 - After every task run the build/typecheck and fix errors before reporting done.
+- All user-visible text in mobile components must come from the i18n dictionaries (src/i18n.js, both fa and en). Reuse existing keys when they exist; when a new string is needed, add a key with both a Persian and an English value. Never hard-code Persian or English strings in JSX.
+- Use the "@" alias for imports (e.g. @/hooks/use-is-mobile, @/components/mobile/MobileShell).
 ## Project facts
 - Stack: React 19 + Vite 7, plain JSX (NO TypeScript), react-router-dom, Tailwind v4 (only for src/components/ui/* and tokens in src/tailwind.css) plus a large plain CSS file style.css at the repo root.
 - Almost everything lives in src/App.jsx (~1456 lines): SiteHeader (~line 76), HomePage (~629), SectionPage (catalog, ~974), DetailPage (~1122), AnimePage (~1396), AppRoutes (~1444).
