@@ -16,8 +16,18 @@ export default function BottomTabBar({ onMore }) {
   const [keyboardOpen, setKeyboardOpen] = useState(false);
 
   useEffect(() => {
-    const onFocusIn = () => setKeyboardOpen(true);
-    const onFocusOut = () => setKeyboardOpen(false);
+    const isTextControl = (el) =>
+      !!el &&
+      (el.tagName === 'INPUT' ||
+        el.tagName === 'TEXTAREA' ||
+        el.tagName === 'SELECT' ||
+        el.isContentEditable);
+    const onFocusIn = (e) => {
+      if (isTextControl(e.target)) setKeyboardOpen(true);
+    };
+    const onFocusOut = (e) => {
+      if (isTextControl(e.target)) setKeyboardOpen(false);
+    };
     document.addEventListener('focusin', onFocusIn);
     document.addEventListener('focusout', onFocusOut);
     return () => {

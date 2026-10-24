@@ -147,7 +147,10 @@
 
   .bottom-tabbar {
     position: fixed;
-    inset-inline: 12px;
+    left: 0;
+    right: 0;
+    margin-inline: 12px;
+    width: auto;
     bottom: calc(12px + env(safe-area-inset-bottom));
     height: 66px;
     padding: 7px;
@@ -225,9 +228,15 @@
   .mobile-topbar__search:active,
   .mobile-topbar__avatar:active,
   .mobile-topbar__login:active,
-  .bottom-tabbar__link:active,
-  .bottom-tabbar__more:active {
-    transform: scale(0.97);
+  .anime-shelf .swiper,
+  .anime-shelf .swiper-wrapper {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  html,
+  body {
+    overflow-x: clip;
   }
 }
 

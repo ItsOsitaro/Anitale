@@ -9,7 +9,7 @@ export default function MobileShell({ children }) {
   return (
     <>
       <MobileTopBar />
-      <main className="mobile-shell__content">{children}</main>
+      <main className="mobile-shell__content" style={{ paddingBottom: 'calc(66px + 12px + env(safe-area-inset-bottom) + 16px)' }}>{children}</main>
       <BottomTabBar onMore={() => setMoreOpen(true)} />
       <MoreSheet open={moreOpen} onClose={() => setMoreOpen(false)} />
     </>
