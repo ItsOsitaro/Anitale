@@ -1,7 +1,0 @@
-### ۴.۶ `Rail` و `PosterCard`
-- `Rail`: `display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; padding-inline: 16px; scrollbar-width: none`. (padding انتهایی هم 16px؛ `scroll-padding-inline: 16px`)
-- `PosterCard` (در ریل): عرض **124px**، کاور نسبت ۲:۳ (ارتفاع ~178px)، شعاع 14px، سایه‌ی آلویی.
-  - روی کاور بالا-ابتدا: بج امتیاز (پس‌زمینه‌ی `plum-3` با ۷۰٪ + blur، سفید، 11px/700، شعاع 9px، با ستاره).
-  - زیر کاور: عنوان 12.5px/700 در **حداکثر ۲ خط** (`line-clamp: 2`)، متا 11px با `--muted-foreground` («سریال · ۱۲ قسمت»).
-- `PosterCard` در گرید دو‌ستونه (کاتالوگ): عرض `auto`، ارتفاع کاور ~206px، gap `16px 12px`.
-- برای تصاویر: `loading="lazy"`, `decoding="async"`, و ابعاد ثابت (`aspect-ratio: 2/3`) تا layout shift نداشته باشیم.

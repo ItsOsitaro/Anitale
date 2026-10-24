@@ -1,7 +1,0 @@
-### ۴.۷ `RankRow` (برترین‌ها)
-- گرید چهارستونه: `30px | 48px | 1fr | auto`، gap 12px، padding `10px 12px 10px 14px`، شعاع 18px، پس‌زمینه‌ی `--card`، حاشیه‌ی ظریف `inset 0 0 0 1px` از `--border` با ۶۰٪ و سایه‌ی `0 1px 2px #2f1d2b0d`.
-- ستون ۱: شماره‌ی رتبه 18px/800 (رتبه‌های ۱ تا ۳ `--primary`، بقیه `--muted-foreground`).
-- ستون ۲: کاور 48×66، شعاع 10px.
-- ستون ۳: عنوان 14px/700 (یک خط با ellipsis) + متا 11.5px.
-- ستون ۴: pill امتیاز (پس‌زمینه‌ی `--secondary`، متن `--secondary-foreground`، 12.5px/800، ستاره‌ی توپر).
-- فاصله‌ی بین ردیف‌ها 8px. حالت `:active` → `transform: scale(.985)`.
