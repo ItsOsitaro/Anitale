@@ -26,6 +26,8 @@ import {
   sectionPages,
   sidebarSections,
 } from './sectionData.js';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import MobileShell from '@/components/mobile/MobileShell';
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
 
@@ -74,8 +76,9 @@ const highlightMatch = (title, query) => {
 };
 
 function SiteHeader() {
-  const navigate = useNavigate();
   const { lang, setLang, t } = useSiteLang();
+  const isMobile = useIsMobile();
+  if (isMobile) return null;
   const [search, setSearch] = useState('');
   const [searchMessage, setSearchMessage] = useState('');
   const [suggestions, setSuggestions] = useState([]);
@@ -1442,7 +1445,8 @@ function WithHeader({ theme, onThemeChange, children }) {
 }
 
 function AppRoutes({ theme, onThemeChange }) {
-  return (
+  const isMobile = useIsMobile();
+  const routes = (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/admin/*" element={<Suspense fallback={<CatalogLoadingFallback />}><AdminApp theme={theme} onThemeChange={onThemeChange} /></Suspense>} />
@@ -1455,6 +1459,10 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="*" element={<SectionPage theme={theme} onThemeChange={onThemeChange} />} />
     </Routes>
   );
+  if (isMobile) {
+    return <MobileShell>{routes}</MobileShell>;
+  }
+  return routes;
 }
 
 function CatalogSkeleton() {

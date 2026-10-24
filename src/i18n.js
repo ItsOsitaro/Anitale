@@ -24,6 +24,7 @@ export const messages = {
     siteName: 'انی‌تیل',
     siteTagline: 'انیمه و مانگا',
     brandAria: 'خانه‌ی انی‌تیل',
+    navMain: 'ناوبری اصلی',
     // Header
     searchPlaceholder: 'جستجوی عنوان…',
     searchAria: 'جستجوی عنوان',
@@ -110,7 +111,7 @@ export const messages = {
     moreNews: 'اخبار بیشتر',
     titleNotFound: 'عنوانی پیدا نشد', notLocal: 'این عنوان در کاتالوگ محلی نیست.',
     backToAnimeCatalog: 'بازگشت به کاتالوگ انیمه', backToMangaCatalog: 'بازگشت به کاتالوگ مانگا',
-    breadcrumbHome: 'خانه', breadcrumbAnime: 'انیمه', breadcrumbManga: 'مانگا',
+    breadcrumbHome: 'خانه', breadcrumbAnime: 'انیمه', breadcrumbManga: 'مانگا', tabMyList: 'فهرست من',
     // Weekdays (schedule)
     dayMon: 'دوشنبه', dayTue: 'سه‌شنبه', dayWed: 'چهارشنبه', dayThu: 'پنجشنبه', dayFri: 'جمعه', daySat: 'شنبه', daySun: 'یک‌شنبه',
     airingToday: 'امروز پخش می‌شود', todayBadge: 'امروز',
@@ -163,6 +164,7 @@ export const messages = {
     siteName: 'Anitale',
     siteTagline: 'Anime & Manga',
     brandAria: 'Anitale home',
+    navMain: 'Main navigation',
     searchPlaceholder: 'Search titles…',
     searchAria: 'Search titles',
     noMatch: 'No matching title found in this catalog.',
@@ -238,7 +240,7 @@ export const messages = {
     moreNews: 'More news',
     titleNotFound: 'Title not found', notLocal: 'That title is not in this local catalog.',
     backToAnimeCatalog: 'Back to anime catalog', backToMangaCatalog: 'Back to manga catalog',
-    breadcrumbHome: 'Home', breadcrumbAnime: 'Anime', breadcrumbManga: 'Manga',
+    breadcrumbHome: 'Home', breadcrumbAnime: 'Anime', breadcrumbManga: 'Manga', tabMyList: 'My List',
     dayMon: 'Mon', dayTue: 'Tue', dayWed: 'Wed', dayThu: 'Thu', dayFri: 'Fri', daySat: 'Sat', daySun: 'Sun',
     airingToday: 'Airing today', todayBadge: 'Today',
     // Site accounts
