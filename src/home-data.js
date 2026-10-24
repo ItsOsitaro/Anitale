@@ -2,7 +2,7 @@
 // HomePage and the mobile home page share one source of truth without
 // duplicating data-fetching or data-selection code.
 import { L } from '@/i18n.js';
-import { sortBy } from 'lodash/sortBy.js';
+import sortBy from 'lodash/sortBy.js';
 import { buildSchedule } from './catalog.js';
 import { withMangaImages } from './catalog-context.jsx';
 
