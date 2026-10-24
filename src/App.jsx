@@ -664,7 +664,7 @@ function HomePage() {
   }, [t]);
 
   if (isMobile) {
-    return <MobileHomePage lang={lang} t={t} picks={picks} />;
+    return <MobileHomePage lang={lang} t={t} picks={{ ...picks, animeCatalog }} />;
   }
 
   return (

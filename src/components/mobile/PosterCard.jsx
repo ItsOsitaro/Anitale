@@ -8,6 +8,7 @@ export default function PosterCard({ item, mediaType = 'anime' }) {
   const { lang } = useSiteLang();
   const title = displayTitle(item, lang);
   const href = mediaHref(item, mediaType);
+  const showScore = item.sampleScore != null && item.sampleScore !== 0;
   return (
     <article className="mobile-poster-card">
       <Link className="mobile-poster-card__link" to={href} aria-label={title}>
@@ -20,7 +21,7 @@ export default function PosterCard({ item, mediaType = 'anime' }) {
           width="124"
           height="178"
         />
-        {item.sampleScore != null && (
+        {showScore && (
           <span className="mobile-poster-card__badge">
             <Star width={11} height={11} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ color: '#fff' }} aria-hidden="true" />
             <span dir="ltr">{item.sampleScore}</span>
@@ -40,3 +41,4 @@ export default function PosterCard({ item, mediaType = 'anime' }) {
     </article>
   );
 }
+

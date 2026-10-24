@@ -10,6 +10,7 @@ export default function RankRow({ item, rank, mediaType = 'anime' }) {
   const title = displayTitle(item, lang);
   const href = mediaHref(item, mediaType);
   const isTop = rank <= 3;
+  const showScore = item.sampleScore != null && item.sampleScore !== 0;
   return (
     <Link
       to={href}
@@ -28,7 +29,7 @@ export default function RankRow({ item, rank, mediaType = 'anime' }) {
           <span dir="ltr">{item.year}</span>
         </div>
       </div>
-      {item.sampleScore != null && (
+      {showScore && (
         <span className="mobile-rank-row__score">
           <Star width={11} height={11} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--secondary-foreground)' }} aria-hidden="true" />
           <span dir="ltr">{item.sampleScore}</span>
@@ -37,3 +38,4 @@ export default function RankRow({ item, rank, mediaType = 'anime' }) {
     </Link>
   );
 }
+

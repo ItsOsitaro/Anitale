@@ -2,7 +2,7 @@ import { Link } from 'react-router-dom';
 import { editorialContent } from '@/sectionData';
 import { L, useSiteLang } from '@/i18n';
 import { mediaHref } from '@/catalog';
-import { displayTitle } from '@/home-data';
+import { displayTitle, selectCurrentSeasonPicks } from '@/home-data';
 import HeroCarousel from './HeroCarousel';
 import QuickChips from './QuickChips';
 import SectionHeader from './SectionHeader';
@@ -60,10 +60,40 @@ function ReviewCard({ item }) {
 export default function MobileHomePage({ picks, lang, t }) {
   const news = editorialContent.news.items;
   const reviews = editorialContent.reviews.items;
+  const animeCatalog = picks?.animeCatalog || picks?.topAnime?.concat(picks?.trendingAnime || []) || [];
+  // Better approach - we need the full catalog; but picks structure is passed from App.jsx
+  // Try to get from picks if available
+  let heroItems = [];
+  try {
+    // If animeCatalog is passed separately in some form, try to use it
+    if (picks?.animeCatalog) {
+      heroItems = selectCurrentSeasonPicks({ animeCatalog: picks.animeCatalog });
+    } else {
+      // Fallback: try to construct from all anime in picks
+      const allAnime = [
+        ...(picks.topAnime || []),
+        ...(picks.trendingAnime || []),
+        ...(picks.currentSeason || []),
+        ...(picks.airingAnime || []),
+      ];
+      // Remove duplicates
+      const unique = [];
+      const seen = new Set();
+      for (const item of allAnime) {
+        if (!seen.has(item.slug)) {
+          unique.push(item);
+          seen.add(item.slug);
+        }
+      }
+      heroItems = selectCurrentSeasonPicks({ animeCatalog: unique });
+    }
+  } catch (e) {
+    heroItems = [];
+  }
 
   return (
     <div className="mobile-home">
-      <HeroCarousel items={picks.topAnime} />
+      {heroItems && heroItems.length > 0 && <HeroCarousel items={heroItems} />}
       <QuickChips />
       <SectionHeader title={t('homeSeason')} to="/seasonal" />
       <Rail>
@@ -83,7 +113,7 @@ export default function MobileHomePage({ picks, lang, t }) {
           <WideCard key={item.slug} item={item} />
         ))}
       </Rail>
-      {picks.freshManga.length > 0 && (
+      {picks.freshManga && picks.freshManga.length > 0 && (
         <>
           <SectionHeader title={t('freshManga')} to="/manga" />
           <Rail>
@@ -116,3 +146,4 @@ export default function MobileHomePage({ picks, lang, t }) {
     </div>
   );
 }
+
