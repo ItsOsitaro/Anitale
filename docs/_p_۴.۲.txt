@@ -1,0 +1,17 @@
+### ۴.۲ `BottomTabBar`
+- `position: fixed; inset-inline: 12px; bottom: calc(12px + env(safe-area-inset-bottom)); height: 66px; border-radius: 26px; padding: 7px; z-index: 20`.
+- پس‌زمینه: `color-mix(in oklch, var(--card) 80%, transparent)` + `backdrop-filter: blur(20px) saturate(1.6)` + `box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--border) 70%, transparent), 0 18px 36px -14px #4f2e4466`.
+- ۵ آیتم برابر (`flex: 1`)، هرکدام آیکون 22px + برچسب 10.5px/700 زیر آن:
+
+| ترتیب (راست به چپ) | برچسب | مسیر |
+|---|---|---|
+| ۱ | خانه | `/` |
+| ۲ | انیمه | `/anime` |
+| ۳ | مانگا | `/manga` |
+| ۴ | فهرست من | `/dashboard` (اگر وارد نشده: `/login`) |
+| ۵ | بیشتر | باز کردن sheet «بیشتر» |
+
+- **حالت فعال:** پس‌زمینه‌ی `--accent`، رنگ `--accent-foreground`، شعاع 20px. حالت عادی: `--muted-foreground`.
+- آیکون‌ها: خطی (stroke 1.8، گوشه‌ی گرد)؛ از همان کتابخانه‌ی آیکون پروژه استفاده کن اگر دارد، وگرنه `lucide-react` (`Home`, `Tv`, `BookOpen`, `ListChecks`, `LayoutGrid`).
+- هنگام اسکرول رو به پایین نیازی به مخفی‌کردن نیست. ساده بماند.
+- اگر کیبورد باز شد (فوکوس روی input)، tab bar مخفی شود.

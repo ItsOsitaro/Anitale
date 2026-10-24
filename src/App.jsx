@@ -14,6 +14,7 @@ const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
 import { loadAnimeCatalog, loadMangaCatalog, buildSchedule, mediaHref, foldTitle, currentWeekday } from './catalog.js';
 import { CatalogContext, MangaCatalogContext, useCatalog, useMangaCatalog, withMangaImages } from './catalog-context.jsx';
 import { useUser, UserProvider } from './user.jsx';
+import { synopsisText, selectHomePicks } from './home-data.js';
 import { ThemeProvider, useTheme } from './theme-context.jsx';
 import { AuthPage, UserDashboard, UserPublicProfile } from './userPages.jsx';
 import { DEFAULT_LANG, L, SiteLangContext, makeSiteT, useSiteLang } from './i18n.js';
@@ -28,16 +29,10 @@ import {
 } from './sectionData.js';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import MobileShell from '@/components/mobile/MobileShell';
+import MobileHomePage from '@/components/mobile/MobileHomePage';
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
 
-// Synopsis value: the catalog stores a legacy plain string OR bilingual JSON
-// { fa, en }. L() resolves the object to the current language with a
-// fa→en fallback; plain strings pass through untouched.
-const synopsisText = (item, lang) => (typeof item?.synopsis === 'string' ? item.synopsis : L(item?.synopsis, lang));
-
-// خورشید/ماه site-native light/dark switch — knob slides, icons crossfade,
-// colors live on the site's own tokens. Context-driven: works on every page.
 function ThemeSwitch() {
   const { isDark, toggle } = useTheme();
   const { t } = useSiteLang();
@@ -632,6 +627,9 @@ function HomePage() {
   const { lang, t } = useSiteLang();
   const isMobile = useIsMobile();
   const animeCatalog = useCatalog();
+  const mangaCatalog = useMangaCatalog();
+  const picks = selectHomePicks({ animeCatalog, mangaCatalog });
+  const { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga } = picks;
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
   // visit, and manually re-rollable with the dice action in the hero.
   // Seen picks this session never repeat (when the catalog is exhausted, the
@@ -660,22 +658,14 @@ function HomePage() {
     () => animeCatalog.find((anime) => anime.slug === featuredSlug) || null,
     [animeCatalog, featuredSlug],
   );
-  const topAnime = sortBy(animeCatalog, (anime) => -anime.sampleScore).slice(0, 5);
-  const trendingAnime = animeCatalog.slice(5, 10);
-  const currentSeason = sortBy(animeCatalog, (anime) => -Number(anime.year)).slice(0, 5);
-  const airingAnime = buildSchedule(animeCatalog)
-    .map((entry) => animeCatalog.find((anime) => anime.slug === entry.slug))
-    .filter(Boolean);
-  const mangaItems = withMangaImages(useMangaCatalog(), animeCatalog);
-  // Queue 20: currently-publishing manga, most chapters first (hidden when none).
-  const freshManga = sortBy(
-    mangaItems.filter((manga) => manga.publicationStatus === 'Publishing'),
-    (manga) => (manga.chapters ?? 0),
-  ).reverse().slice(0, 5);
 
   useEffect(() => {
     document.title = t('pageTitles').home;
   }, [t]);
+
+  if (isMobile) {
+    return <MobileHomePage lang={lang} t={t} picks={picks} />;
+  }
 
   return (
     <>

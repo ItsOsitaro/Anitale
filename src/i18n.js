@@ -57,6 +57,13 @@ export const messages = {
     mostPopular: 'محبوب‌ترین انیمه‌ها', mangaStoreShelf: 'قفسه‌ی مانگا', animeSuggestions: 'پیشنهاد انیمه',
     freshManga: 'تازه‌های مانگا', publishingLabel: 'در حال انتشار', finishedLabel: 'پایان‌یافته', mangaChaptersBadge: 'چاپتر: {n}',
     mangaSuggestions: 'پیشنهاد مانگا', editorialDesk: 'از میز تحریریه', exploreCommunity: 'اجتماع را بگرد',
+    // Mobile home page
+    chipSeason: 'فصل جاری', chipTop: 'برترین‌ها', chipLatest: 'تازه‌ها', chipNews: 'اخبار',
+    homeSeason: 'انیمه‌های فصل',
+    homeEditorialMeta: '۶ عنوان · از میز تحریریه',
+    homeNewsMeta: '۲ ساعت پیش · تحریریه',
+    footerAbout: 'درباره', footerAdvertising: 'تبلیغات', footerContact: 'تماس',
+    footerCopyright: 'کلیه حقوق برای انی‌تیل محفوظ است.',
     // Notes
     mediaNote: 'پخش ویدیو در این نمونه‌ی محلی میزبانی نمی‌شود.',
     trailerNote: 'پیش‌نمایش قفسه‌ی تریلر؛ به‌جای ویدیوی میزبانی‌شده از طراحی محلی استفاده شده است.',
@@ -191,6 +198,13 @@ export const messages = {
     mostPopular: 'Most Popular Anime', mangaStoreShelf: 'Popular Manga Store Comics', animeSuggestions: 'Anime Suggestions',
     freshManga: 'Fresh Manga', publishingLabel: 'Publishing', finishedLabel: 'Finished', mangaChaptersBadge: '{n} chapters',
     mangaSuggestions: 'Manga Suggestions', editorialDesk: 'From the Editorial Desk', exploreCommunity: 'Explore the community',
+    // Mobile home page
+    chipSeason: 'Current season', chipTop: 'Top', chipLatest: 'Latest', chipNews: 'News',
+    homeSeason: 'Seasonal anime',
+    homeEditorialMeta: '6 titles · Editorial desk',
+    homeNewsMeta: '2 hours ago · Editorial',
+    footerAbout: 'About', footerAdvertising: 'Advertising', footerContact: 'Contact',
+    footerCopyright: 'All rights reserved.',
     mediaNote: 'Video playback is not hosted by this local prototype.',
     trailerNote: 'Trailer shelf preview; original local artwork is used in place of hosted video.',
     friendNote: 'Sample member activity',
