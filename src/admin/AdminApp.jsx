@@ -10,6 +10,7 @@ import SiteUsers from './SiteUsers.jsx';
 import Schedule from './Schedule.jsx';
 import MangaList from './MangaList.jsx';
 import BulkImport from './BulkImport.jsx';
+import Translation from './Translation.jsx';
 import './admin.css';
 
 const readLang = () => {
@@ -60,6 +61,14 @@ const IconList = makeIcon([
   'M8 6h13', 'M8 12h13', 'M8 18h13',
   'M3 6h.01', 'M3 12h.01', 'M3 18h.01',
 ]);
+const IconTranslate = makeIcon([
+  'M5 8l6 6',
+  'M4 14l6-6 2-3',
+  'M2 5h12',
+  'M7 2h1',
+  'M22 22l-5-10-5 10',
+  'M14 18h6',
+]);
 const IconUser = makeIcon(['M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'], [[12, 7, 4]]);
 
 /* Sidebar sections: group key = i18n key, items share the route title keys. */
@@ -76,6 +85,7 @@ const NAV = [
     items: [
       { to: '/admin/new', icon: IconPlus, key: 'newAnime' },
       { to: '/admin/bulk-import', icon: IconImport, key: 'bulkNav' },
+      { to: '/admin/translate', icon: IconTranslate, key: 'translateNav' },
       { to: '/admin/schedule', icon: IconCalendar, key: 'scheduleNav' },
     ],
   },
@@ -92,6 +102,7 @@ const titleFor = (pathname) => {
   if (pathname.startsWith('/admin/users')) return 'siteUsers';
   if (pathname.startsWith('/admin/schedule')) return 'scheduleNav';
   if (pathname.startsWith('/admin/bulk-import')) return 'bulkNav';
+  if (pathname.startsWith('/admin/translate')) return 'translateNav';
   if (pathname.startsWith('/admin/manga')) return 'mangaNav';
   if (pathname.startsWith('/admin/new') || pathname.startsWith('/admin/edit')) return 'newAnime';
   return 'titles';
@@ -244,6 +255,7 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="users" element={<SiteUsers />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="bulk-import" element={<BulkImport />} />
+                <Route path="translate" element={<Translation />} />
                 <Route path="manga" element={<MangaList />} />
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Routes>

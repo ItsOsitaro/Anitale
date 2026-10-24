@@ -62,7 +62,7 @@ export const api = {
   refresh: (slug) => request('POST', `/api/admin/anime/${encodeURIComponent(slug)}/refresh`),
   refreshAll: () => request('POST', '/api/admin/anime/refresh-all'),
   // Persian backfill job (local NLLB engine): one bounded slice per call.
-  backfill: () => request('POST', '/api/admin/translate/backfill'),
+  backfill: (body = {}) => request('POST', '/api/admin/translate/backfill', body),
   // Site-user management
   usersList: (q, page) => request('GET', `/api/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
   usersGet: (username) => request('GET', `/api/admin/users/${encodeURIComponent(username)}`),

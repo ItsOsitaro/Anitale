@@ -1020,8 +1020,9 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   // keyed-off admin job fills Persian at its own pace: one call translates as
   // many rows as fit in a bounded slice of the function time cap (240s), then
   // reports how many rows are still missing Persian so the admin UI can loop.
-  // Rows whose Persian exists (manual or auto) are never touched here; the
-  // refresh endpoints rule over re-translation.
+  // Rows whose Persian exists (manual or auto) are never touched here unless
+  // explicitly retranslated in forceAuto mode; the refresh endpoints rule over
+  // re-translation. Manual Persian (auto: false) is ALWAYS preserved.
   let backfillRunning = false;
   const needsPersian = (raw) => {
     try {
@@ -1030,38 +1031,101 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     } catch { /* plain string source text */ }
     return true;
   };
+  const parseSynopsisObj = (raw) => {
+    try {
+      const parsed = JSON.parse(raw || '');
+      if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) return parsed;
+    } catch { /* plain string */ }
+    return null;
+  };
+  const getEnglishSource = (raw) => {
+    const obj = parseSynopsisObj(raw);
+    if (obj && typeof obj.en === 'string' && obj.en.trim()) return obj.en.trim();
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (typeof parsed === 'string') return parsed.trim();
+      } catch { /* not json */ }
+      return raw.trim();
+    }
+    return '';
+  };
   const missingPersianRows = (table) => {
     const rows = db.prepare(
       `SELECT id, slug, synopsis FROM ${table} WHERE mal_id IS NOT NULL AND synopsis IS NOT NULL AND synopsis != '' ORDER BY id ASC LIMIT 400`,
     ).all();
     return rows.filter((row) => needsPersian(row.synopsis));
   };
+  const autoTranslatedRows = (table, limit = 400) => {
+    const rows = db.prepare(
+      `SELECT id, slug, synopsis FROM ${table} WHERE mal_id IS NOT NULL AND synopsis IS NOT NULL AND synopsis != '' ORDER BY id ASC LIMIT ?`,
+    ).all(limit);
+    const list = [];
+    for (const row of rows) {
+      const obj = parseSynopsisObj(row.synopsis);
+      if (!obj) continue;
+      if (obj.auto === false) continue; // manual - never touch
+      if (!obj.auto) continue;
+      const en = getEnglishSource(row.synopsis);
+      if (!en) continue;
+      list.push({ ...row, _en: en });
+    }
+    return list;
+  };
   app.post('/api/admin/translate/backfill', requireAdmin, writeLimiter, async (req, res) => {
     if (backfillRunning) throw httpError(429, 'A backfill run is already in flight');
     backfillRunning = true;
     const startedAt = Date.now();
     const budgetMs = Number(req.body?.budgetMs) || 240_000; // leave headroom under the 300s cap
+    const mode = String(req.body?.mode || 'missing').toLowerCase();
+    const media = String(req.body?.media || 'both').toLowerCase();
+    const tables = media === 'anime' ? ['anime'] : media === 'manga' ? ['manga'] : ['anime', 'manga'];
     const results = [];
     let translated = 0;
     let failed = 0;
+    let scanned = 0;
+    let skippedManual = 0;
     try {
-      outer: for (const table of ['anime', 'manga']) {
-        for (const row of missingPersianRows(table)) {
-          if (Date.now() - startedAt > budgetMs) break outer;
-          const en = String(row.synopsis).trim();
-          if (!en) continue;
-          try {
-            const fa = await translateSynopsis(en); // policy: fresh translate with auto flag
-            if (!fa) throw new Error('Empty translation');
-            db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
-              .run(JSON.stringify({ fa, en, auto: true }), row.id);
-            translated += 1;
-            results.push({ table, slug: row.slug, ok: true });
-            console.log(`[backfill] ${table}/${row.slug} filled in ${Date.now() - startedAt}ms cumulative`);
-          } catch (error) {
-            failed += 1;
-            results.push({ table, slug: row.slug, ok: false, error: error.message });
-            console.error(`[backfill] ${table}/${row.slug}: ${error.message}`);
+      if (mode === 'forceauto' || mode === 'force-auto' || mode === 'retranslate' || mode === 'retranslate-auto') {
+        outer: for (const table of tables) {
+          const rows = autoTranslatedRows(table, 500);
+          scanned += rows.length;
+          for (const row of rows) {
+            if (Date.now() - startedAt > budgetMs) break outer;
+            try {
+              const fa = await translateSynopsis(row._en); // retranslate from source en
+              if (!fa) throw new Error('Empty translation');
+              db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
+                .run(JSON.stringify({ fa, en: row._en, auto: true }), row.id);
+              translated += 1;
+              results.push({ table, slug: row.slug, ok: true });
+              console.log(`[translate:forceAuto] ${table}/${row.slug} retranslated in ${Date.now() - startedAt}ms cumulative`);
+            } catch (error) {
+              failed += 1;
+              results.push({ table, slug: row.slug, ok: false, error: error.message });
+              console.error(`[translate:forceAuto] ${table}/${row.slug}: ${error.message}`);
+            }
+          }
+        }
+      } else {
+        outer: for (const table of tables) {
+          for (const row of missingPersianRows(table)) {
+            if (Date.now() - startedAt > budgetMs) break outer;
+            const en = getEnglishSource(row.synopsis) || String(row.synopsis).trim();
+            if (!en) continue;
+            try {
+              const fa = await translateSynopsis(en); // policy: fresh translate with auto flag
+              if (!fa) throw new Error('Empty translation');
+              db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
+                .run(JSON.stringify({ fa, en, auto: true }), row.id);
+              translated += 1;
+              results.push({ table, slug: row.slug, ok: true });
+              console.log(`[backfill] ${table}/${row.slug} filled in ${Date.now() - startedAt}ms cumulative`);
+            } catch (error) {
+              failed += 1;
+              results.push({ table, slug: row.slug, ok: false, error: error.message });
+              console.error(`[backfill] ${table}/${row.slug}: ${error.message}`);
+            }
           }
         }
       }
@@ -1069,10 +1133,19 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     } finally {
       backfillRunning = false;
     }
+    // compute remaining for missing mode
+    let remainingMissing = 0;
+    if (mode === 'missing') {
+      for (const table of ['anime', 'manga']) {
+        remainingMissing += missingPersianRows(table).length;
+      }
+    }
     res.json({
       translated,
       failed,
-      remaining: missingPersianRows('anime').length + missingPersianRows('manga').length,
+      scanned,
+      skippedManual,
+      remaining: mode === 'missing' ? remainingMissing : 0,
       elapsedMs: Date.now() - startedAt,
       results,
     });
