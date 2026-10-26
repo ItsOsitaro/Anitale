@@ -7,6 +7,8 @@ export default function MobileTopBar({
   title,
   user,
   onSearch,
+  onLogin,
+  onAvatar,
   onBack,
   onMore,
   className,
@@ -43,7 +45,7 @@ export default function MobileTopBar({
       </button>
 
       {user ? (
-        <button type="button" className="mobile-topbar__avatar" aria-label={t('userKind')}>
+        <button type="button" className="mobile-topbar__avatar" onClick={onAvatar} aria-label={t('userKind')}>
           {user.avatarUrl ? (
             <img
               className="mobile-topbar__avatar-img"
@@ -61,7 +63,7 @@ export default function MobileTopBar({
           )}
         </button>
       ) : (
-        <button type="button" className="mobile-topbar__login" aria-label={t('authSubmitLogin')}>
+        <button type="button" className="mobile-topbar__login" onClick={onLogin} aria-label={t('authSubmitLogin')}>
           {t('authSubmitLogin')}
         </button>
       )}

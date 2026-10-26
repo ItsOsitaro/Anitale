@@ -31,6 +31,8 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import MobileShell from '@/components/mobile/MobileShell';
 import MobileHomePage from '@/components/mobile/MobileHomePage';
 import MobileCatalogPage from '@/components/mobile/MobileCatalogPage';
+import MobileRankingPage from '@/components/mobile/MobileRankingPage';
+import MobileSeasonalPage from '@/components/mobile/MobileSeasonalPage';
 import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
@@ -1060,6 +1062,25 @@ function SectionPage({ theme, onThemeChange }) {
         year={year} onYearChange={setYear} years={years}
         sort={sort} onSortChange={setSort}
       />
+    );
+  }
+
+  if (isMobile && page.kind.includes('ranking')) {
+    return (
+      <MobileRankingPage
+        title={title}
+        items={filteredItems}
+        mediaType={page.kind === 'manga-ranking' ? 'manga' : 'anime'}
+        note={page.kind === 'manga-ranking' ? t('mangaRankingNote') : t('animeRankingNote')}
+      />
+    );
+  }
+
+  if (isMobile && page.kind === 'seasonal') {
+    return (
+      <MobileSeasonalPage title={title} items={filteredItems}>
+        <AiringToday />
+      </MobileSeasonalPage>
     );
   }
 

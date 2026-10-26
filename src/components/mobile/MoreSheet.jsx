@@ -2,11 +2,13 @@ import { useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { sidebarSections } from '@/sectionData';
 import { L, useSiteLang } from '@/i18n';
+import { useUser } from '@/user';
 import { cn } from 'cn';
 
 export default function MoreSheet({ open, onClose }) {
   const { t, lang } = useSiteLang();
   const dialogRef = useRef(null);
+  const user = useUser();
 
   useEffect(() => {
     if (!open) return;
@@ -57,6 +59,15 @@ export default function MoreSheet({ open, onClose }) {
         </div>
         <div className="more-sheet__footer">
           <button type="button" className="more-sheet__footer-btn">{t('langButton')}</button>
+          {user?.me && (
+            <button
+              type="button"
+              className="more-sheet__footer-btn"
+              onClick={() => { onClose(); user.logout(); }}
+            >
+              {t('dashLogout')}
+            </button>
+          )}
         </div>
       </div>
     </div>
