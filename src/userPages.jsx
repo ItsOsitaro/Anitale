@@ -7,6 +7,9 @@ import { useCatalog, useMangaCatalog, withMangaImages } from './catalog-context.
 import { mediaHref } from './catalog.js';
 import { useUser, userApi } from './user.jsx';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useIsMobile } from '@/hooks/use-is-mobile';
+import MobileDashboard from '@/components/mobile/MobileDashboard';
+import MobileProfile from '@/components/mobile/MobileProfile';
 
 export const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,24}$/;
 
@@ -231,6 +234,7 @@ export function AuthPage({ mode = 'login' }) {
 
 export function UserDashboard() {
   const { lang, t } = useSiteLang();
+  const isMobile = useIsMobile();
   const user = useUser();
   const { animeBySlug, mangaBySlug } = useEntryCatalogs();
   const [tab, setTab] = useState('anime');
@@ -264,6 +268,16 @@ export function UserDashboard() {
   if (!user.me) return <Navigate to="/login" replace />;
 
   const { me, entries } = user;
+
+  if (isMobile) {
+    return (
+      <MobileDashboard me={me} entries={entries} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} user={user}>
+        <FriendsFeed items={feedItems} />
+        <ListMatches />
+      </MobileDashboard>
+    );
+  }
+
   const tabEntries = entries[tab];
   const ratedTabEntries = tabEntries.filter((entry) => entry.rating != null);
   const tabAvgRating = ratedTabEntries.length
@@ -541,6 +555,7 @@ export function FollowButton({ profile, onChange }) {
 
 export function UserPublicProfile() {
   const { lang, t } = useSiteLang();
+  const isMobile = useIsMobile();
   const { username } = useParams();
   const user = useUser();
   const { animeBySlug, mangaBySlug } = useEntryCatalogs();
@@ -603,6 +618,27 @@ export function UserPublicProfile() {
     : null;
 
   const resolve = (entry) => (tab === 'anime' ? animeBySlug : mangaBySlug).get(entry.slug);
+
+  if (isMobile) {
+    return (
+      <MobileProfile
+        profile={profile}
+        entries={entries}
+        animeBySlug={animeBySlug}
+        mangaBySlug={mangaBySlug}
+        followCounts={followCounts}
+        isOwner={Boolean(isOwner)}
+        followButton={(
+          <FollowButton
+            profile={{ ...profile, isFollowing: followCounts.isFollowing }}
+            onChange={(followTotal, nextFlag) => {
+              setFollowCountsState({ followers: followTotal, following: followCounts.following, isFollowing: nextFlag });
+            }}
+          />
+        )}
+      />
+    );
+  }
 
   return (
     <main className="profile-shell">

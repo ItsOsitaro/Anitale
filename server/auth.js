@@ -22,8 +22,8 @@ const safeEqual = (a, b) => {
   return left.length === right.length && crypto.timingSafeEqual(left, right);
 };
 
-const createToken = (user, extra = {}, ttlSeconds = TTL_SECONDS) => {
-  const body = b64(JSON.stringify({ u: user, exp: Math.floor(Date.now() / 1000) + ttlSeconds, ...extra }));
+const createToken = (user, kind, extra = {}, ttlSeconds = TTL_SECONDS) => {
+  const body = b64(JSON.stringify({ u: user, kind, exp: Math.floor(Date.now() / 1000) + ttlSeconds, ...extra }));
   return `${body}.${hmac(body)}`;
 };
 
@@ -46,7 +46,11 @@ const parseCookies = (header = '') => Object.fromEntries(
   }),
 );
 
-export const currentUser = (req) => readToken(parseCookies(req.headers.cookie)[COOKIE])?.u || null;
+export const currentUser = (req) => {
+  const payload = readToken(parseCookies(req.headers.cookie)[COOKIE]);
+  if (payload?.kind !== 'admin' || !process.env.ADMIN_USER || !safeEqual(payload.u, process.env.ADMIN_USER)) return null;
+  return payload.u;
+};
 
 export const isAuthConfigured = () => Boolean(process.env.ADMIN_USER && process.env.ADMIN_PASSWORD_HASH);
 
@@ -69,7 +73,7 @@ const secureFlag = (req) => {
 };
 
 export const setSession = (req, res, user) => {
-  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user, {}, ADMIN_TTL_SECONDS)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ADMIN_TTL_SECONDS}${secureFlag(req)}`);
+  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user, 'admin', {}, ADMIN_TTL_SECONDS)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ADMIN_TTL_SECONDS}${secureFlag(req)}`);
 };
 
 export const clearSession = (req, res) => {
@@ -84,14 +88,17 @@ const userTokenVersion = (username) => db
 
 export const setUserSession = (req, res, username) => {
   const maxAge = TTL_SECONDS * 4;
-  res.setHeader('Set-Cookie', `${USER_COOKIE}=${createToken(username, { v: userTokenVersion(username) }, maxAge)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secureFlag(req)}`);
+  res.setHeader('Set-Cookie', `${USER_COOKIE}=${createToken(username, 'user', { v: userTokenVersion(username) }, maxAge)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${maxAge}${secureFlag(req)}`);
 };
 
 export const clearUserSession = (req, res) => {
   res.setHeader('Set-Cookie', `${USER_COOKIE}=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${secureFlag(req)}`);
 };
 
-export const currentSiteUser = (req) => readToken(parseCookies(req.headers.cookie)[USER_COOKIE])?.u || null;
+export const currentSiteUser = (req) => {
+  const payload = readToken(parseCookies(req.headers.cookie)[USER_COOKIE]);
+  return payload?.kind === 'user' ? payload.u : null;
+};
 
 // Verifies the cookie AND that the user row still exists with the token
 // version current (password changes / deletes bump or remove the row).
