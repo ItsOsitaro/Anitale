@@ -31,6 +31,7 @@ import { useIsMobile } from '@/hooks/use-is-mobile';
 import MobileShell from '@/components/mobile/MobileShell';
 import MobileHomePage from '@/components/mobile/MobileHomePage';
 import MobileCatalogPage from '@/components/mobile/MobileCatalogPage';
+import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
 
@@ -1216,6 +1217,30 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const reviews = editorialContent.reviews.items.slice(0, 2);
   const homeDiscussions = homeContent.discussions;
   const newsItems = editorialContent.news.items;
+
+  if (isMobile) {
+    return (
+      <MobileDetailPage
+        item={item}
+        mediaType={mediaType}
+        related={related}
+        informationRows={informationRows}
+        statisticsRows={statisticsRows}
+        alternativeTitles={alternativeTitles}
+        romajiTitle={romajiTitle}
+        isSaved={isSaved}
+        currentStatus={savedEntry?.status || 'watching'}
+        listStatuses={listStatuses}
+        onToggleSaved={toggleSaved}
+        onSetStatus={(statusId) => user.setStatus(mediaType, item.slug, statusId)}
+        onShare={shareTitle}
+        shareNote={shareNote}
+        reviews={reviews}
+        newsItems={newsItems}
+        discussions={homeDiscussions}
+      />
+    );
+  }
 
   return (
     <>
