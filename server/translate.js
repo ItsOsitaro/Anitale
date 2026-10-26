@@ -25,6 +25,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { fetch as undiciFetch, ProxyAgent } from 'undici';
 import { glossaryNames, glossaryTerms } from './translate-glossary.mjs';
+import { getSetting } from './settings.js';
 
 const NLLB_ID = 'Xenova/nllb-200-distilled-600M';
 const NLLB_MODEL_DIR = path.join('Xenova', 'nllb-200-distilled-600M');
@@ -381,7 +382,6 @@ const adminPreferredProvider = () => {
 // Runtime state handed to GET /api/admin/settings: what the admin UI shows as
 // the current pick plus which engines are actually usable on this deployment.
 export const translatorState = () => ({
-  provider: () => '',
   chosen: getSetting('translate_provider', '') || 'auto',
   engine: engineMode(),
   geminiKey: Boolean(process.env.GEMINI_API_KEY),
@@ -407,8 +407,12 @@ export const translateSynopsis = async (text) => {
   // Glossary in place: swap protected terms to their Persian forms before any
   // engine sees the text.
   const prepared = prepareSource(source);
-  const pinned = engineMode() === 'nllb' ? 'local' : (PROVIDERS[pinnedProvider()] ? pinnedProvider() : null);
-  const chain = pinned ? [pinned] : defaultChain();
+  const strictPin = engineMode() === 'nllb' ? 'local' : (PROVIDERS[pinnedProvider()] ? pinnedProvider() : null);
+  const adminPin = strictPin ? '' : adminPreferredProvider();
+  const baseline = strictPin ? [strictPin] : defaultChain();
+  // Admin pick (admin Settings) leads the chain; the rest of the baseline stays
+  // behind as resilience so one dead provider can never stall imports.
+  const chain = adminPin ? [adminPin, ...baseline.filter((name) => name !== adminPin)] : baseline;
   let lastError = null;
   for (const name of chain) {
     try {
