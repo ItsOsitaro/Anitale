@@ -15,6 +15,7 @@ import MobileProfile from '@/components/mobile/MobileProfile';
 import { coverUrl } from '@/lib/cover';
 import { isEmail } from './accountPages.jsx';
 import { profileInsights } from '@/lib/profile-insights';
+import { ProfileFavorites } from '@/components/Favorites';
 import { FavoriteGenres, ProfileReviews, RecentActivity, StatusBreakdown, TopRated } from '@/components/ProfileInsights';
 import AiringAlertList from '@/components/AiringAlertList';
 import { useAiringAlerts } from '@/hooks/use-airing-alerts';
@@ -725,6 +726,7 @@ export function UserPublicProfile() {
         mangaBySlug={mangaBySlug}
         followCounts={followCounts}
         reviews={data.reviews || []}
+        favorites={data.favorites}
         isOwner={Boolean(isOwner)}
         followButton={(
           <FollowButton
@@ -778,6 +780,8 @@ export function UserPublicProfile() {
           </div>
         )}
       </div>
+
+      <ProfileFavorites favorites={data.favorites} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
 
       {insights.total > 0 && (
         <div className="pi-grid">

@@ -16,6 +16,7 @@ import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdmin
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
 import { listNotifications, markNotificationsRead, notifyFollow, notifyFollowersOfReview } from './notifications.js';
@@ -385,6 +386,7 @@ export const createApp = () => {
         manga: mine.manga.map(({ note, ...rest }) => rest),
       },
       reviews: listUserReviews(row.id),
+      favorites: listFavorites(row.id),
       followers: counts.followers,
       following: counts.following,
       ...(viewer && viewer.id !== row.id ? { isFollowing: isFollowing(viewer.id, row.id) } : {}),
@@ -449,6 +451,36 @@ export const createApp = () => {
   };
   app.put('/api/user/reviews/:id/helpful', requireSiteUser, reviewLimiter, helpfulHandler(true));
   app.delete('/api/user/reviews/:id/helpful', requireSiteUser, reviewLimiter, helpfulHandler(false));
+
+  // ---------- Favorites (hearts on titles, characters and people) ----------
+  const favLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 200, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many changes. Try again later.' } });
+  const favParams = (req) => {
+    const kind = req.params.kind;
+    const ref = String(req.params.ref || '').slice(0, 120);
+    if (!FAVORITE_KINDS.includes(kind) || !ref) throw httpError(404, 'Not found');
+    return { kind, ref };
+  };
+  app.get('/api/favorites/:kind/:ref', (req, res) => {
+    const { kind, ref } = favParams(req);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.json({ ...favoriteInfo(kind, ref, viewerId(req)), limit: FAVORITE_LIMIT });
+  });
+  app.put('/api/user/favorites/:kind/:ref', requireSiteUser, favLimiter, (req, res) => {
+    const { kind, ref } = favParams(req);
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    const result = addFavorite(row.id, kind, ref);
+    if (result === 'missing') throw httpError(404, 'Not found');
+    if (result === 'limit') throw httpError(409, `You can keep at most ${FAVORITE_LIMIT} favorites in this category`);
+    res.json({ ok: true, ...favoriteInfo(kind, ref, row.id) });
+  });
+  app.delete('/api/user/favorites/:kind/:ref', requireSiteUser, favLimiter, (req, res) => {
+    const { kind, ref } = favParams(req);
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    removeFavorite(row.id, kind, ref);
+    res.json({ ok: true, ...favoriteInfo(kind, ref, row.id) });
+  });
 
   // ---------- Recommendations ("if you liked this, try that") ----------
   app.get('/api/recs/:mediaType/:slug', (req, res) => {

@@ -1,3 +1,4 @@
+import { ProfileFavorites } from '../Favorites';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { displayTitle } from '@/home-data';
@@ -13,7 +14,7 @@ import FollowListSheet from '../FollowListSheet';
 const TABS = ['list', 'activity', 'about'];
 const TAB_KEYS = { list: 'dbTabList', activity: 'dbTabActivity', about: 'dbTabAbout' };
 
-export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [] }) {
+export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [], favorites }) {
   const { t, lang } = useSiteLang();
   const [tab, setTab] = useState('list');
   const [media, setMedia] = useState('anime');
@@ -155,6 +156,7 @@ export default function MobileProfile({ onOpenFollows, followSheet, profile, ent
         <section className="mprofile__panel mprofile__about">
           <p className="mprofile__bio" dir="auto">{profile.bio || t('dbNoBio')}</p>
           <p className="mprofile__joined"><time dateTime={profile.joinedAt}>{t('dashJoined', { date: joined })}</time></p>
+          <ProfileFavorites favorites={favorites} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
           <StatusBreakdown insights={insights} />
           <FavoriteGenres insights={insights} />
           <TopRated insights={insights} />

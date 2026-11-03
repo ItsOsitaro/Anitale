@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSiteLang } from './i18n.js';
 import { useCatalog, useMangaCatalog } from './catalog-context.jsx';
 import { mediaHref } from './catalog.js';
+import { FavoriteButton } from './components/Favorites.jsx';
 
 const cache = new Map();
 
@@ -92,6 +93,7 @@ function PeopleView({ kind, id }) {
         <div>
           <h1 dir="auto">{d.name}</h1>
           {otherNames.length > 0 && <p className="people-alt" dir="auto">{otherNames.join(lang === 'fa' ? '، ' : ', ')}</p>}
+          <FavoriteButton kind={kind} refId={d.id} />
           <dl className="people-facts">
             {d.birthday && <div><dt>{t('peopleBirthday')}</dt><dd dir="ltr">{d.birthday}</dd></div>}
             {d.favorites > 0 && <div><dt>{t('favoritesLabel')}</dt><dd dir="ltr">{d.favorites.toLocaleString('en-US')}</dd></div>}

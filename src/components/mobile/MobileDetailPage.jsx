@@ -1,4 +1,5 @@
 import { splitGenres } from '@/lib/genre-kinds';
+import { FavoriteButton } from '../Favorites';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -350,6 +351,7 @@ export default function MobileDetailPage({
           {isSaved ? <Check width={20} height={20} aria-hidden="true" /> : <Plus width={20} height={20} aria-hidden="true" />}
           <span>{isSaved ? t('inList') : t('addToList')}</span>
         </button>
+        <FavoriteButton kind={mediaType} refId={item.slug} compact className="mobile-actionbar__fav" />
         {isSaved && (
           <button
             type="button"

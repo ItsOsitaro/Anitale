@@ -1,4 +1,5 @@
 import { splitGenres, splitInfoRows } from '@/lib/genre-kinds';
+import { FavoriteButton } from '@/components/Favorites';
 import React, { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import uniq from 'lodash/uniq.js';
@@ -1172,6 +1173,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
               >
                 {isSaved ? t('inList') : t('addToList')}
               </Button>
+              <FavoriteButton kind={mediaType} refId={item.slug} className="detail-fav" />
               {isSaved && (
                 <div className="detail-status-picker" role="radiogroup" aria-label={t('listStatusAria')}>
                   {listStatuses.map((status) => (

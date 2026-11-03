@@ -4343,3 +4343,21 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .rec-form__hits button:hover, .rec-form__hits button:focus-visible { background: var(--muted); }
 .rec-form__picked { display: flex; align-items: center; gap: 10px; margin: 0; }
 .rec-form__clear { background: transparent; border: 0; color: var(--primary); font: inherit; cursor: pointer; text-decoration: underline; }
+
+/* ---------- B3 favorites ---------- */
+.fav-wrap { display: flex; flex-direction: column; gap: 4px; }
+.fav-button { display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; cursor: pointer; text-decoration: none; min-height: 40px; }
+.fav-button.is-active { color: #e0245e; border-color: currentColor; }
+.fav-button:disabled { opacity: 0.7; cursor: default; }
+.fav-note { color: var(--destructive, #c0392b); }
+.detail-fav { margin-top: 8px; }
+.detail-fav .fav-button { width: 100%; }
+.people-head .fav-wrap { margin-top: 10px; align-items: flex-start; }
+.mobile-actionbar__fav .fav-button { min-width: 48px; padding: 0 12px; height: 48px; border-radius: 14px; }
+.fav-profile { margin-top: 16px; padding: 14px; }
+.fav-profile h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.fav-profile__row h3 { margin: 10px 0 6px; font-size: 0.85rem; color: var(--muted-foreground); }
+.fav-profile__row ul { list-style: none; margin: 0; padding: 0; display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+.fav-profile__row a { display: flex; flex-direction: column; gap: 4px; width: 78px; color: inherit; text-decoration: none; font-size: 0.75rem; }
+.fav-profile__row img, .fav-profile__noimg { width: 78px; height: 110px; object-fit: cover; border-radius: 8px; background: var(--muted); }
+.fav-profile__row a span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
