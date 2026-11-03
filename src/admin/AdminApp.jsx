@@ -18,6 +18,7 @@ import VpnPage from './VpnPage.jsx';
 import Translation from './Translation.jsx';
 import ReviewQueue from './ReviewQueue.jsx';
 import UserReviews from './UserReviews.jsx';
+import UserRecs from './UserRecs.jsx';
 import Suggestions from './Suggestions.jsx';
 import './admin.css';
 
@@ -110,6 +111,7 @@ const NAV = [
     items: [
       { to: '/admin/users', icon: IconUsers, key: 'siteUsers' },
       { to: '/admin/reviews', icon: IconCheckList, key: 'rvNav' },
+      { to: '/admin/recs', icon: IconCheckList, key: 'rcNav' },
       { to: '/admin/suggestions', icon: IconCheckList, key: 'sgNav' },
     ],
   },
@@ -119,6 +121,7 @@ const NAV = [
 const titleFor = (pathname) => {
   if (pathname.startsWith('/admin/users')) return 'siteUsers';
   if (pathname.startsWith('/admin/reviews')) return 'rvNav';
+  if (pathname.startsWith('/admin/recs')) return 'rcNav';
   if (pathname.startsWith('/admin/schedule')) return 'scheduleNav';
   if (pathname.startsWith('/admin/bulk-import')) return 'bulkNav';
   if (pathname.startsWith('/admin/quick-add')) return 'quickNav';
@@ -279,6 +282,7 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="edit/:slug" element={<AnimeForm key="edit" />} />
                 <Route path="users" element={<SiteUsers />} />
                 <Route path="reviews" element={<UserReviews />} />
+                <Route path="recs" element={<UserRecs />} />
                 <Route path="suggestions" element={<Suggestions />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="quick-add" element={<QuickAdd />} />

@@ -88,6 +88,8 @@ export const api = {
   suggestionApprove: (id) => request('POST', `/api/admin/suggestions/${id}/approve`, {}),
   suggestionReject: (id, reason) => request('POST', `/api/admin/suggestions/${id}/reject`, { reason }),
   reviewsRemove: (id) => request('DELETE', `/api/admin/reviews/${id}`),
+  recsList: (q, page) => request('GET', `/api/admin/recs?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
+  recsRemove: (id) => request('DELETE', `/api/admin/recs/${id}`),
   usersList: (q, page) => request('GET', `/api/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
   usersGet: (username) => request('GET', `/api/admin/users/${encodeURIComponent(username)}`),
   usersCreate: (payload) => request('POST', '/api/admin/users', payload),

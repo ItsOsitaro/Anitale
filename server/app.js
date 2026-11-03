@@ -527,7 +527,12 @@ export const createApp = () => {
   app.put('/api/user/recs/:id/helpful', requireSiteUser, reviewLimiter, recHelpful(true));
   app.delete('/api/user/recs/:id/helpful', requireSiteUser, reviewLimiter, recHelpful(false));
 
-  app.get('/api/admin/recs', requireAdmin, (req, res) => res.json({ items: adminListRecs() }));
+  app.get('/api/admin/recs', requireAdmin, (req, res) => {
+    const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 15));
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const { items, total } = adminListRecs({ q: String(req.query.q || ''), limit, offset: (page - 1) * limit });
+    res.json({ items, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
+  });
   app.delete('/api/admin/recs/:id', requireAdmin, (req, res) => {
     if (!adminDeleteRec(Number(req.params.id))) throw httpError(404, 'Recommendation not found');
     res.json({ ok: true });

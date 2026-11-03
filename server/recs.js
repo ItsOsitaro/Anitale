@@ -61,10 +61,34 @@ export const setRecHelpful = (userId, recId, on) => {
   return { helpful: db.prepare('SELECT COUNT(*) AS n FROM rec_votes WHERE rec_id = ?').get(recId).n, voted: on };
 };
 
-export const adminListRecs = ({ limit = 30 } = {}) => db.prepare(`
-  SELECT r.id, r.media_type, r.slug_a, r.slug_b, r.body, r.created_at, u.username
-  FROM recs r JOIN users u ON u.id = r.user_id ORDER BY r.id DESC LIMIT ?
-`).all(limit);
+export const adminListRecs = ({ q = '', limit = 15, offset = 0 } = {}) => {
+  const like = `%${String(q).trim().replace(/[%_\\]/g, (ch) => `\\${ch}`)}%`;
+  const where = q.trim()
+    ? "WHERE u.username LIKE ? ESCAPE '\\' OR r.body LIKE ? ESCAPE '\\' OR r.slug_a LIKE ? ESCAPE '\\' OR r.slug_b LIKE ? ESCAPE '\\'"
+    : '';
+  const args = q.trim() ? [like, like, like, like] : [];
+  const total = db.prepare(`SELECT COUNT(*) AS n FROM recs r JOIN users u ON u.id = r.user_id ${where}`).get(...args).n;
+  const rows = db.prepare(`
+    SELECT r.id, r.media_type, r.slug_a, r.slug_b, r.body, r.created_at, u.username,
+      (SELECT COUNT(*) FROM rec_votes v WHERE v.rec_id = r.id) AS helpful
+    FROM recs r JOIN users u ON u.id = r.user_id
+    ${where}
+    ORDER BY r.id DESC LIMIT ? OFFSET ?
+  `).all(...args, limit, offset);
+  return {
+    items: rows.map((row) => ({
+      id: row.id,
+      mediaType: row.media_type,
+      slugA: row.slug_a,
+      slugB: row.slug_b,
+      body: row.body,
+      username: row.username,
+      helpful: row.helpful || 0,
+      createdAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
+    })),
+    total,
+  };
+};
 
 export const adminDeleteRec = (id) => {
   db.prepare('DELETE FROM rec_votes WHERE rec_id = ?').run(id);
