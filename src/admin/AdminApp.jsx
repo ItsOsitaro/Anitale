@@ -18,6 +18,7 @@ import VpnPage from './VpnPage.jsx';
 import Translation from './Translation.jsx';
 import ReviewQueue from './ReviewQueue.jsx';
 import UserReviews from './UserReviews.jsx';
+import Suggestions from './Suggestions.jsx';
 import './admin.css';
 
 const readLang = () => {
@@ -109,6 +110,7 @@ const NAV = [
     items: [
       { to: '/admin/users', icon: IconUsers, key: 'siteUsers' },
       { to: '/admin/reviews', icon: IconCheckList, key: 'rvNav' },
+      { to: '/admin/suggestions', icon: IconCheckList, key: 'sgNav' },
     ],
   },
 ];
@@ -277,6 +279,7 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="edit/:slug" element={<AnimeForm key="edit" />} />
                 <Route path="users" element={<SiteUsers />} />
                 <Route path="reviews" element={<UserReviews />} />
+                <Route path="suggestions" element={<Suggestions />} />
                 <Route path="schedule" element={<Schedule />} />
                 <Route path="quick-add" element={<QuickAdd />} />
                 <Route path="bulk-import" element={<BulkImport />} />

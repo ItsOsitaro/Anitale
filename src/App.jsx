@@ -37,6 +37,8 @@ import CommunitySection from '@/components/CommunitySection';
 import ImportListPage from './importListPage.jsx';
 import PeoplePage from './peoplePages.jsx';
 import MediaTabs from './components/MediaTabs.jsx';
+import SuggestEdit from './components/SuggestEdit.jsx';
+import MySuggestions from './suggestionsPage.jsx';
 import { StacksBrowse, StackView } from './stacksPages.jsx';
 import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { ContinueWatching, QuickEpisode } from './components/QuickEpisode.jsx';
@@ -483,6 +485,7 @@ function UserPanel() {
           </div>
           <div className="user-links">
             <Link to="/dashboard">{t('dashTitle')}</Link>
+            <Link to="/suggestions">{t('sugMine')}</Link>
             <button type="button" onClick={user.logout}>{t('dashLogout')}</button>
           </div>
         </>
@@ -1217,6 +1220,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 </Button>
                 {shareNote && <span className="detail-share-note" role="status">{shareNote}</span>}
               </div>
+              <SuggestEdit item={item} mediaType={mediaType} />
               <div className="detail-sidebar-sections">
                 {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english) && (
                   <DetailSection id="detailAlternativeTitles" title={t('alternativeTitles')} className="detail-sidebar-section">
@@ -1386,7 +1390,7 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
       : {}),
   };
   // Queue 19: the fa storefront shows the Persian title when manga rows carry one.
-  if (mediaType === 'manga' && item && lang === 'fa' && item.titleFa) item = { ...item, title: item.titleFa };
+  if (item && lang === 'fa' && item.titleFa) item = { ...item, title: item.titleFa };
 
   if (resolved && isSensitive(resolved) && !showSensitive) {
     return <SensitiveGate mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} />;
@@ -1434,6 +1438,7 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="/reset-password" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ResetPasswordPage /></WithHeader>} />
       <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
       <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
+      <Route path="/suggestions" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><MySuggestions /></WithHeader>} />
       <Route path="/stacks" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StacksBrowse /></WithHeader>} />
       <Route path="/stacks/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StackView /></WithHeader>} />
       <Route path="/studio/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="studio" /></WithHeader>} />

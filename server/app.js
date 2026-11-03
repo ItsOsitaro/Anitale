@@ -36,6 +36,7 @@ import { registerPeopleRoutes } from './people.js';
 import { registerTopCharactersRoutes } from './topchars.js';
 import { registerMediaRoutes } from './media.js';
 import { registerStackRoutes } from './stacks.js';
+import { registerSuggestionRoutes } from './suggestions.js';
 import { registerFranchiseRoutes } from './franchise.js';
 import { registerHealthRoutes } from './health.js';
 import { recordMissing, registerMissingRoutes } from './missing-titles.js';
@@ -493,6 +494,7 @@ export const createApp = () => {
     res.json({ ok: true, ...favoriteInfo(kind, ref, row.id) });
   });
 
+  registerSuggestionRoutes(app, { requireSiteUser, requireAdmin, currentSiteUser, getUserByUsername, httpError });
   registerStackRoutes(app, { requireSiteUser, currentSiteUser, getUserByUsername, viewerId, httpError });
 
   // ---------- Recommendations ("if you liked this, try that") ----------

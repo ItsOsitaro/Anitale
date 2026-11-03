@@ -20,6 +20,7 @@ export const rowToItem = (row) => {
     malId: row.mal_id,
     slug: row.slug,
     title: row.title,
+    ...(row.title_fa ? { titleFa: row.title_fa } : {}),
     category: row.category,
     year: row.year,
     format: row.format,

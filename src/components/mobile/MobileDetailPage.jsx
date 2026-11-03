@@ -1,5 +1,6 @@
 import { splitGenres } from '@/lib/genre-kinds';
 import MediaTabs from '@/components/MediaTabs';
+import SuggestEdit from '@/components/SuggestEdit';
 import { QuickEpisode } from '@/components/QuickEpisode';
 import { FavoriteButton } from '../Favorites';
 import WatchOrder from '../WatchOrder';
@@ -232,6 +233,7 @@ export default function MobileDetailPage({
             <section>
               <h2 className="mobile-detail__h">{t('information')}</h2>
               <FactGrid rows={informationRows} />
+              <SuggestEdit item={item} mediaType={mediaType} />
             </section>
             <section>
               <h2 className="mobile-detail__h">{t('statistics')}</h2>

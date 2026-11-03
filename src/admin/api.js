@@ -84,6 +84,9 @@ export const api = {
   backfill: (body = {}) => request('POST', '/api/admin/translate/backfill', body),
   // Site-user management
   reviewsList: (q, page) => request('GET', `/api/admin/reviews?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
+  suggestionsList: (status) => request('GET', `/api/admin/suggestions?status=${status}`),
+  suggestionApprove: (id) => request('POST', `/api/admin/suggestions/${id}/approve`, {}),
+  suggestionReject: (id, reason) => request('POST', `/api/admin/suggestions/${id}/reject`, { reason }),
   reviewsRemove: (id) => request('DELETE', `/api/admin/reviews/${id}`),
   usersList: (q, page) => request('GET', `/api/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
   usersGet: (username) => request('GET', `/api/admin/users/${encodeURIComponent(username)}`),

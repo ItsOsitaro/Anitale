@@ -749,3 +749,8 @@ body[data-theme="dark"] .adm-primary:hover:not(:disabled) { background: var(--ac
 .adm-health-errors li { display: grid; gap: 4px; padding: 8px 10px; border-radius: var(--r-sm); background: rgba(128,128,128,.08); font-size: 12px; }
 .adm-health-errors code { white-space: pre-wrap; word-break: break-word; font-size: 11.5px; }
 .adm-chip-bad { background: rgba(214,69,69,.15); color: #d64545; }
+
+.sg-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.sg-diff p { margin: 4px 0 0; white-space: pre-wrap; font-size: 13.5px; }
+.sg-actions, .sg-reject { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+@media (max-width: 700px) { .sg-diff { grid-template-columns: 1fr; } }
