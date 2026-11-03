@@ -4309,3 +4309,13 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .community-statuses ul { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; }
 .community-statuses li { display: inline-flex; align-items: center; gap: 6px; }
 .search-genres__kind { margin: 10px 0 4px; font-size: 0.8rem; font-weight: 600; color: var(--muted-foreground); }
+
+/* ---------- A8 characters and people in search ---------- */
+.search-page__folks { margin: 0 0 14px; }
+.search-page__folks h2 { margin: 0 0 8px; font-size: 1rem; }
+.search-page__folks ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; }
+.search-page__folks a { display: flex; align-items: center; gap: 10px; padding: 6px; border-radius: 10px; border: 1px solid var(--border); color: inherit; text-decoration: none; min-width: 0; }
+.search-page__folks img, .search-page__folk-noimg { width: 42px; height: 56px; flex: none; border-radius: 6px; object-fit: cover; background: var(--muted); }
+.search-page__folks span { display: flex; flex-direction: column; min-width: 0; }
+.search-page__folks strong { font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.search-page__folks small { color: var(--muted-foreground); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

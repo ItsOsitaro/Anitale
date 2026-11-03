@@ -67,7 +67,55 @@ const load = (kind, id) => {
   return job;
 };
 
+// Name search over characters and people. Tenrai answers; results are kept in memory for an hour.
+// If Tenrai is unreachable we fall back to the characters/people already stored in people_cache.
+const searchCache = new Map();
+const SEARCH_TTL = 3600 * 1000;
+const fold = (v) => String(v || '').toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g, '').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+const brief = (kind, d) => ({
+  kind, id: d.mal_id, name: text(d.name, 100), sub: text(kind === 'character' ? (d.name_kanji || '') : (d.given_name || d.family_name ? `${d.given_name || ''} ${d.family_name || ''}`.trim() : ''), 100),
+  image: proxied(img(d.images)), favorites: Number(d.favorites) || 0,
+});
+const searchPeople = async (q) => {
+  const key = fold(q);
+  const hit = searchCache.get(key);
+  if (hit && Date.now() - hit.at < SEARCH_TTL) return hit.data;
+  const enc = encodeURIComponent(q.slice(0, 80));
+  const [chars, people] = await Promise.all([
+    tenraiGetRaw(`/characters?q=${enc}&limit=8&order_by=favorites&sort=desc`),
+    tenraiGetRaw(`/people?q=${enc}&limit=6&order_by=favorites&sort=desc`),
+  ]);
+  const data = {
+    characters: arr(chars?.data).filter((d) => d?.mal_id).map((d) => brief('character', d)).slice(0, 8),
+    people: arr(people?.data).filter((d) => d?.mal_id).map((d) => brief('person', d)).slice(0, 6),
+  };
+  if (searchCache.size >= 200) searchCache.delete(searchCache.keys().next().value);
+  searchCache.set(key, { at: Date.now(), data });
+  return data;
+};
+const searchStored = (q) => {
+  const needle = fold(q);
+  const out = { characters: [], people: [] };
+  for (const row of db.prepare('SELECT kind, data FROM people_cache').all()) {
+    let d; try { d = JSON.parse(row.data); } catch { continue; }
+    const names = [d.name, d.nameKanji, d.givenName, d.familyName, ...(d.nicknames || []), ...(d.alternateNames || [])].map(fold);
+    if (!names.some((n) => n && n.includes(needle))) continue;
+    const entry = { kind: row.kind, id: d.id, name: d.name, sub: d.nameKanji || '', image: d.image || '', favorites: d.favorites || 0 };
+    (row.kind === 'character' ? out.characters : out.people).push(entry);
+  }
+  const top = (list, n) => list.sort((a, b) => b.favorites - a.favorites).slice(0, n);
+  return { characters: top(out.characters, 8), people: top(out.people, 6) };
+};
+
 export const registerPeopleRoutes = (app) => {
+  const searchLimiter = rateLimit({ windowMs: 60_000, limit: 20, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many searches' } });
+  app.get('/api/search/people', searchLimiter, async (req, res) => {
+    const q = String(req.query.q || '').trim().slice(0, 80);
+    res.setHeader('Cache-Control', 'no-cache');
+    if (fold(q).length < 2) { res.json({ characters: [], people: [] }); return; }
+    try { res.json(await searchPeople(q)); } catch { res.json({ ...searchStored(q), local: true }); }
+  });
+
   const limiter = rateLimit({ windowMs: 60_000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many requests' } });
   app.get('/api/people/:kind/:id', limiter, async (req, res) => {
     const kind = req.params.kind === 'character' ? 'character' : req.params.kind === 'person' ? 'person' : '';

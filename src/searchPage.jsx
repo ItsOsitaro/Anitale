@@ -49,6 +49,18 @@ export default function SearchPage() {
     return () => window.clearTimeout(timer);
   }, [draft]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Characters and people (voice actors, staff) for the same words, loaded separately so titles never wait for them.
+  const [folks, setFolks] = useState({ characters: [], people: [] });
+  useEffect(() => {
+    if (q.trim().length < 2) { setFolks({ characters: [], people: [] }); return undefined; }
+    const controller = new AbortController();
+    fetch(`/api/search/people?q=${encodeURIComponent(q.trim())}`, { signal: controller.signal })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((result) => setFolks({ characters: result?.characters || [], people: result?.people || [] }))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [q]);
+
   const showSensitive = useShowSensitive();
   const queryString = [...PARAMS.map((name) => [name, get(name)]).filter(([, v]) => v).map(([k, v]) => `${k}=${encodeURIComponent(v)}`), ...(showSensitive ? [] : ['sfw=1'])].join('&');
   useEffect(() => {
@@ -198,6 +210,22 @@ export default function SearchPage() {
               </ul>
             </section>
           )}
+
+          {[['characters', 'character', 'searchCharacters'], ['people', 'person', 'searchPeople']].map(([key, route, label]) => folks[key].length > 0 && (
+            <section className="search-page__folks" key={key} aria-label={t(label)}>
+              <h2>{t(label)}</h2>
+              <ul>
+                {folks[key].map((entry) => (
+                  <li key={entry.id}>
+                    <Link to={`/${route}/${entry.id}`}>
+                      {entry.image ? <img src={entry.image} alt="" loading="lazy" decoding="async" /> : <span className="search-page__folk-noimg" aria-hidden="true" />}
+                      <span><strong dir="auto">{entry.name}</strong>{entry.sub && <small dir="auto">{entry.sub}</small>}</span>
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
 
           <p className="search-page__count" role="status" aria-live="polite">{t('searchResults', { n: data.total })}</p>
 

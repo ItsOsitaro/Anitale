@@ -35,6 +35,11 @@ http.createServer((req,res)=>{
     if (kind==='staff') return send(res,200,{data:[{person:{mal_id:700,name:'Director San'},positions:['Director','Episode Director']},{person:{mal_id:701,name:'Key Anim'},positions:['Key Animation']},{person:{mal_id:702,name:'Composer Kun'},positions:['Music']}]});
     if (kind==='themes') return send(res,200,{data:{openings:['1: "Op Song" by Band (eps 1-12)'],endings:['1: "End Song" by Singer']}});
   }
+  if (p==='/v1/characters' || p==='/v1/people') {
+    const q=(u.searchParams?.get('q')||'').toLowerCase(); if(globalThis.__failSearch) return send(res,500,{});
+    const rows=[{mal_id:41,name:'Frieren Hero',name_kanji:'勇者',favorites:900,images:img(41)},{mal_id:42,name:'Hero Mage',favorites:50,images:img(42)}].filter(r=>r.name.toLowerCase().includes(q));
+    return send(res,200,{data:p==='/v1/people'?rows.map(r=>({...r,given_name:'Taro',family_name:'Yamada'})).filter(r=>r.name.toLowerCase().includes(q)):rows});
+  }
   if ((mm=/^\/v1\/(characters|people)\/(\d+)\/full$/.exec(p))) {
     const id=Number(mm[2]); if (id===404404) return send(res,404,{status:404,type:'X',message:'nf'});
     const A=(i)=>({mal_id:i,title:`Anime ${i}`,images:img(i)});
