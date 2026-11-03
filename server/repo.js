@@ -1,6 +1,8 @@
 import { db } from './db.js';
 import { inputToColumns } from './shape.js';
 
+db.exec('CREATE TABLE IF NOT EXISTS manga_serial (mal_id INTEGER PRIMARY KEY, magazines TEXT NOT NULL, fetched_at INTEGER NOT NULL)');
+
 const COLS = [
   'mal_id', 'title', 'category', 'year', 'format', 'score', 'airing_day', 'synopsis', 'genres', 'alt_synonyms', 'alt_japanese',
   'alt_romaji', 'alt_english', 'information', 'statistics', 'available_at', 'resources', 'streaming_platforms', 'streaming_notice',
@@ -45,6 +47,7 @@ export const mangaRowToItem = (row) => ({
   sampleScore: row.score ?? null,
   publicationStatus: row.publication_status || '',
   chapters: row.chapters ?? null,
+  serialization: parseJson(row.magazines, []),
   genres: parseJson(row.genres, []),
   synopsis: parseJson(row.synopsis, ''), // { fa, en } (plain strings are accepted too)
   cover: row.cover || '',
@@ -52,7 +55,7 @@ export const mangaRowToItem = (row) => ({
   updatedAt: row.updated_at || '',
 });
 
-export const listManga = () => db.prepare('SELECT * FROM manga ORDER BY id ASC').all().map(mangaRowToItem);
+export const listManga = () => db.prepare('SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id ORDER BY m.id ASC').all().map(mangaRowToItem);
 export const getMangaBySlug = (slug) => db.prepare('SELECT * FROM manga WHERE slug = ?').get(slug);
 export const getMangaByMalId = (malId) => (malId ? db.prepare('SELECT * FROM manga WHERE mal_id = ?').get(malId) : undefined);
 export const countManga = () => db.prepare('SELECT COUNT(*) AS n FROM manga').get().n;

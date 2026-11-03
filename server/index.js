@@ -3,6 +3,7 @@ import { createApp } from './app.js';
 import { seedIfEmpty, seedMangaIfEmpty } from './seed.js';
 import { cleanupTemp } from './images.js';
 import { startAutoImportScheduler } from './auto-import.js';
+import { startMagazineBackfill } from './magazines.js';
 import { initVpn } from './vpn.js';
 
 const added = seedIfEmpty();
@@ -18,6 +19,7 @@ const host = process.env.HOST || '127.0.0.1';
 initVpn();
 const app = createApp();
 startAutoImportScheduler(app.locals.bulkImport);
+startMagazineBackfill();
 app.listen(port, host, () => {
   console.log(`API + site on http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}   (admin: /admin)`);
 });

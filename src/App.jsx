@@ -37,6 +37,7 @@ import CommunitySection from '@/components/CommunitySection';
 import ImportListPage from './importListPage.jsx';
 import PeoplePage from './peoplePages.jsx';
 import MediaTabs from './components/MediaTabs.jsx';
+import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { ContinueWatching, QuickEpisode } from './components/QuickEpisode.jsx';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
@@ -386,7 +387,7 @@ function AnimeCard({ item, rank }) {
   );
 }
 
-function AnimeGrid({ items, showRank = false }) {
+export function AnimeGrid({ items, showRank = false }) {
   return (
     <div className="card-grid">
       {items.map((item, index) => <AnimeCard key={`${item.format}-${item.slug}`} item={item} rank={showRank ? index + 1 : null} />)}
@@ -1044,7 +1045,7 @@ function SidebarDataList({ rows }) {
       {rows.filter((row) => row.value).map((row) => (
         <div key={row.label}>
           <dt>{row.label}</dt>
-          <dd>{row.value}</dd>
+          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : row.value}</dd>
         </div>
       ))}
     </dl>
@@ -1098,12 +1099,19 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
       flash(copied ? t('shareCopied') : t('shareFailed'));
     }
   };
-  const informationRows = splitInfoRows(item.information || [
+  const linkRows = (rows) => rows.map((row) => {
+    const label = String(row.label).toLowerCase();
+    const kind = label === 'studios' ? 'studio' : label === 'producers' ? 'producer' : label === 'serialization' ? 'magazine' : null;
+    if (!kind || !row.value) return row;
+    return { ...row, links: String(row.value).split(',').map((n) => n.trim()).filter(Boolean).map((n) => ({ text: n, to: companyHref(kind, n) })) };
+  });
+  const informationRows = linkRows(splitInfoRows(item.information || [
     { label: t('typeLabel'), value: mediaType === 'manga' ? (lang === 'fa' ? 'مانگا' : 'Manga') : item.format },
     { label: t('categoryLabel'), value: item.category },
     { label: t('yearLabel'), value: item.year },
     { label: t('genresLabel'), value: item.genres.join(lang === 'fa' ? '، ' : ', ') },
-  ]);
+    ...(mediaType === 'manga' && item.serialization?.length ? [{ label: 'Serialization', value: item.serialization.join(', ') }] : []),
+  ]));
   const statisticsRows = item.statistics
     ? [
         { label: t('scoreLabel'), value: item.statistics.score },
@@ -1425,6 +1433,9 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="/reset-password" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ResetPasswordPage /></WithHeader>} />
       <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
       <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
+      <Route path="/studio/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="studio" /></WithHeader>} />
+      <Route path="/producer/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="producer" /></WithHeader>} />
+      <Route path="/magazine/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="magazine" /></WithHeader>} />
       <Route path="/top/characters" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><TopCharactersPage /></WithHeader>} />
       <Route path="/character/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="character" /></WithHeader>} />
       <Route path="/person/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="person" /></WithHeader>} />

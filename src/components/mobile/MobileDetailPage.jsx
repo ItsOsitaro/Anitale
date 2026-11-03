@@ -27,7 +27,7 @@ function FactGrid({ rows }) {
       {visible.map((row) => (
         <div key={row.label} className="mobile-facts__cell">
           <dt>{row.label}</dt>
-          <dd>{row.value}</dd>
+          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : row.value}</dd>
         </div>
       ))}
     </dl>
