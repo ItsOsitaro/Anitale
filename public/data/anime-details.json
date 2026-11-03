@@ -171439,5 +171439,763 @@
     ],
     "resources": [],
     "streamingPlatforms": []
+  },
+  {
+    "slug": "umamusume-cinderella-gray-part-2",
+    "alternativeTitles": {
+      "synonyms": [],
+      "japanese": "ウマ娘 シンデレラグレイ 第2クール",
+      "romaji": "Uma Musume: Cinderella Gray Part 2",
+      "english": "Umamusume: Cinderella Gray Part 2"
+    },
+    "information": [
+      {
+        "label": "Type",
+        "value": "TV"
+      },
+      {
+        "label": "Episodes",
+        "value": "10"
+      },
+      {
+        "label": "Status",
+        "value": "Finished Airing"
+      },
+      {
+        "label": "Aired",
+        "value": "Oct 5, 2025 to Dec 21, 2025"
+      },
+      {
+        "label": "Premiered",
+        "value": "Fall 2025"
+      },
+      {
+        "label": "Broadcast",
+        "value": "Sundays at 16:30 (JST)"
+      },
+      {
+        "label": "Producers",
+        "value": "TBS, Universal Music Japan, Cygames, Bit grooove promotion, Happinet Media Marketing"
+      },
+      {
+        "label": "Studios",
+        "value": "CygamesPictures"
+      },
+      {
+        "label": "Source",
+        "value": "Manga"
+      },
+      {
+        "label": "Genres",
+        "value": "Drama, Sports, Anthropomorphic, Racing, School"
+      },
+      {
+        "label": "Demographic",
+        "value": "Seinen"
+      },
+      {
+        "label": "Duration",
+        "value": "23 min per ep"
+      },
+      {
+        "label": "Rating",
+        "value": "PG-13 - Teens 13 or older"
+      }
+    ],
+    "statistics": {
+      "score": "8.67",
+      "scoredBy": "41,294 users",
+      "ranked": "#83",
+      "popularity": "#2882",
+      "members": "77,842",
+      "favorites": "819"
+    },
+    "availableAt": [
+      {
+        "label": "MyAnimeList",
+        "href": "https://myanimelist.net/anime/61930/Uma_Musume__Cinderella_Gray_Part_2",
+        "icon": "M"
+      },
+      {
+        "label": "Official Site",
+        "href": "https://anime-cinderellagray.com/",
+        "icon": "↗"
+      },
+      {
+        "label": "@umamusu_animeCG",
+        "href": "https://twitter.com/umamusu_animeCG",
+        "icon": "↗"
+      },
+      {
+        "label": "AniDB",
+        "href": "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=19419",
+        "icon": "↗"
+      },
+      {
+        "label": "ANN",
+        "href": "https://www.animenewsnetwork.com/encyclopedia/anime.php?id=36789",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://en.wikipedia.org/wiki/Uma_Musume_Pretty_Derby#Anime_2",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://ja.wikipedia.org/wiki/ウマ娘_シンデレラグレイ#テレビアニメ",
+        "icon": "↗"
+      },
+      {
+        "label": "Syoboi",
+        "href": "https://cal.syoboi.jp/tid/7621",
+        "icon": "↗"
+      }
+    ],
+    "resources": [],
+    "streamingPlatforms": [
+      "Amazon Prime Video",
+      "Tubi TV",
+      "Plex",
+      "Plex Channel",
+      "Netflix",
+      "U-NEXT",
+      "Watcha",
+      "Catchplay",
+      "Animation Digital Network"
+    ]
+  },
+  {
+    "slug": "the-legend-of-hei-2",
+    "alternativeTitles": {
+      "synonyms": [
+        "The Legend of Hei II",
+        "Luo Xiao Hei Zhan Ji 2",
+        "羅小黒戦記２ ぼくらが望む未来"
+      ],
+      "japanese": "罗小黑战记2",
+      "romaji": "Luo Xiaohei Zhanji 2",
+      "english": "The Legend of Hei 2"
+    },
+    "information": [
+      {
+        "label": "Type",
+        "value": "Movie"
+      },
+      {
+        "label": "Episodes",
+        "value": "1"
+      },
+      {
+        "label": "Status",
+        "value": "Finished Airing"
+      },
+      {
+        "label": "Aired",
+        "value": "Jul 18, 2025"
+      },
+      {
+        "label": "Premiered",
+        "value": "Summer 2025"
+      },
+      {
+        "label": "Producers",
+        "value": "MaoYan Movie"
+      },
+      {
+        "label": "Licensors",
+        "value": "GKIDS"
+      },
+      {
+        "label": "Studios",
+        "value": "HMCH"
+      },
+      {
+        "label": "Source",
+        "value": "Original"
+      },
+      {
+        "label": "Genres",
+        "value": "Adventure, Drama, Fantasy"
+      },
+      {
+        "label": "Duration",
+        "value": "1 hr 58 min"
+      },
+      {
+        "label": "Rating",
+        "value": "G - All Ages"
+      }
+    ],
+    "statistics": {
+      "score": "8.66",
+      "scoredBy": "4,407 users",
+      "ranked": "#86",
+      "popularity": "#6196",
+      "members": "15,831",
+      "favorites": "125"
+    },
+    "availableAt": [
+      {
+        "label": "MyAnimeList",
+        "href": "https://myanimelist.net/anime/61952/Luo_Xiaohei_Zhanji_2",
+        "icon": "M"
+      },
+      {
+        "label": "Official Site",
+        "href": "https://luoxiaohei-movie.com/2nd/",
+        "icon": "↗"
+      },
+      {
+        "label": "@heicat_movie_jp",
+        "href": "https://twitter.com/heicat_movie_jp",
+        "icon": "↗"
+      },
+      {
+        "label": "AniDB",
+        "href": "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=19721",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://en.wikipedia.org/wiki/The_Legend_of_Hei_II",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://zh.wikipedia.org/wiki/%E7%BD%97%E5%B0%8F%E9%BB%91%E6%88%98%E8%AE%B02",
+        "icon": "↗"
+      },
+      {
+        "label": "Bangumi",
+        "href": "https://bangumi.tv/subject/442114",
+        "icon": "↗"
+      },
+      {
+        "label": "Baidu Baike",
+        "href": "https://baike.baidu.com/item/罗小黑战记2/63112182",
+        "icon": "↗"
+      },
+      {
+        "label": "Douban",
+        "href": "https://movie.douban.com/subject/36448279/",
+        "icon": "↗"
+      }
+    ],
+    "resources": [],
+    "streamingPlatforms": []
+  },
+  {
+    "slug": "umamusume-cinderella-gray",
+    "alternativeTitles": {
+      "synonyms": [],
+      "japanese": "ウマ娘 シンデレラグレイ",
+      "romaji": "Uma Musume: Cinderella Gray",
+      "english": "Umamusume: Cinderella Gray"
+    },
+    "information": [
+      {
+        "label": "Type",
+        "value": "TV"
+      },
+      {
+        "label": "Episodes",
+        "value": "13"
+      },
+      {
+        "label": "Status",
+        "value": "Finished Airing"
+      },
+      {
+        "label": "Aired",
+        "value": "Apr 6, 2025 to Jun 29, 2025"
+      },
+      {
+        "label": "Premiered",
+        "value": "Spring 2025"
+      },
+      {
+        "label": "Broadcast",
+        "value": "Sundays at 16:30 (JST)"
+      },
+      {
+        "label": "Producers",
+        "value": "TBS, Universal Music Japan, Cygames, Bit grooove promotion, Happinet Media Marketing"
+      },
+      {
+        "label": "Studios",
+        "value": "CygamesPictures"
+      },
+      {
+        "label": "Source",
+        "value": "Manga"
+      },
+      {
+        "label": "Genres",
+        "value": "Drama, Sports, Anthropomorphic, Racing, School"
+      },
+      {
+        "label": "Demographic",
+        "value": "Seinen"
+      },
+      {
+        "label": "Duration",
+        "value": "23 min per ep"
+      },
+      {
+        "label": "Rating",
+        "value": "PG-13 - Teens 13 or older"
+      }
+    ],
+    "statistics": {
+      "score": "8.57",
+      "scoredBy": "59,293 users",
+      "ranked": "#132",
+      "popularity": "#2234",
+      "members": "115,612",
+      "favorites": "1,903"
+    },
+    "availableAt": [
+      {
+        "label": "MyAnimeList",
+        "href": "https://myanimelist.net/anime/59636/Uma_Musume__Cinderella_Gray",
+        "icon": "M"
+      },
+      {
+        "label": "Official Site",
+        "href": "https://anime-cinderellagray.com/",
+        "icon": "↗"
+      },
+      {
+        "label": "@umamusu_animeCG",
+        "href": "https://twitter.com/umamusu_animeCG",
+        "icon": "↗"
+      },
+      {
+        "label": "AniDB",
+        "href": "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=18829",
+        "icon": "↗"
+      },
+      {
+        "label": "ANN",
+        "href": "https://www.animenewsnetwork.com/encyclopedia/anime.php?id=33371",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://en.wikipedia.org/wiki/Uma_Musume_Pretty_Derby#Uma_Musume:_Cinderella_Gray_(anime)",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://ja.wikipedia.org/wiki/%E3%82%A6%E3%83%9E%E5%A8%98_%E3%82%B7%E3%83%B3%E3%83%87%E3%83%AC%E3%83%A9%E3%82%B0%E3%83%AC%E3%82%A4",
+        "icon": "↗"
+      },
+      {
+        "label": "Syoboi",
+        "href": "https://cal.syoboi.jp/tid/7388",
+        "icon": "↗"
+      }
+    ],
+    "resources": [],
+    "streamingPlatforms": [
+      "Amazon Prime Video",
+      "Tubi TV",
+      "Plex",
+      "Plex Channel",
+      "Netflix",
+      "U-NEXT",
+      "Watcha",
+      "Catchplay",
+      "Animation Digital Network"
+    ]
+  },
+  {
+    "slug": "to-be-hero-x",
+    "alternativeTitles": {
+      "synonyms": [],
+      "japanese": "凸变英雄X",
+      "romaji": "Tu Bian Yingxiong X",
+      "english": "To Be Hero X"
+    },
+    "information": [
+      {
+        "label": "Type",
+        "value": "ONA"
+      },
+      {
+        "label": "Episodes",
+        "value": "24"
+      },
+      {
+        "label": "Status",
+        "value": "Finished Airing"
+      },
+      {
+        "label": "Aired",
+        "value": "Apr 6, 2025 to Sep 14, 2025"
+      },
+      {
+        "label": "Premiered",
+        "value": "Spring 2025"
+      },
+      {
+        "label": "Producers",
+        "value": "Aniplex, bilibili, BeDream"
+      },
+      {
+        "label": "Studios",
+        "value": "Pb Animation, LAN Studio, Paper Plane Animation Studio, B.COOL STUDIO"
+      },
+      {
+        "label": "Source",
+        "value": "Original"
+      },
+      {
+        "label": "Genres",
+        "value": "Action, Super Power"
+      },
+      {
+        "label": "Duration",
+        "value": "23 min per ep"
+      },
+      {
+        "label": "Rating",
+        "value": "PG-13 - Teens 13 or older"
+      }
+    ],
+    "statistics": {
+      "score": "8.66",
+      "scoredBy": "124,246 users",
+      "ranked": "#88",
+      "popularity": "#1057",
+      "members": "273,457",
+      "favorites": "5,578"
+    },
+    "availableAt": [
+      {
+        "label": "MyAnimeList",
+        "href": "https://myanimelist.net/anime/53447/Tu_Bian_Yingxiong_X",
+        "icon": "M"
+      },
+      {
+        "label": "Official Site",
+        "href": "https://tbhx.net/",
+        "icon": "↗"
+      },
+      {
+        "label": "@tbhx_officialcn",
+        "href": "https://twitter.com/tbhx_officialcn",
+        "icon": "↗"
+      },
+      {
+        "label": "@tbhx_officialJP",
+        "href": "https://twitter.com/tbhx_officialJP",
+        "icon": "↗"
+      },
+      {
+        "label": "YouTube",
+        "href": "https://www.youtube.com/playlist?list=PLBakWosU0sfhl2OV5VeT9T7hiqFGmUALv",
+        "icon": "↗"
+      },
+      {
+        "label": "bilibili",
+        "href": "https://www.bilibili.com/bangumi/media/md28340128",
+        "icon": "↗"
+      },
+      {
+        "label": "AniDB",
+        "href": "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=17694",
+        "icon": "↗"
+      },
+      {
+        "label": "ANN",
+        "href": "https://www.animenewsnetwork.com/encyclopedia/anime.php?id=27609",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://zh.wikipedia.org/wiki/%E5%87%B8%E5%8F%98%E8%8B%B1%E9%9B%84",
+        "icon": "↗"
+      },
+      {
+        "label": "Syoboi",
+        "href": "https://cal.syoboi.jp/tid/7435",
+        "icon": "↗"
+      },
+      {
+        "label": "Bangumi",
+        "href": "https://bangumi.tv/subject/405212",
+        "icon": "↗"
+      },
+      {
+        "label": "Baidu Baike",
+        "href": "https://baike.baidu.com/item/%E5%87%B8%E5%8F%98%E8%8B%B1%E9%9B%84X",
+        "icon": "↗"
+      },
+      {
+        "label": "Douban",
+        "href": "https://movie.douban.com/subject/36140768/",
+        "icon": "↗"
+      },
+      {
+        "label": "Weibo",
+        "href": "https://weibo.com/u/7796177182",
+        "icon": "↗"
+      },
+      {
+        "label": "Moegirl",
+        "href": "https://zh.moegirl.org.cn/%E5%87%B8%E5%8F%98%E8%8B%B1%E9%9B%84X",
+        "icon": "↗"
+      }
+    ],
+    "resources": [],
+    "streamingPlatforms": [
+      "Crunchyroll",
+      "Apple TV Store",
+      "Fandango At Home",
+      "Amazon Prime Video",
+      "FOD",
+      "U-NEXT",
+      "Watcha",
+      "Bilibili Global",
+      "STARZPLAY"
+    ]
+  },
+  {
+    "slug": "kingdom-season-6",
+    "alternativeTitles": {
+      "synonyms": [],
+      "japanese": "キングダム 第6シリーズ",
+      "romaji": "Kingdom 6th Season",
+      "english": "Kingdom Season 6"
+    },
+    "information": [
+      {
+        "label": "Type",
+        "value": "TV"
+      },
+      {
+        "label": "Episodes",
+        "value": "13"
+      },
+      {
+        "label": "Status",
+        "value": "Finished Airing"
+      },
+      {
+        "label": "Aired",
+        "value": "Oct 5, 2025 to Dec 28, 2025"
+      },
+      {
+        "label": "Premiered",
+        "value": "Fall 2025"
+      },
+      {
+        "label": "Broadcast",
+        "value": "Sundays at 00:10 (JST)"
+      },
+      {
+        "label": "Producers",
+        "value": "Avex Pictures, Shueisha, NHK Enterprises"
+      },
+      {
+        "label": "Studios",
+        "value": "Studio Pierrot, Studio Signpost"
+      },
+      {
+        "label": "Source",
+        "value": "Manga"
+      },
+      {
+        "label": "Genres",
+        "value": "Action, Historical, Military"
+      },
+      {
+        "label": "Demographic",
+        "value": "Seinen"
+      },
+      {
+        "label": "Duration",
+        "value": "24 min per ep"
+      },
+      {
+        "label": "Rating",
+        "value": "R - 17+ (violence & profanity)"
+      }
+    ],
+    "statistics": {
+      "score": "8.66",
+      "scoredBy": "20,429 users",
+      "ranked": "#85",
+      "popularity": "#4016",
+      "members": "43,984",
+      "favorites": "497"
+    },
+    "availableAt": [
+      {
+        "label": "MyAnimeList",
+        "href": "https://myanimelist.net/anime/61517/Kingdom_6th_Season",
+        "icon": "M"
+      },
+      {
+        "label": "Official Site",
+        "href": "https://kingdom-anime.com/",
+        "icon": "↗"
+      },
+      {
+        "label": "@kingdom_animepr",
+        "href": "https://twitter.com/kingdom_animepr",
+        "icon": "↗"
+      },
+      {
+        "label": "AniDB",
+        "href": "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=19295",
+        "icon": "↗"
+      },
+      {
+        "label": "ANN",
+        "href": "https://www.animenewsnetwork.com/encyclopedia/anime.php?id=35719",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://en.wikipedia.org/wiki/List_of_Kingdom_(Japanese_TV_series)_episodes",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://ja.wikipedia.org/wiki/%E3%82%AD%E3%83%B3%E3%82%B0%E3%83%80%E3%83%A0_(%E3%82%A2%E3%83%8B%E3%83%A1)",
+        "icon": "↗"
+      },
+      {
+        "label": "Syoboi",
+        "href": "https://cal.syoboi.jp/tid/7580",
+        "icon": "↗"
+      }
+    ],
+    "resources": [],
+    "streamingPlatforms": [
+      "Crunchyroll",
+      "Apple TV Store",
+      "Netflix",
+      "Amazon Prime Video",
+      "Animation Digital Network",
+      "Sony Liv",
+      "Aniplus Asia"
+    ]
+  },
+  {
+    "slug": "kaguya-sama-love-is-war-stairway-to-adulthood",
+    "alternativeTitles": {
+      "synonyms": [],
+      "japanese": "かぐや様は告らせたい 大人への階段",
+      "romaji": "Kaguya-sama wa Kokurasetai: Otona e no Kaidan",
+      "english": "Kaguya-sama: Love Is War - Stairway to Adulthood"
+    },
+    "information": [
+      {
+        "label": "Type",
+        "value": "TV Special"
+      },
+      {
+        "label": "Episodes",
+        "value": "1"
+      },
+      {
+        "label": "Status",
+        "value": "Finished Airing"
+      },
+      {
+        "label": "Aired",
+        "value": "Dec 31, 2025"
+      },
+      {
+        "label": "Premiered",
+        "value": "Fall 2025"
+      },
+      {
+        "label": "Producers",
+        "value": "Aniplex, Mainichi Broadcasting System, Shueisha, JR East Marketing & Communications"
+      },
+      {
+        "label": "Studios",
+        "value": "A-1 Pictures"
+      },
+      {
+        "label": "Source",
+        "value": "Manga"
+      },
+      {
+        "label": "Genres",
+        "value": "Comedy, Romance, School"
+      },
+      {
+        "label": "Demographic",
+        "value": "Seinen"
+      },
+      {
+        "label": "Duration",
+        "value": "52 min"
+      },
+      {
+        "label": "Rating",
+        "value": "PG-13 - Teens 13 or older"
+      }
+    ],
+    "statistics": {
+      "score": "8.51",
+      "scoredBy": "63,079 users",
+      "ranked": "#161",
+      "popularity": "#2093",
+      "members": "125,769",
+      "favorites": "372"
+    },
+    "availableAt": [
+      {
+        "label": "MyAnimeList",
+        "href": "https://myanimelist.net/anime/61903/Kaguya-sama_wa_Kokurasetai__Otona_e_no_Kaidan",
+        "icon": "M"
+      },
+      {
+        "label": "Official Site",
+        "href": "https://kaguya.love/",
+        "icon": "↗"
+      },
+      {
+        "label": "@anime_kaguya",
+        "href": "https://twitter.com/anime_kaguya/",
+        "icon": "↗"
+      },
+      {
+        "label": "AniDB",
+        "href": "https://anidb.net/perl-bin/animedb.pl?show=anime&aid=19402",
+        "icon": "↗"
+      },
+      {
+        "label": "ANN",
+        "href": "https://www.animenewsnetwork.com/encyclopedia/anime.php?id=36700",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://en.wikipedia.org/wiki/Kaguya-sama:_Love_Is_War#Anime",
+        "icon": "↗"
+      },
+      {
+        "label": "Wikipedia",
+        "href": "https://ja.wikipedia.org/wiki/%E3%81%8B%E3%81%90%E3%82%84%E6%A7%98%E3%81%AF%E5%91%8A%E3%82%89%E3%81%9B%E3%81%9F%E3%81%84%E3%80%9C%E5%A4%A9%E6%89%8D%E3%81%9F%E3%81%A1%E3%81%AE%E6%81%8B%E6%84%9B%E9%A0%AD%E8%84%B3%E6%88%A6%E3%80%9C",
+        "icon": "↗"
+      },
+      {
+        "label": "Syoboi",
+        "href": "https://cal.syoboi.jp/tid/7694",
+        "icon": "↗"
+      }
+    ],
+    "resources": [],
+    "streamingPlatforms": [
+      "Bahamut Anime Crazy"
+    ]
   }
 ]

@@ -84,7 +84,10 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 **فاز 3 (وابسته به داده/تصمیم)**: C1 تب قسمت‌ها/ویدیو/تصاویر · C2 صفحه استودیو/تهیه‌کننده/مجله · C6 interest stacks · C7 پیشنهاد ویرایش کاربران + صف ادمین · C8 API عمومی با انتخاب فیلد و ETag.
 
 ## 9. کارهای باز / یادآوری
-- از مالک بپرس: «بروزرسانی همه» انیمه و مانگا را (برای ذخیره ژانر Ecchi) زده؟ build و restart سرور تمام شد؟
+- از مالک بپرس: بسته‌های B8، B9، C1، C2، C6، C7، C8 روی سرور اعمال و تأیید شده‌اند؟ «بروزرسانی همه» انیمه و مانگا (برای ذخیره ژانر Ecchi) زده شده؟
+- مجله‌های مانگا (C2) در پس‌زمینه کم‌کم پر می‌شوند (۲۵ عنوان هر ۲۰ دقیقه)؛ C1/C2/B2/B7 به دسترسی سرور به Tenrai وابسته‌اند.
+- تأیید ژانر C7: فقط ستون `genres` عوض می‌شود، نه ردیف «Genres» در اطلاعات.
+- موبایل: گروه‌بندی ژانر در FilterSheet هنوز ساده است.
 - پیشنهاد امنیتی اختیاری: SSH فقط با کلید؛ بررسی unattended-upgrades.
 - تمیزکاری: واژه‌های قدیمی `PROVIDER`/Jikan در مستندات.
 - تست مسیر refresh-all مانگا.
@@ -110,3 +113,17 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 - ~~C7 پیشنهاد ویرایش کاربران~~ انجام شد: `server/suggestions.js` (جدول `edit_suggestions`؛ نوع‌ها: خلاصه‌ی فارسی، عنوان فارسی، ژانر، گزارش اشتباه؛ حداکثر ۵ پیشنهاد در ۲۴ ساعت برای هر کاربر؛ یک پیشنهاد در انتظار از هر نوع برای هر عنوان؛ تأیید ادمین تغییر را خودکار اعمال می‌کند، رد نیاز به دلیل دارد). ستون جدید `anime.title_fa` (عنوان فارسی انیمه؛ در کارت‌ها و عنوان صفحه وقتی زبان فارسی است نشان داده می‌شود). UI: دکمه‌ی «پیشنهاد ویرایش» (`components/SuggestEdit.jsx`) در سایدبار دسکتاپ و تب «اطلاعات» موبایل؛ صفحه‌ی `/suggestions` (پیشنهادهای من با وضعیت و دلیل رد)؛ پنل ادمین `/admin/suggestions` با نمایش قدیم/جدید. کاتالوگ عمومی تا ~۱ دقیقه بعد از تأیید کش CDN/مرورگر است.
 
 - ~~C8: API عمومی~~ **انجام شد** — `server/api-v1.js`: `/api/v1` (anime, manga, جزئیات با slug یا malId, top, search, schedule)، بدون کلید، ۶۰ درخواست در دقیقه برای هر IP، محتوای حساس همیشه حذف، `fields` و ETag/304، CORS باز. صفحه‌ی مستندات: `/developers`.
+
+
+## 11. نقشه ماژول‌های B8–C8 (همه چک‌لیست انجام شده — نشست جدید از اینجا شروع می‌کند)
+چک‌لیست بخش 8 **کامل شد** (A1–A8، B1–B9، C1، C2، C6، C7، C8). C3–C5 (انجمن/کلاب/پیام خصوصی)، CSS سفارشی خام و OAuth عمداً کنار گذاشته شدند. ایده‌ی بعدی را با مالک مشورت کن.
+- **B8** `server/topchars.js` + `src/topCharactersPage.jsx` — `/top/characters`، کش ۲۴ ساعته (`top_cache`).
+- **B9** `src/components/QuickEpisode.jsx` (+۱ قسمت و «ادامه‌ی تماشا»)، `src/home-data.js` (بزودی/محبوب‌ترین).
+- **C1** `server/media.js` (`/api/media/:type/:malId/:kind`، کش ۱۲ ساعته `media_cache`) + `src/components/MediaTabs.jsx`.
+- **C2** `src/companyPage.jsx` (`/studio|producer|magazine/:name`) + `server/magazines.js` (جدول `manga_serial`، backfill پس‌زمینه).
+- **C6** `server/stacks.js` + `src/stacksPages.jsx` — جدول‌های `stacks`، `stack_items`، `stack_likes`؛ ۱۰ استک برای هر کاربر، ۵۰ عنوان در هر استک.
+- **C7** `server/suggestions.js` (جدول `edit_suggestions`؛ ستون `anime.title_fa`) + `src/components/SuggestEdit.jsx`، `src/suggestionsPage.jsx`، ادمین `src/admin/Suggestions.jsx`. تأیید خودکار اعمال می‌شود؛ حداکثر ۵ پیشنهاد در ۲۴ ساعت.
+- **C8** `server/api-v1.js` — API عمومی `/api/v1` (anime، manga، جزئیات با slug/malId، top، search، schedule)، بدون کلید، ۶۰ درخواست/دقیقه برای هر IP، محتوای حساس همیشه حذف، `fields`، ETag، CORS باز. مستندات: `src/developersPage.jsx` در `/developers`. `getDocs` و گزینه‌ی `raw` در `server/search.js` برایش اضافه شد.
+
+### تست سریع
+`bash scripts/dev/test-server.sh /مسیر/data.db` (mock + سرور روی 3057؛ توقف: `fuser -k 4010/tcp 3057/tcp`). mock حالا endpointهای C1/C2/B8 را هم دارد.

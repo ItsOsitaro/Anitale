@@ -34,17 +34,24 @@ http.createServer((req,res)=>{
     return send(res,200,{data:[mk(base+1),{...mk(base+2),mal_id:null}],pagination:{last_visible_page:1,has_next_page:false}});
   }
   if ((mm=/^\/v1\/(anime|manga)\/(\d+)\/full$/.exec(p))) { const id=Number(mm[2]); if (id===404404) return send(res,404,{status:404,type:'ResourceNotFoundException',message:'nf'}); const base=(mm[1]==='anime'?anime:manga)(id); const g=globalThis.__graph?.[id]; if(g) Object.assign(base,{title:g.t,title_english:g.t,type:g.k,episodes:g.e,aired:{prop:{from:{year:g.y,month:g.m||1,day:1}}},year:g.y,relations:g.r.map(([relation,ids,type])=>({relation,entry:ids.map(i=>({mal_id:i,type:type||'anime',name:'x'}))}))}); return send(res,200,{data:base}); }
-  if ((mm=/^\/v1\/(anime|manga)\/(\d+)\/(characters|relations|recommendations|videos|themes|staff)$/.exec(p))) {
+  if ((mm=/^\/v1\/(anime|manga)\/(\d+)\/(characters|relations|recommendations|videos|themes|staff|episodes|pictures)$/.exec(p))) {
     const kind=mm[3], id=Number(mm[2]); if (id===404404) return send(res,404,{status:404,type:'X',message:'nf'});
     if (globalThis.mode.noExtras) return send(res,403,{status:403,type:'Blocked',message:'blocked'});
+    if (kind==='episodes') { const pg=Number(u.searchParams.get('page')||1); const n=pg===1?100:20; return send(res,200,{data:[...Array(n)].map((_,i)=>({mal_id:(pg-1)*100+i+1,title:`Episode title ${(pg-1)*100+i+1}`,title_japanese:'話',aired:'2024-01-0'+((i%9)+1)+'T00:00:00+00:00',filler:i===3,recap:false})),pagination:{has_next_page:pg===1}}); }
+    if (kind==='pictures') return send(res,200,{data:[...Array(8)].map((_,i)=>(img(4000+i)))});
     if (kind==='characters') return send(res,200,{data:[...Array(20)].map((_,i)=>({character:{mal_id:100+i,name:`Char ${i}`,images:img(100+i)},role:i<3?'Main':'Supporting',favorites:100-i,voice_actors:mm[1]==='anime'?[{person:{mal_id:500+i,name:`VA ${i}`,images:img(500+i)},language:'English'},{person:{mal_id:600+i,name:`Seiyuu ${i}`,images:img(600+i)},language:'Japanese'}]:undefined}))});
     if (kind==='relations') return send(res,200,{data:[{relation:'Sequel',entry:[{mal_id:9501,type:'anime',name:'Mock Sequel'}]},{relation:'Adaptation',entry:[{mal_id:9200,type:'manga',name:'Mock Source Manga'}]},{relation:'Other',entry:[{mal_id:1,type:'novel',name:'skip'}]}]});
     if (kind==='recommendations') return send(res,200,{data:[...Array(12)].map((_,i)=>({entry:{mal_id:9600+i,title:`Rec ${i}`,images:img(9600+i)},votes:i}))});
-    if (kind==='videos') return send(res,200,{data:{promo:[{title:'PV 1',trailer:{youtube_id:'abc123XYZ_-',embeddable:true}}],episodes:[],music_videos:[]}});
+    if (kind==='videos') return send(res,200,{data:{promo:[{title:'PV 1',trailer:{youtube_id:'abc123XYZ_-',embeddable:true}},{title:'PV 2',trailer:{youtube_id:'def456XYZ_-',embeddable:true}}],episodes:[],music_videos:[{title:'OP full',video:{youtube_id:'mus123XYZ_-'},meta:{title:'OP full',author:'Band'}}]}});
     if (kind==='staff') return send(res,200,{data:[...Array(30)].map((_,i)=>({person:{mal_id:700+i,name:`Staff ${i}`},positions:i%5===0?['Director','Storyboard']:i%7===0?['Music']:['Key Animation']}))});
     if (kind==='staff') return send(res,200,{data:[{person:{mal_id:700,name:'Director San'},positions:['Director','Episode Director']},{person:{mal_id:701,name:'Key Anim'},positions:['Key Animation']},{person:{mal_id:702,name:'Composer Kun'},positions:['Music']}]});
     if (kind==='themes') return send(res,200,{data:{openings:['1: "Op Song" by Band (eps 1-12)'],endings:['1: "End Song" by Singer']}});
   }
+  if (p==='/v1/top/characters') {
+    const pg=Number(u.searchParams?.get('page')||1); if(globalThis.__failTop) return send(res,500,{});
+    return send(res,200,{data:[...Array(25)].map((_,i)=>{const n=(pg-1)*25+i+1;return {mal_id:3000+n,name:`Top Char ${n}`,name_kanji:'名',favorites:100000-n*100,images:img(3000+n)};})});
+  }
+  if ((mm=/^\/v1\/manga\/(\d+)$/.exec(p))) return send(res,200,{data:{mal_id:Number(mm[1]),serializations:Number(mm[1])===7002?[]:[{name:'Weekly Shonen Jump'},{name:'Jump Giga'}]}});
   if (p==='/v1/characters' || p==='/v1/people') {
     const q=(u.searchParams?.get('q')||'').toLowerCase(); if(globalThis.__failSearch) return send(res,500,{});
     const rows=[{mal_id:41,name:'Frieren Hero',name_kanji:'勇者',favorites:900,images:img(41)},{mal_id:42,name:'Hero Mage',favorites:50,images:img(42)}].filter(r=>r.name.toLowerCase().includes(q));
