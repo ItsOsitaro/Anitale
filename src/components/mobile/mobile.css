@@ -569,14 +569,14 @@
   .mobile-hero-dots {
     display: flex;
     justify-content: center;
-    gap: 6px;
+    gap: 16px;
     padding-bottom: 4px;
   }
 
   .mobile-hero-dot {
     position: relative;
-    width: 6px;
-    height: 6px;
+    width: 8px;
+    height: 8px;
     border-radius: 999px;
     background: color-mix(in oklch, var(--foreground) 25%, transparent);
     border: none;
@@ -587,7 +587,7 @@
   .mobile-hero-dot::before {
     content: '';
     position: absolute;
-    inset: -19px -6px;
+    inset: -8px;
   }
 
   .mobile-hero-dot.is-active {

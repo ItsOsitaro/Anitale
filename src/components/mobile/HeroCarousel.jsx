@@ -8,7 +8,7 @@ import { cn } from 'cn';
 import { coverUrl } from '@/lib/cover';
 
 export default function HeroCarousel({ items }) {
-  const { lang } = useSiteLang();
+  const { lang, t } = useSiteLang();
   const listRef = useRef(null);
   const [active, setActive] = useState(0);
 
@@ -46,18 +46,18 @@ export default function HeroCarousel({ items }) {
         {items.map((item, index) => {
           const href = mediaHref(item);
           const title = displayTitle(item, lang);
+          const Heading = index === 0 ? 'h1' : 'h2'; // one page-level h1
           return (
             <Link
               key={item.slug}
               to={href}
               className="mobile-hero-card"
-              aria-label={title}
             >
               <div className="mobile-hero-card__media">
                 <img
                   className="mobile-hero-card__image"
                   src={coverUrl(item.image, 720)}
-                  alt={title}
+                  alt=""
                   loading={index === 0 ? 'eager' : 'lazy'}
                   decoding="async"
                 />
@@ -77,7 +77,7 @@ export default function HeroCarousel({ items }) {
                     </span>
                   )}
                 </div>
-                <h1 className="mobile-hero-card__title">{title}</h1>
+                <Heading className="mobile-hero-card__title">{title}</Heading>
                 <p className="mobile-hero-card__synopsis" dir="auto">
                   {synopsisText(item, lang)}
                 </p>
@@ -93,7 +93,7 @@ export default function HeroCarousel({ items }) {
             type="button"
             className={cn('mobile-hero-dot', active === index && 'is-active')}
             onClick={() => scrollTo(index)}
-            aria-label={`${index + 1} از ${items.length}`}
+            aria-label={t('mcHeroSlide', { n: index + 1, total: items.length })}
             aria-current={active === index ? 'true' : undefined}
           />
         ))}

@@ -4545,3 +4545,12 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .dev-endpoints div { padding: 8px 10px; border-radius: 10px; background: color-mix(in oklch, var(--foreground) 5%, transparent); }
 .dev-endpoints dd { margin: 2px 0 0; font-size: 13px; opacity: .8; word-break: break-word; }
 .dev-code { padding: 10px 12px; border-radius: 10px; background: color-mix(in oklch, var(--foreground) 8%, transparent); overflow-x: auto; font-size: 13px; }
+
+/* 404 page */
+.anime-missing { text-align: center; }
+.not-found-code { margin: 0 0 4px; font-size: 64px; font-weight: 800; line-height: 1; color: var(--primary); }
+.not-found-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 24px; margin-block-start: 16px; }
+.not-found-actions .detail-back-link { padding: 10px 4px; }
+
+/* Touch target: sidebar sign-in button */
+.user-cta-btn { min-height: 32px; min-width: 44px; color: var(--primary-foreground); }

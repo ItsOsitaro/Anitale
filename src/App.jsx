@@ -453,8 +453,8 @@ function UserPanel() {
         <>
           <p className="user-cta-title"><strong>{t('panelJoinTitle')}</strong></p>
           <p className="user-cta-text">{t('panelJoinText')}</p>
-          <Button asChild size="sm" className="user-cta-btn">
-            <Link to="/login">{t('navAuth')}</Link>
+          <Button render={<Link to="/login" />} nativeButton={false} size="sm" className="user-cta-btn">
+            {t('navAuth')}
           </Button>
         </>
       )}
@@ -900,9 +900,13 @@ function SectionPage({ theme, onThemeChange }) {
       <>
         {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
         <NotFoundPanel>
+          <p className="not-found-code" aria-hidden="true">404</p>
           <h1>{t('pageNotFound')}</h1>
           <p>{t('notCatalog')}</p>
-          <Link className="detail-back-link" to="/">{t('backHome')}</Link>
+          <div className="not-found-actions">
+            <Link className="detail-back-link" to="/">{t('backHome')}</Link>
+            <Link className="detail-back-link" to="/search">{t('notFoundSearch')}</Link>
+          </div>
         </NotFoundPanel>
       </>
     );
