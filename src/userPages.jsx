@@ -16,6 +16,7 @@ import { coverUrl } from '@/lib/cover';
 import { isEmail } from './accountPages.jsx';
 import { profileInsights } from '@/lib/profile-insights';
 import { ProfileFavorites } from '@/components/Favorites';
+import { ProfileStacks } from '@/stacksPages.jsx';
 import TasteMatch from '@/components/TasteMatch';
 import AboutEditor from '@/components/AboutEditor';
 import { AboutRich } from '@/lib/safe-markup.jsx';
@@ -790,6 +791,7 @@ export function UserPublicProfile() {
       </div>
 
       <ProfileFavorites favorites={data.favorites} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
+      <ProfileStacks username={profile.username} />
 
       {insights.total > 0 && (
         <div className="pi-grid">

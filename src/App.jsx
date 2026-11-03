@@ -37,6 +37,7 @@ import CommunitySection from '@/components/CommunitySection';
 import ImportListPage from './importListPage.jsx';
 import PeoplePage from './peoplePages.jsx';
 import MediaTabs from './components/MediaTabs.jsx';
+import { StacksBrowse, StackView } from './stacksPages.jsx';
 import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { ContinueWatching, QuickEpisode } from './components/QuickEpisode.jsx';
 import TopCharactersPage from './topCharactersPage.jsx';
@@ -1433,6 +1434,8 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="/reset-password" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ResetPasswordPage /></WithHeader>} />
       <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
       <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
+      <Route path="/stacks" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StacksBrowse /></WithHeader>} />
+      <Route path="/stacks/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StackView /></WithHeader>} />
       <Route path="/studio/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="studio" /></WithHeader>} />
       <Route path="/producer/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="producer" /></WithHeader>} />
       <Route path="/magazine/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="magazine" /></WithHeader>} />
