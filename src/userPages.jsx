@@ -16,6 +16,7 @@ import { coverUrl } from '@/lib/cover';
 import { isEmail } from './accountPages.jsx';
 import { profileInsights } from '@/lib/profile-insights';
 import { ProfileFavorites } from '@/components/Favorites';
+import TasteMatch from '@/components/TasteMatch';
 import { FavoriteGenres, ProfileReviews, RecentActivity, StatusBreakdown, TopRated } from '@/components/ProfileInsights';
 import AiringAlertList from '@/components/AiringAlertList';
 import { useAiringAlerts } from '@/hooks/use-airing-alerts';
@@ -728,6 +729,7 @@ export function UserPublicProfile() {
         reviews={data.reviews || []}
         favorites={data.favorites}
         hidden={isOwner ? null : data.hidden}
+        similarity={isOwner ? null : data.similarity}
         isOwner={Boolean(isOwner)}
         followButton={(
           <FollowButton
@@ -757,6 +759,7 @@ export function UserPublicProfile() {
               <button type="button" onClick={() => setFollowSheet('followers')}><strong>{followCounts.followers}</strong> {t('followersLabel')}</button>
               <button type="button" onClick={() => setFollowSheet('following')}><strong>{followCounts.following}</strong> {t('followingLabel')}</button>
             </p>
+            {!isOwner && <TasteMatch similarity={data.similarity} />}
           </div>
           <FollowButton
             profile={{ ...profile, isFollowing: followCounts.isFollowing }}

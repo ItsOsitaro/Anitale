@@ -15,7 +15,7 @@ import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
-import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
@@ -395,6 +395,7 @@ export const createApp = () => {
       followers: counts.followers,
       following: counts.following,
       ...(viewer && viewer.id !== row.id ? { isFollowing: isFollowing(viewer.id, row.id) } : {}),
+      ...(viewer && viewer.id !== row.id ? { similarity: tasteSimilarity(viewer.id, row.id) } : {}),
     });
   });
 
@@ -553,16 +554,23 @@ export const createApp = () => {
     res.json({ following: false, followers: followCounts(target.id).followers });
   });
 
+  // Signed-in viewers also get a taste-match percent next to each member (first 100 only).
+  const withSimilarity = (req, users) => {
+    const viewer = getUserByUsername(currentSiteUser(req));
+    if (!viewer) return users;
+    return users.map((person, index) => (index < 100 && person.id !== viewer.id ? { ...person, similarity: tasteSimilarity(viewer.id, person.id) } : person));
+  };
+
   app.get('/api/users/:username/followers', (req, res) => {
     const row = getUserByUsername(req.params.username);
     if (!row) throw httpError(404, 'User not found');
-    res.json({ users: listFollowers(row.id) });
+    res.json({ users: withSimilarity(req, listFollowers(row.id)) });
   });
 
   app.get('/api/users/:username/following', (req, res) => {
     const row = getUserByUsername(req.params.username);
     if (!row) throw httpError(404, 'User not found');
-    res.json({ users: listFollowing(row.id) });
+    res.json({ users: withSimilarity(req, listFollowing(row.id)) });
   });
 
   // Queue 23: «list matches» — titles the viewer and the people they follow

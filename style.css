@@ -4365,3 +4365,11 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 /* ---------- B4 list privacy ---------- */
 .privacy-select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--background); color: inherit; font: inherit; }
 .profile-private { margin: 16px 0; padding: 14px; text-align: center; color: var(--muted-foreground); }
+
+/* ---------- B5 taste match ---------- */
+.taste-match { margin: 8px 0 0; display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px; font-size: 0.9rem; }
+.taste-match strong { font-size: 1.15rem; color: var(--primary); }
+.taste-match small, .taste-match.is-pending { color: var(--muted-foreground); font-size: 0.8rem; }
+.follow-sheet__sort { margin: 0 0 8px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.follow-sheet__sort[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
+.follow-sheet__match { margin-inline-start: auto; font-size: 0.82rem; color: var(--primary); font-weight: 600; }

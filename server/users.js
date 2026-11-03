@@ -41,6 +41,26 @@ export const canSeeList = (ownerRow, mediaType, viewerId = null) => {
   return Boolean(db.prepare('SELECT 1 AS x FROM follows WHERE follower_id = ? AND following_id = ?').get(ownerRow.id, viewerId));
 };
 
+export const SIMILARITY_MIN_SHARED = 8;
+
+// Taste match between a viewer and another member: titles both have rated, scored by how
+// close the ratings are (1 - mean gap / 9). Only lists the viewer is allowed to see count.
+// percent is null until SIMILARITY_MIN_SHARED titles are shared.
+export const tasteSimilarity = (viewerId, targetId) => {
+  const target = db.prepare('SELECT id, privacy_anime, privacy_manga FROM users WHERE id = ?').get(targetId);
+  if (!target || viewerId == null || viewerId === targetId) return null;
+  const seeAnime = canSeeList(target, 'anime', viewerId) ? 1 : 0;
+  const seeManga = canSeeList(target, 'manga', viewerId) ? 1 : 0;
+  const row = db.prepare(`
+    SELECT COUNT(*) AS n, AVG(ABS(a.rating - b.rating)) AS gap
+    FROM user_entries a JOIN user_entries b ON b.media_type = a.media_type AND b.slug = a.slug
+    WHERE a.user_id = ? AND b.user_id = ? AND a.rating IS NOT NULL AND b.rating IS NOT NULL
+      AND ((a.media_type = 'anime' AND ?) OR (a.media_type = 'manga' AND ?))
+  `).get(viewerId, targetId, seeAnime, seeManga);
+  const shared = row.n || 0;
+  return { shared, min: SIMILARITY_MIN_SHARED, percent: shared >= SIMILARITY_MIN_SHARED ? Math.round((1 - row.gap / 9) * 100) : null };
+};
+
 export const setPrivacy = (userId, { anime, manga }) => {
   if (PRIVACY_LEVELS.includes(anime)) db.prepare('UPDATE users SET privacy_anime = ? WHERE id = ?').run(anime, userId);
   if (PRIVACY_LEVELS.includes(manga)) db.prepare('UPDATE users SET privacy_manga = ? WHERE id = ?').run(manga, userId);

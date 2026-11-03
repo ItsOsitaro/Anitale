@@ -12,12 +12,14 @@ export default function FollowListSheet({ username, kind, onClose }) {
   const ref = useRef(null);
   const open = Boolean(kind);
   const [state, setState] = useState({ loading: true, users: [], failed: false });
+  const [bySimilarity, setBySimilarity] = useState(false);
   useSheet(open, onClose, ref);
 
   useEffect(() => {
     if (!kind) return undefined;
     let alive = true;
     setState({ loading: true, users: [], failed: false });
+    setBySimilarity(false);
     userApi.followList(username, kind)
       .then((result) => { if (alive) setState({ loading: false, users: result.users || [], failed: false }); })
       .catch(() => { if (alive) setState({ loading: false, users: [], failed: true }); });
@@ -25,6 +27,10 @@ export default function FollowListSheet({ username, kind, onClose }) {
   }, [username, kind]);
 
   if (!open) return null;
+  const canSort = state.users.some((person) => person.similarity?.percent != null);
+  const users = bySimilarity
+    ? [...state.users].sort((a, b) => (b.similarity?.percent ?? -1) - (a.similarity?.percent ?? -1))
+    : state.users;
   const title = t(kind === 'followers' ? 'followersLabel' : 'followingLabel');
   return createPortal(
     <div className="filter-sheet__scrim follow-scrim" onClick={onClose} role="presentation">
@@ -42,12 +48,16 @@ export default function FollowListSheet({ username, kind, onClose }) {
           {!state.loading && !state.failed && state.users.length === 0 && (
             <p className="follow-sheet__note">{t(kind === 'followers' ? 'followersEmpty' : 'followingEmpty')}</p>
           )}
+          {canSort && (
+            <button type="button" className="follow-sheet__sort" aria-pressed={bySimilarity} onClick={() => setBySimilarity((on) => !on)}>{t('tasteSortToggle')}</button>
+          )}
           <ul className="follow-sheet__list">
-            {state.users.map((person) => (
+            {users.map((person) => (
               <li key={person.username}>
                 <Link to={`/user/${encodeURIComponent(person.username)}`} onClick={onClose}>
                   <span className="user-avatar sm" style={{ '--bloom': person.bloom ?? 12 }} aria-hidden="true">{person.username[0]?.toUpperCase()}</span>
                   <span className="follow-sheet__name" dir="ltr">{person.username}</span>
+                  {person.similarity?.percent != null && <span className="follow-sheet__match" dir="ltr" title={t('tasteMatch')}>{person.similarity.percent}%</span>}
                 </Link>
               </li>
             ))}

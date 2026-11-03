@@ -1,4 +1,5 @@
 import { ProfileFavorites } from '../Favorites';
+import TasteMatch from '../TasteMatch';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { displayTitle } from '@/home-data';
@@ -14,7 +15,7 @@ import FollowListSheet from '../FollowListSheet';
 const TABS = ['list', 'activity', 'about'];
 const TAB_KEYS = { list: 'dbTabList', activity: 'dbTabActivity', about: 'dbTabAbout' };
 
-export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [], favorites, hidden }) {
+export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [], favorites, hidden, similarity }) {
   const { t, lang } = useSiteLang();
   const [tab, setTab] = useState('list');
   const [media, setMedia] = useState('anime');
@@ -62,6 +63,7 @@ export default function MobileProfile({ onOpenFollows, followSheet, profile, ent
           <button type="button" onClick={() => onOpenFollows('followers')}><strong>{followCounts.followers}</strong> {t('followersLabel')}</button>
           <button type="button" onClick={() => onOpenFollows('following')}><strong>{followCounts.following}</strong> {t('followingLabel')}</button>
         </p>
+        <TasteMatch similarity={similarity} />
         {isOwner ? (
           <Link className="mprofile__own" to="/dashboard">{t('ownProfile')}</Link>
         ) : followButton}
