@@ -209,6 +209,8 @@ export function AccountSecurityPage() {
   const [mail, setMail] = useState({ email: '', password: '' });
   const [mailState, setMailState] = useState({ busy: false, error: '', note: '' });
   const [editing, setEditing] = useState(false);
+  const [privacyBusy, setPrivacyBusy] = useState(false);
+  const [privacyError, setPrivacyError] = useState(false);
 
   useEffect(() => { document.title = `${t('accountTitle')} · ${t('siteName')}`; }, [t]);
 
@@ -298,6 +300,36 @@ export function AccountSecurityPage() {
         ) : (
           <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>{t('accountEmailChange')}</Button>
         )}
+      </section>
+
+      <section className="auth-card" aria-labelledby="prHeading">
+        <h1 id="prHeading">{t('privacyHead')}</h1>
+        <p className="auth-hint">{t('privacyHint')}</p>
+        {['anime', 'manga'].map((kind) => (
+          <div className="auth-field" key={kind}>
+            <label htmlFor={`pr-${kind}`}>{t(kind === 'anime' ? 'privacyAnime' : 'privacyManga')}</label>
+            <select
+              id={`pr-${kind}`}
+              className="privacy-select"
+              value={user.me.privacy?.[kind] || 'public'}
+              disabled={privacyBusy}
+              onChange={async (event) => {
+                const value = event.target.value;
+                setPrivacyBusy(true);
+                setPrivacyError(false);
+                try {
+                  const { user: updated } = await userApi.updatePrivacy({ [kind]: value });
+                  user.setMe((current) => ({ ...current, privacy: updated.privacy }));
+                } catch { setPrivacyError(true); } finally { setPrivacyBusy(false); }
+              }}
+            >
+              <option value="public">{t('privacyPublic')}</option>
+              <option value="friends">{t('privacyFriends')}</option>
+              <option value="private">{t('privacyPrivate')}</option>
+            </select>
+          </div>
+        ))}
+        {privacyError && <p className="auth-error" role="alert">{t('authGenericError')}</p>}
       </section>
 
       <section className="auth-card" aria-labelledby="pwHeading">

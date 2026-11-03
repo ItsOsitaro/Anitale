@@ -4361,3 +4361,7 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .fav-profile__row a { display: flex; flex-direction: column; gap: 4px; width: 78px; color: inherit; text-decoration: none; font-size: 0.75rem; }
 .fav-profile__row img, .fav-profile__noimg { width: 78px; height: 110px; object-fit: cover; border-radius: 8px; background: var(--muted); }
 .fav-profile__row a span { overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+/* ---------- B4 list privacy ---------- */
+.privacy-select { width: 100%; padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--background); color: inherit; font: inherit; }
+.profile-private { margin: 16px 0; padding: 14px; text-align: center; color: var(--muted-foreground); }

@@ -1,5 +1,5 @@
 import { db } from './db.js';
-import { bloomFor } from './users.js';
+import { bloomFor, canSeeList } from './users.js';
 
 // Public reviews (one per user per title) and the community score, which is the
 // average of the personal 1-10 ratings people already give on their lists.
@@ -55,7 +55,8 @@ const shape = (row, viewerId) => ({
   bloom: Number.parseInt(row.avatar_color, 10) || bloomFor(row.username),
   body: row.body,
   spoiler: Boolean(row.spoiler),
-  rating: row.rating ?? null,
+  // A private (or friends-only) list also hides the score shown next to the review.
+  rating: canSeeList({ id: row.user_id, privacy_anime: row.privacy_anime, privacy_manga: row.privacy_manga }, row.media_type, viewerId) ? (row.rating ?? null) : null,
   createdAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
   mine: viewerId != null && row.user_id === viewerId,
   helpful: row.helpful || 0,
@@ -72,7 +73,7 @@ const SORTS = {
 export const listReviews = (mediaType, slug, { viewerId = null, limit = 20, offset = 0, sort = 'new' } = {}) => {
   const order = SORTS[sort] || SORTS.new;
   const rows = db.prepare(`
-    SELECT r.*, u.username, u.avatar_color, e.rating,
+    SELECT r.*, u.username, u.avatar_color, u.privacy_anime, u.privacy_manga, e.rating,
       (SELECT COUNT(*) FROM review_votes v WHERE v.review_id = r.id) AS helpful,
       EXISTS (SELECT 1 FROM review_votes v WHERE v.review_id = r.id AND v.user_id = ?) AS voted
     FROM reviews r
@@ -103,19 +104,22 @@ export const addReview = (userId, mediaType, slug, body, spoiler) => db.prepare(
 `).run(userId, mediaType, slug, body, spoiler ? 1 : 0).changes > 0;
 
 // A user's own public reviews, newest first (shown on their profile).
-export const listUserReviews = (userId, limit = 10) => db.prepare(`
-  SELECT r.media_type, r.slug, r.body, r.spoiler, r.created_at, e.rating
-  FROM reviews r
-  LEFT JOIN user_entries e ON e.user_id = r.user_id AND e.media_type = r.media_type AND e.slug = r.slug
-  WHERE r.user_id = ? ORDER BY r.created_at DESC, r.id DESC LIMIT ?
-`).all(userId, limit).map((row) => ({
-  mediaType: row.media_type,
-  slug: row.slug,
-  body: row.body,
-  spoiler: Boolean(row.spoiler),
-  rating: row.rating ?? null,
-  createdAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
-}));
+export const listUserReviews = (userId, limit = 10, viewerId = null) => {
+  const owner = db.prepare('SELECT id, privacy_anime, privacy_manga FROM users WHERE id = ?').get(userId) || { id: userId };
+  return db.prepare(`
+    SELECT r.media_type, r.slug, r.body, r.spoiler, r.created_at, e.rating
+    FROM reviews r
+    LEFT JOIN user_entries e ON e.user_id = r.user_id AND e.media_type = r.media_type AND e.slug = r.slug
+    WHERE r.user_id = ? ORDER BY r.created_at DESC, r.id DESC LIMIT ?
+  `).all(userId, limit).map((row) => ({
+    mediaType: row.media_type,
+    slug: row.slug,
+    body: row.body,
+    spoiler: Boolean(row.spoiler),
+    rating: canSeeList(owner, row.media_type, viewerId) ? (row.rating ?? null) : null,
+    createdAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
+  }));
+};
 
 // Admin moderation list: newest first, optional search over username / review text / slug.
 export const adminListReviews = ({ q = '', limit = 15, offset = 0 } = {}) => {

@@ -15,7 +15,7 @@ import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
-import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
@@ -218,7 +218,8 @@ export const createApp = () => {
     if (!row) throw httpError(401, 'Not logged in');
     if (input.bio !== undefined) setBio(row.id, input.bio);
     if (input.avatarColor !== undefined) setAvatarColor(row.id, input.avatarColor);
-    res.json({ user: publicUser(getUserByUsername(row.username)) });
+    if (input.privacy) setPrivacy(row.id, input.privacy);
+    res.json({ user: ownUser(getUserByUsername(row.username)) });
   });
 
   app.post('/api/user/logout', (req, res) => {
@@ -348,10 +349,10 @@ export const createApp = () => {
   app.get('/api/users', (_req, res) => {
     const rows = db.prepare(`
       SELECT u.id, u.username, u.bio, u.avatar_color, u.created_at,
-        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id) AS total_entries,
-        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id AND e.status = 'watching') AS watching,
-        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id AND e.status = 'completed') AS completed,
-        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id AND e.status = 'planned') AS planned
+        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id AND ((e.media_type = 'anime' AND u.privacy_anime = 'public') OR (e.media_type = 'manga' AND u.privacy_manga = 'public'))) AS total_entries,
+        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id AND e.status = 'watching' AND ((e.media_type = 'anime' AND u.privacy_anime = 'public') OR (e.media_type = 'manga' AND u.privacy_manga = 'public'))) AS watching,
+        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id AND e.status = 'completed' AND ((e.media_type = 'anime' AND u.privacy_anime = 'public') OR (e.media_type = 'manga' AND u.privacy_manga = 'public'))) AS completed,
+        (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id AND e.status = 'planned' AND ((e.media_type = 'anime' AND u.privacy_anime = 'public') OR (e.media_type = 'manga' AND u.privacy_manga = 'public'))) AS planned
       FROM users u
       ORDER BY total_entries DESC, u.id DESC
       LIMIT 6
@@ -379,13 +380,17 @@ export const createApp = () => {
     // Notes are private (see the feed comment below): strip them the same way
     // for public profiles; status/rating/progress stay public by design.
     const mine = listEntries(row.id);
+    const seeAnime = canSeeList(row, 'anime', viewer?.id ?? null);
+    const seeManga = canSeeList(row, 'manga', viewer?.id ?? null);
     res.json({
       user: publicUser(row),
       entries: {
-        anime: mine.anime.map(({ note, ...rest }) => rest),
-        manga: mine.manga.map(({ note, ...rest }) => rest),
+        anime: seeAnime ? mine.anime.map(({ note, ...rest }) => rest) : [],
+        manga: seeManga ? mine.manga.map(({ note, ...rest }) => rest) : [],
       },
-      reviews: listUserReviews(row.id),
+      // Tells the page to say "this list is private" instead of "nothing here".
+      hidden: { anime: !seeAnime, manga: !seeManga },
+      reviews: listUserReviews(row.id, 10, viewer?.id ?? null),
       favorites: listFavorites(row.id),
       followers: counts.followers,
       following: counts.following,
@@ -570,7 +575,9 @@ export const createApp = () => {
     const matches = [];
     for (const friend of listFollowing(viewer.id)) {
       const theirs = listEntries(friend.id);
+      const friendRow = getUserByUsername(friend.username);
       for (const mediaType of ['anime', 'manga']) {
+        if (!canSeeList(friendRow, mediaType, viewer.id)) continue;
         for (const their of theirs[mediaType]) {
           const myEntry = mineByType.get(mediaType).get(their.slug);
           if (!myEntry) continue;

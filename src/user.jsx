@@ -46,6 +46,7 @@ export const userApi = {
   setHelpful: (id, on) => request(on ? 'PUT' : 'DELETE', `/api/user/reviews/${id}/helpful`),
   saveReview: (mediaType, slug, body, spoiler) => request('POST', '/api/user/reviews', { mediaType, slug, body, spoiler }),
   updateBio: (bio) => request('PUT', '/api/user/me', { bio }),
+  updatePrivacy: (privacy) => request('PUT', '/api/user/me', { privacy }),
   updateAvatar: (bloom) => request('PUT', '/api/user/me', { avatarColor: bloom }),
   addEntry: (mediaType, slug, status = 'watching', note, rating, progress, extra = {}) => request('PUT', '/api/user/entries', { mediaType, slug, status, ...(note !== undefined ? { note } : {}), ...(rating !== undefined ? { rating } : {}), ...(progress !== undefined ? { progress } : {}), ...extra }),
   removeEntry: (mediaType, slug) => request('DELETE', `/api/user/entries/${mediaType}/${encodeURIComponent(slug)}`),

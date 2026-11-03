@@ -727,6 +727,7 @@ export function UserPublicProfile() {
         followCounts={followCounts}
         reviews={data.reviews || []}
         favorites={data.favorites}
+        hidden={isOwner ? null : data.hidden}
         isOwner={Boolean(isOwner)}
         followButton={(
           <FollowButton
@@ -795,6 +796,12 @@ export function UserPublicProfile() {
             <ProfileReviews reviews={data.reviews} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
           </div>
         </div>
+      )}
+
+      {!isOwner && (data.hidden?.anime || data.hidden?.manga) && (
+        <p className="profile-private panel" role="note">
+          {t(data.hidden.anime && data.hidden.manga ? 'privateListBoth' : data.hidden.anime ? 'privateListAnime' : 'privateListManga')}
+        </p>
       )}
 
       {listEntries.length > 0 && (

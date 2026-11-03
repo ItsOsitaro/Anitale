@@ -175,6 +175,12 @@ if (!mangaChaptersColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN chapters INTEG
 // cookies when a password changes or the account is deleted).
 const tokenVersionColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('users') WHERE name = 'token_version'").get();
 if (!tokenVersionColumn.n) db.exec(`ALTER TABLE users ADD COLUMN token_version INTEGER NOT NULL DEFAULT 0`);
+// List privacy per media type: 'public' | 'friends' (people the owner follows) | 'private'.
+for (const column of ['privacy_anime', 'privacy_manga']) {
+  if (!db.prepare('SELECT COUNT(*) AS n FROM pragma_table_info(\'users\') WHERE name = ?').get(column).n) {
+    db.exec(`ALTER TABLE users ADD COLUMN ${column} TEXT NOT NULL DEFAULT 'public'`);
+  }
+}
 
 // Migration: user_entries from the 3-status era needs a rebuild to accept
 // the five list statuses (SQLite cannot alter a CHECK constraint in place).

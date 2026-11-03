@@ -21,7 +21,36 @@ export const publicUser = (row) => row && ({
 });
 
 // The account owner's own view: the only place the email is exposed.
-export const ownUser = (row) => row && ({ ...publicUser(row), email: row.email || '', emailVerified: Boolean(row.email_verified_at) });
+export const ownUser = (row) => row && ({
+  ...publicUser(row),
+  email: row.email || '',
+  emailVerified: Boolean(row.email_verified_at),
+  privacy: { anime: row.privacy_anime || 'public', manga: row.privacy_manga || 'public' },
+});
+
+export const PRIVACY_LEVELS = ['public', 'friends', 'private'];
+
+// May `viewerId` (null = guest) see this member's list of one media type?
+// "friends" = the people the owner follows.
+export const canSeeList = (ownerRow, mediaType, viewerId = null) => {
+  const level = (mediaType === 'manga' ? ownerRow.privacy_manga : ownerRow.privacy_anime) || 'public';
+  if (level === 'public') return true;
+  if (viewerId == null) return false;
+  if (viewerId === ownerRow.id) return true;
+  if (level === 'private') return false;
+  return Boolean(db.prepare('SELECT 1 AS x FROM follows WHERE follower_id = ? AND following_id = ?').get(ownerRow.id, viewerId));
+};
+
+export const setPrivacy = (userId, { anime, manga }) => {
+  if (PRIVACY_LEVELS.includes(anime)) db.prepare('UPDATE users SET privacy_anime = ? WHERE id = ?').run(anime, userId);
+  if (PRIVACY_LEVELS.includes(manga)) db.prepare('UPDATE users SET privacy_manga = ? WHERE id = ?').run(manga, userId);
+};
+
+// SQL fragment: entry rows `e` of member `u` that a viewer (bound as ?) may see. Guests pass -1.
+export const VISIBLE_ENTRY_SQL = `(
+  (e.media_type = 'anime' AND (u.privacy_anime = 'public' OR u.id = ? OR (u.privacy_anime = 'friends' AND EXISTS (SELECT 1 FROM follows x WHERE x.follower_id = u.id AND x.following_id = ?))))
+  OR (e.media_type = 'manga' AND (u.privacy_manga = 'public' OR u.id = ? OR (u.privacy_manga = 'friends' AND EXISTS (SELECT 1 FROM follows x WHERE x.follower_id = u.id AND x.following_id = ?))))
+)`;
 
 export const getUserByUsername = (username) => db
   .prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE')
@@ -213,10 +242,10 @@ export const friendFeed = (userId, limit = 30) => db.prepare(`
   JOIN user_entries e ON e.user_id = f.following_id
   JOIN users u ON u.id = e.user_id
   LEFT JOIN anime a ON a.slug = e.slug
-  WHERE f.follower_id = ?
+  WHERE f.follower_id = ? AND ${VISIBLE_ENTRY_SQL}
   ORDER BY COALESCE(NULLIF(e.updated_at, ''), e.created_at) DESC, e.rowid DESC
   LIMIT ?
-`).all(userId, limit).map((row) => ({
+`).all(userId, userId, userId, userId, userId, limit).map((row) => ({
   username: row.username,
   bloom: Number.parseInt(row.avatar_color, 10) || 12,
   mediaType: row.media_type,

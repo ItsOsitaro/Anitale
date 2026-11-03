@@ -14,7 +14,7 @@ import FollowListSheet from '../FollowListSheet';
 const TABS = ['list', 'activity', 'about'];
 const TAB_KEYS = { list: 'dbTabList', activity: 'dbTabActivity', about: 'dbTabAbout' };
 
-export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [], favorites }) {
+export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [], favorites, hidden }) {
   const { t, lang } = useSiteLang();
   const [tab, setTab] = useState('list');
   const [media, setMedia] = useState('anime');
@@ -98,7 +98,9 @@ export default function MobileProfile({ onOpenFollows, followSheet, profile, ent
               </button>
             ))}
           </div>
-          {list.length === 0 ? (
+          {hidden?.[media] ? (
+            <p className="mdash__none">{t(media === 'anime' ? 'privateListAnime' : 'privateListManga')}</p>
+          ) : list.length === 0 ? (
             <p className="mdash__none">{t('dbListEmpty')}</p>
           ) : (
             <ul className="wall">

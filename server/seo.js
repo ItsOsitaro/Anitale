@@ -11,7 +11,7 @@ import { db, ROOT_DIR } from './db.js';
 import { getBySlug, getByMalId, getMangaBySlug, getMangaByMalId, mangaRowToItem } from './repo.js';
 import { rowToItem } from './shape.js';
 import { isSensitiveItem } from './sensitive.js';
-import { getUserByUsername, listEntries } from './users.js';
+import { canSeeList, getUserByUsername, listEntries } from './users.js';
 
 const SITE_NAME = 'انی‌تیل';
 const EDGE_CACHE = 'public, max-age=0, s-maxage=60, stale-while-revalidate=300';
@@ -225,7 +225,9 @@ export const registerSeoRoutes = (app) => {
       res.setHeader('Cache-Control', 'no-cache');
       if (!row) { res.send(shell); return; }
       const origin = originOf(req);
-      const entries = listEntries(row.id);
+      // Search-engine view = a guest: only public lists count.
+      const full = listEntries(row.id);
+      const entries = { anime: canSeeList(row, 'anime', null) ? full.anime : [], manga: canSeeList(row, 'manga', null) ? full.manga : [] };
       const all = [...entries.anime.map((e) => ({ ...e, type: 'anime' })), ...entries.manga.map((e) => ({ ...e, type: 'manga' }))];
       const rated = all.filter((e) => e.rating != null);
       const average = rated.length ? (rated.reduce((sum, e) => sum + e.rating, 0) / rated.length).toFixed(1) : null;
