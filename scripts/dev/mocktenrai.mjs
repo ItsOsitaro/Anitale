@@ -1,3 +1,13 @@
+globalThis.__graph={
+ 7000:{t:'Saga Special',k:'Special',e:1,y:2015,r:[['Sequel',[7001]]]},
+ 7001:{t:'Saga S1',k:'TV',e:12,y:2018,r:[['Prequel',[7000]],['Sequel',[7003]],['Alternative version',[7006]]]},
+ 7003:{t:'Saga Movie',k:'Movie',e:1,y:2019,r:[['Prequel',[7001]],['Sequel',[7002]],['Adaptation',[9200],'manga']]},
+ 7002:{t:'Saga S2',k:'TV',e:24,y:2020,r:[['Prequel',[7003]],['Side story',[7004]]]},
+ 7004:{t:'Saga Gaiden',k:'OVA',e:2,y:2021,r:[['Parent story',[7002]]]},
+ 7006:{t:'Saga Remake',k:'TV',e:12,y:2022,r:[['Alternative version',[7001]]]},
+ 9301:{t:'Solo Leveling',k:'TV',e:12,y:2024,r:[['Sequel',[9501]]]},
+ 9501:{t:'Demon Slayer',k:'TV',e:26,y:2019,r:[['Prequel',[9301]]]},
+};
 import http from 'node:http'; import zlib from 'node:zlib';
 const PORT=Number(process.env.PORT||4010); const hits={}; globalThis.mode={};
 // 1x1 png
@@ -23,7 +33,7 @@ http.createServer((req,res)=>{
     const mk=p.endsWith('anime')?anime:manga; const base=p.endsWith('anime')?9100:9200;
     return send(res,200,{data:[mk(base+1),{...mk(base+2),mal_id:null}],pagination:{last_visible_page:1,has_next_page:false}});
   }
-  if ((mm=/^\/v1\/(anime|manga)\/(\d+)\/full$/.exec(p))) { const id=Number(mm[2]); if (id===404404) return send(res,404,{status:404,type:'ResourceNotFoundException',message:'nf'}); return send(res,200,{data:(mm[1]==='anime'?anime:manga)(id)}); }
+  if ((mm=/^\/v1\/(anime|manga)\/(\d+)\/full$/.exec(p))) { const id=Number(mm[2]); if (id===404404) return send(res,404,{status:404,type:'ResourceNotFoundException',message:'nf'}); const base=(mm[1]==='anime'?anime:manga)(id); const g=globalThis.__graph?.[id]; if(g) Object.assign(base,{title:g.t,title_english:g.t,type:g.k,episodes:g.e,aired:{prop:{from:{year:g.y,month:g.m||1,day:1}}},year:g.y,relations:g.r.map(([relation,ids,type])=>({relation,entry:ids.map(i=>({mal_id:i,type:type||'anime',name:'x'}))}))}); return send(res,200,{data:base}); }
   if ((mm=/^\/v1\/(anime|manga)\/(\d+)\/(characters|relations|recommendations|videos|themes|staff)$/.exec(p))) {
     const kind=mm[3], id=Number(mm[2]); if (id===404404) return send(res,404,{status:404,type:'X',message:'nf'});
     if (globalThis.mode.noExtras) return send(res,403,{status:403,type:'Blocked',message:'blocked'});

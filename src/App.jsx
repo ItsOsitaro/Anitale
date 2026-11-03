@@ -1,5 +1,6 @@
 import { splitGenres, splitInfoRows } from '@/lib/genre-kinds';
 import { FavoriteButton } from '@/components/Favorites';
+import WatchOrder from '@/components/WatchOrder';
 import React, { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import uniq from 'lodash/uniq.js';
@@ -1278,7 +1279,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 )}
                 {extras.status === 'loading' && <p className="extras-muted" role="status">{t('extrasLoading')}</p>}
                 {hasAny(extras, 'relations') && (
-                  <DetailSection id="detailRelatedEntries" title={t('relatedEntries')}><Relations data={extras.data} /></DetailSection>
+                  <DetailSection id="detailRelatedEntries" title={t('relatedEntries')}><Relations data={extras.data} /><WatchOrder mediaType={mediaType} malId={item.malId} /></DetailSection>
                 )}
                 {hasAny(extras, 'characters') && (
                   <DetailSection id="detailCharacters" title={t('charactersVA')}><Characters data={extras.data} /></DetailSection>

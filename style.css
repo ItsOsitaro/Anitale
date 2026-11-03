@@ -4391,3 +4391,18 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .about-editor__bar { display: flex; flex-wrap: wrap; gap: 6px; }
 .about-editor__bar button { padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 0.85rem; cursor: pointer; }
 .about-editor__preview { padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; }
+
+/* ---------- B7 watch order ---------- */
+.watch-order__open { margin-top: 10px; }
+.watch-order h3 { margin: 14px 0 8px; font-size: 1rem; }
+.watch-order ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.watch-order li > a, .watch-order li > div { display: flex; align-items: center; gap: 10px; padding: 6px 10px 6px 6px; border: 1px solid var(--border); border-radius: 12px; color: inherit; text-decoration: none; }
+.watch-order li.is-current > div { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 8%, transparent); }
+.watch-order .is-plain { opacity: 0.8; }
+.watch-order__n { width: 26px; text-align: center; font-weight: 700; color: var(--muted-foreground); flex: none; }
+.watch-order img, .watch-order__noimg { width: 44px; height: 62px; object-fit: cover; border-radius: 6px; background: var(--muted); flex: none; }
+.watch-order__text { display: flex; flex-direction: column; min-width: 0; gap: 2px; }
+.watch-order__text strong { font-size: 0.92rem; overflow-wrap: anywhere; }
+.watch-order__text small { color: var(--muted-foreground); }
+.watch-order__here { margin-inline-start: auto; font-size: 0.78rem; color: var(--primary); font-weight: 600; white-space: nowrap; }
+.watch-order__retry { background: transparent; border: 0; color: var(--primary); text-decoration: underline; font: inherit; cursor: pointer; }

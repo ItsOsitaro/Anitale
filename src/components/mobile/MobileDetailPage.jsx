@@ -1,5 +1,6 @@
 import { splitGenres } from '@/lib/genre-kinds';
 import { FavoriteButton } from '../Favorites';
+import WatchOrder from '../WatchOrder';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -321,6 +322,7 @@ export default function MobileDetailPage({
               <section>
                 <h2 className="mobile-detail__h">{t('relatedEntries')}</h2>
                 <Relations data={extras.data} />
+                <WatchOrder mediaType={mediaType} malId={item.malId} />
               </section>
             )}
             {related.length > 0 && (

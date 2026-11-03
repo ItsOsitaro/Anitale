@@ -33,6 +33,7 @@ import { getAutoImportState, runAutoImport, setAutoImportEnabled } from './auto-
 import { registerSeoRoutes } from './seo.js';
 import { registerExtrasRoutes } from './extras.js';
 import { registerPeopleRoutes } from './people.js';
+import { registerFranchiseRoutes } from './franchise.js';
 import { registerHealthRoutes } from './health.js';
 import { recordMissing, registerMissingRoutes } from './missing-titles.js';
 import { coverResizeHandler } from './cover-resize.js';
@@ -1693,6 +1694,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
 
   registerExtrasRoutes(app);
   registerPeopleRoutes(app);
+  registerFranchiseRoutes(app);
   registerMissingRoutes(app, { requireAdmin, writeLimiter });
   registerHealthRoutes(app, { requireAdmin, writeLimiter });
 
