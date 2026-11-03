@@ -1,4 +1,5 @@
 import { splitGenres } from '@/lib/genre-kinds';
+import MediaTabs from '@/components/MediaTabs';
 import { QuickEpisode } from '@/components/QuickEpisode';
 import { FavoriteButton } from '../Favorites';
 import WatchOrder from '../WatchOrder';
@@ -15,8 +16,8 @@ import { coverUrl } from '@/lib/cover';
 import CommunitySection from '../CommunitySection';
 import { hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
 
-const TAB_IDS = ['summary', 'reviews', 'info', 'team', 'related'];
-const TAB_KEYS = { summary: 'mdSummary', reviews: 'mdReviews', info: 'information', team: 'staffSection', related: 'mdRelated' };
+const TAB_IDS = ['summary', 'media', 'reviews', 'info', 'team', 'related'];
+const TAB_KEYS = { summary: 'mdSummary', media: 'mediaSection', reviews: 'mdReviews', info: 'information', team: 'staffSection', related: 'mdRelated' };
 
 function FactGrid({ rows }) {
   const visible = rows.filter((row) => row.value);
@@ -317,6 +318,7 @@ export default function MobileDetailPage({
           </>
         )}
 
+        {tab === 'media' && <MediaTabs item={item} mediaType={mediaType} />}
         {tab === 'related' && (
           <>
             {hasAny(extras, 'relations') && (

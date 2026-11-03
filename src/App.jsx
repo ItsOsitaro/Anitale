@@ -36,6 +36,7 @@ import { useAiringAlerts } from '@/hooks/use-airing-alerts';
 import CommunitySection from '@/components/CommunitySection';
 import ImportListPage from './importListPage.jsx';
 import PeoplePage from './peoplePages.jsx';
+import MediaTabs from './components/MediaTabs.jsx';
 import { ContinueWatching, QuickEpisode } from './components/QuickEpisode.jsx';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
@@ -1282,6 +1283,9 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 </DetailSection>
                 {hasAny(extras, 'trailer') && (
                   <DetailSection id="detailTrailer" title={t('trailerTitle')}><Trailer data={extras.data} /></DetailSection>
+                )}
+                {item.malId && (
+                  <DetailSection id="detailMedia" title={t('mediaSection')}><MediaTabs item={item} mediaType={mediaType} /></DetailSection>
                 )}
                 {extras.status === 'loading' && <p className="extras-muted" role="status">{t('extrasLoading')}</p>}
                 {hasAny(extras, 'relations') && (

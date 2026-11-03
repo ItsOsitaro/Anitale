@@ -34,6 +34,7 @@ import { registerSeoRoutes } from './seo.js';
 import { registerExtrasRoutes } from './extras.js';
 import { registerPeopleRoutes } from './people.js';
 import { registerTopCharactersRoutes } from './topchars.js';
+import { registerMediaRoutes } from './media.js';
 import { registerFranchiseRoutes } from './franchise.js';
 import { registerHealthRoutes } from './health.js';
 import { recordMissing, registerMissingRoutes } from './missing-titles.js';
@@ -1696,6 +1697,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   registerExtrasRoutes(app);
   registerPeopleRoutes(app);
   registerTopCharactersRoutes(app);
+  registerMediaRoutes(app);
   registerFranchiseRoutes(app);
   registerMissingRoutes(app, { requireAdmin, writeLimiter });
   registerHealthRoutes(app, { requireAdmin, writeLimiter });
