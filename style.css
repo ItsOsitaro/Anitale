@@ -4327,3 +4327,19 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .community-helpful { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 0.82rem; cursor: pointer; }
 .community-helpful:disabled { cursor: default; opacity: 0.8; }
 .community-helpful.is-active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
+
+/* ---------- B2 recommendations ---------- */
+.rec-section { margin-top: 20px; }
+.rec-list { list-style: none; margin: 0 0 12px; padding: 0; display: grid; gap: 10px; }
+.rec-card { display: flex; gap: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 12px; }
+.rec-card__title { display: flex; flex-direction: column; gap: 6px; width: 84px; flex: none; color: inherit; text-decoration: none; font-size: 0.8rem; }
+.rec-card__title img { width: 84px; height: 118px; object-fit: cover; border-radius: 8px; background: var(--muted); }
+.rec-card__body { min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+.rec-card__body p { margin: 0; overflow-wrap: anywhere; }
+.rec-card__body small { color: var(--muted-foreground); }
+.rec-form input[type=search] { padding: 8px 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--background); color: inherit; font: inherit; }
+.rec-form__hits { list-style: none; margin: 4px 0 0; padding: 0; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.rec-form__hits button { display: block; width: 100%; text-align: start; padding: 8px 10px; background: transparent; border: 0; color: inherit; font: inherit; cursor: pointer; }
+.rec-form__hits button:hover, .rec-form__hits button:focus-visible { background: var(--muted); }
+.rec-form__picked { display: flex; align-items: center; gap: 10px; margin: 0; }
+.rec-form__clear { background: transparent; border: 0; color: var(--primary); font: inherit; cursor: pointer; text-decoration: underline; }

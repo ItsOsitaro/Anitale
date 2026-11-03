@@ -108,6 +108,12 @@ export const siteReviewInput = z.object({
   body: z.string().trim().min(10, 'Review must be at least 10 characters').max(2000),
   spoiler: z.boolean().optional(),
 });
+export const siteRecInput = z.object({
+  mediaType: z.enum(['anime', 'manga']),
+  slug: z.string().trim().min(1).max(120),
+  other: z.string().trim().min(1).max(120),
+  body: z.string().trim().min(10, 'Reason must be at least 10 characters').max(300),
+});
 export const siteProfileInput = z.object({
   bio: text(300),
   avatarColor: z.number().refine((value) => [8, 342, 276, 208, 168, 96].includes(value), 'Invalid avatar color').optional(),

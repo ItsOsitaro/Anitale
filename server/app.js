@@ -12,10 +12,11 @@ import {
   sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials,
 } from './auth.js';
 import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.js';
-import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
+import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
 import { listNotifications, markNotificationsRead, notifyFollow, notifyFollowersOfReview } from './notifications.js';
 import { isSensitiveItem } from './sensitive.js';
@@ -448,6 +449,40 @@ export const createApp = () => {
   };
   app.put('/api/user/reviews/:id/helpful', requireSiteUser, reviewLimiter, helpfulHandler(true));
   app.delete('/api/user/reviews/:id/helpful', requireSiteUser, reviewLimiter, helpfulHandler(false));
+
+  // ---------- Recommendations ("if you liked this, try that") ----------
+  app.get('/api/recs/:mediaType/:slug', (req, res) => {
+    const mediaType = mediaParam(req);
+    res.setHeader('Cache-Control', 'no-cache');
+    res.json({ items: listRecs(mediaType, req.params.slug, { viewerId: viewerId(req) }) });
+  });
+
+  app.post('/api/user/recs', requireSiteUser, reviewLimiter, (req, res) => {
+    const input = siteRecInput.parse(req.body);
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    if (input.slug === input.other) throw httpError(400, 'Pick a different title');
+    if (!titleExists(input.mediaType, input.slug) || !titleExists(input.mediaType, input.other)) throw httpError(404, 'Title not found');
+    if (!addRec(row.id, input.mediaType, input.slug, input.other, input.body)) throw httpError(409, 'You already recommended this pair');
+    res.status(201).json({ ok: true });
+  });
+
+  const recHelpful = (on) => (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    const id = Number.parseInt(req.params.id, 10);
+    const result = Number.isInteger(id) ? setRecHelpful(row.id, id, on) : null;
+    if (!result) throw httpError(404, 'Recommendation not found, or it is yours');
+    res.json({ ok: true, ...result });
+  };
+  app.put('/api/user/recs/:id/helpful', requireSiteUser, reviewLimiter, recHelpful(true));
+  app.delete('/api/user/recs/:id/helpful', requireSiteUser, reviewLimiter, recHelpful(false));
+
+  app.get('/api/admin/recs', requireAdmin, (req, res) => res.json({ items: adminListRecs() }));
+  app.delete('/api/admin/recs/:id', requireAdmin, (req, res) => {
+    if (!adminDeleteRec(Number(req.params.id))) throw httpError(404, 'Recommendation not found');
+    res.json({ ok: true });
+  });
 
   app.get('/api/admin/reviews', requireAdmin, (req, res) => {
     const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 15));

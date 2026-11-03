@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useSiteLang } from '@/i18n';
 import { useUser, userApi } from '@/user.jsx';
+import Recommendations from './Recommendations.jsx';
 
 const MIN_LENGTH = 10;
 const MAX_LENGTH = 2000;
@@ -245,6 +246,7 @@ export default function CommunitySection({ mediaType, slug }) {
       {data.reviews.length < data.total && (
         <Button type="button" variant="outline" size="sm" onClick={() => load(page + 1)}>{t('reviewsMore')}</Button>
       )}
+      <Recommendations mediaType={mediaType} slug={slug} />
     </div>
   );
 }
