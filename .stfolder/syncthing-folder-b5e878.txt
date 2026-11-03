@@ -1,5 +1,0 @@
-# This directory is a Syncthing folder marker.
-# Do not delete.
-
-folderID: anitale-site
-created: 2026-11-02T14:20:51+03:30
