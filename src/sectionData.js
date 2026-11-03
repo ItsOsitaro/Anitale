@@ -29,6 +29,7 @@ export const sidebarSections = [
       { label: { fa: 'جدول پخش هفتگی', en: 'Weekly schedule' }, to: '/schedule' },
       { label: { fa: 'برترین انیمه‌ها', en: 'Top anime' }, to: '/top/anime' },
       { label: { fa: 'برترین مانگا', en: 'Top manga' }, to: '/top/manga' },
+      { label: { fa: 'برترین شخصیت‌ها', en: 'Top characters' }, to: '/top/characters' },
       { label: { fa: 'مانگای انیمه‌شده', en: 'Manga adapted to anime' }, to: '/adapted' },
     ],
   },

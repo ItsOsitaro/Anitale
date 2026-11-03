@@ -95,3 +95,6 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 - تغییرات DB: migrate در `server/db.js`؛ بدون ORM.
 - موبایل: هر صفحه جدید باید در ≤820px (MobileShell) بررسی شود (`docs/mobile-ui-spec.md`).
 - فایل‌های ایجادشده در `server/xcache/`, `server/*.db*`, `.env*` را کامیت نکن.
+
+
+- ~~B8 برترین شخصیت‌ها~~ انجام شد: `server/topchars.js` (`GET /api/top/characters?page=1|2`, کش ۲۴ ساعته در جدول `top_cache`، در خطا نسخه‌ی قدیمی), صفحه‌ی `src/topCharactersPage.jsx` در `/top/characters` (۵۰ تا، ۲۵ تا در هر صفحه), لینک در `sidebarSections` و تب سوم در `MobileRankingPage`, ورودی SEO.

@@ -18,6 +18,9 @@ export default function MobileRankingPage({ title, items, mediaType = 'anime', n
         <NavLink to="/top/manga" className={({ isActive }) => `mobile-tabs__tab${isActive ? ' is-active' : ''}`}>
           {t('breadcrumbManga')}
         </NavLink>
+        <NavLink to="/top/characters" className={({ isActive }) => `mobile-tabs__tab${isActive ? ' is-active' : ''}`}>
+          {t('topCharsTab')}
+        </NavLink>
       </nav>
       {note && <p className="mobile-catalog__note">{note}</p>}
       {items.length === 0 && (

@@ -36,6 +36,7 @@ import { useAiringAlerts } from '@/hooks/use-airing-alerts';
 import CommunitySection from '@/components/CommunitySection';
 import ImportListPage from './importListPage.jsx';
 import PeoplePage from './peoplePages.jsx';
+import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
 import MobileShell from '@/components/mobile/MobileShell';
@@ -1415,6 +1416,7 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="/reset-password" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ResetPasswordPage /></WithHeader>} />
       <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
       <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
+      <Route path="/top/characters" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><TopCharactersPage /></WithHeader>} />
       <Route path="/character/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="character" /></WithHeader>} />
       <Route path="/person/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="person" /></WithHeader>} />
       <Route path="/import-list" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ImportListPage /></WithHeader>} />
