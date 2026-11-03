@@ -171371,5 +171371,73 @@
     ],
     "resources": [],
     "streamingPlatforms": []
+  },
+  {
+    "slug": "one-piece-film-baad",
+    "alternativeTitles": {
+      "synonyms": [
+        "One Piece Movie 17"
+      ],
+      "japanese": "ONE PIECE FILM BAAD",
+      "romaji": "One Piece Film: Baad",
+      "english": "One Piece Film: Baad"
+    },
+    "information": [
+      {
+        "label": "Type",
+        "value": "Movie"
+      },
+      {
+        "label": "Episodes",
+        "value": "1"
+      },
+      {
+        "label": "Status",
+        "value": "Not yet aired"
+      },
+      {
+        "label": "Source",
+        "value": "Manga"
+      },
+      {
+        "label": "Genres",
+        "value": "Action, Adventure, Fantasy"
+      },
+      {
+        "label": "Demographic",
+        "value": "Shounen"
+      },
+      {
+        "label": "Duration",
+        "value": "Unknown"
+      }
+    ],
+    "statistics": {
+      "score": "",
+      "scoredBy": "",
+      "ranked": "",
+      "popularity": "#5923",
+      "members": "17,974",
+      "favorites": "46"
+    },
+    "availableAt": [
+      {
+        "label": "MyAnimeList",
+        "href": "https://myanimelist.net/anime/64859/One_Piece_Film__Baad",
+        "icon": "M"
+      },
+      {
+        "label": "Official Site",
+        "href": "https://www.onepiece-film.jp/",
+        "icon": "↗"
+      },
+      {
+        "label": "@Eiichiro_Staff",
+        "href": "https://twitter.com/Eiichiro_Staff",
+        "icon": "↗"
+      }
+    ],
+    "resources": [],
+    "streamingPlatforms": []
   }
 ]

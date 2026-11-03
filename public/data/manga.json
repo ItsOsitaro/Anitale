@@ -10,6 +10,9 @@
     "sampleScore": 6.82,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Manga Gaugau"
+    ],
     "genres": [
       "Adventure",
       "Comedy",
@@ -38,6 +41,9 @@
     "sampleScore": 7.11,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Comic Days"
+    ],
     "genres": [
       "Romance",
       "School"
@@ -62,6 +68,9 @@
     "sampleScore": 6.87,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Dragon Age"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -88,6 +97,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Sports",
       "School",
@@ -113,6 +125,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "TakeComi!"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -138,6 +153,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Magazine pocket"
+    ],
     "genres": [
       "Comedy",
       "Girls Love",
@@ -163,6 +181,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Sunday Webry"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -188,6 +209,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Alive+"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -213,6 +237,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Saikyou Jump"
+    ],
     "genres": [
       "Action",
       "Sci-Fi"
@@ -237,6 +264,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Dra-Dra Flat♭"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -263,6 +293,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Romance",
       "School"
@@ -287,6 +320,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Young Jump"
+    ],
     "genres": [
       "Suspense",
       "Gore",
@@ -313,6 +349,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Ace Plus"
+    ],
     "genres": [
       "Romance",
       "School"
@@ -337,6 +376,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Young Animal"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -363,6 +405,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Young Ace UP"
+    ],
     "genres": [
       "Fantasy",
       "Harem",
@@ -388,6 +433,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Comedy",
       "Supernatural",
@@ -414,6 +462,7 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [],
     "genres": [
       "Drama",
       "Suspense",
@@ -440,6 +489,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "ComicWalker"
+    ],
     "genres": [
       "Girls Love",
       "Harem",
@@ -465,6 +517,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Sunday Gene-X"
+    ],
     "genres": [
       "Comedy",
       "Gourmet",
@@ -491,6 +546,9 @@
     "sampleScore": 6.68,
     "publicationStatus": "Finished",
     "chapters": 1,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -516,6 +574,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Supernatural",
       "Suspense",
@@ -541,6 +602,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Suiyoubi no Sirius"
+    ],
     "genres": [
       "Action",
       "Fantasy"
@@ -565,6 +629,9 @@
     "sampleScore": 7.36,
     "publicationStatus": "Finished",
     "chapters": 1,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Action",
       "Comedy",
@@ -591,6 +658,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Comic Fire"
+    ],
     "genres": [
       "Comedy",
       "Romance",
@@ -616,6 +686,9 @@
     "sampleScore": 6.53,
     "publicationStatus": "Finished",
     "chapters": 1,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Action",
       "Fantasy",
@@ -641,6 +714,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Manga Park"
+    ],
     "genres": [
       "Comedy",
       "Fantasy",
@@ -666,15 +742,22 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Ace Plus"
+    ],
     "genres": [
       "Comedy",
       "Romance",
       "School"
     ],
-    "synopsis": "",
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
     "cover": "suki-datta-ko-wo-maid-ni-shitara-ore-no-heya-de-kossori-nanika-shiteiru.jpg",
     "image": "/covers/suki-datta-ko-wo-maid-ni-shitara-ore-no-heya-de-kossori-nanika-shiteiru.jpg",
-    "updatedAt": "2026-11-02 07:49:16"
+    "updatedAt": "2026-11-03 15:06:35"
   },
   {
     "slug": "nightmare-of-oveja-negra",
@@ -687,6 +770,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Horror",
       "Sci-Fi",
@@ -712,6 +798,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "Shounen Jump+"
+    ],
     "genres": [
       "Action",
       "Adventure",
@@ -738,6 +827,9 @@
     "sampleScore": null,
     "publicationStatus": "Publishing",
     "chapters": null,
+    "serialization": [
+      "ComicWalker"
+    ],
     "genres": [
       "Fantasy",
       "Romance",

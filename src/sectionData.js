@@ -31,6 +31,7 @@ export const sidebarSections = [
       { label: { fa: 'برترین مانگا', en: 'Top manga' }, to: '/top/manga' },
       { label: { fa: 'برترین شخصیت‌ها', en: 'Top characters' }, to: '/top/characters' },
       { label: { fa: 'استک‌های علاقه', en: 'Interest stacks' }, to: '/stacks' },
+      { label: { fa: 'API برای توسعه‌دهندگان', en: 'Developer API' }, to: '/developers' },
       { label: { fa: 'مانگای انیمه‌شده', en: 'Manga adapted to anime' }, to: '/adapted' },
     ],
   },

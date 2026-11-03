@@ -83,7 +83,7 @@ const addWeighted = (docs) => {
   return docs;
 };
 
-const getDocs = () => {
+export const getDocs = () => {
   const key = versionKey();
   if (cache.key !== key) cache = { key, docs: addWeighted(buildDocs()) };
   return cache.docs;
@@ -151,7 +151,7 @@ const toRow = (doc, relevance) => ({
 
 // genres / excludeGenres are arrays (a title must have every included genre and none of the excluded);
 // the old single `genre` and `year` still work. fromYear/toYear bound the year, inclusive.
-export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], excludeGenres = [], year = '', fromYear = 0, toYear = 0, format = '', status = '', studio = '', rating = '', letter = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false }) => {
+export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], excludeGenres = [], year = '', fromYear = 0, toYear = 0, format = '', status = '', studio = '', rating = '', letter = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false, raw = false }) => {
   const needle = foldTitle(String(q).trim());
   const docs = getDocs();
 
@@ -200,5 +200,5 @@ export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], e
 
   const total = filtered.length;
   const start = (page - 1) * limit;
-  return { items: filtered.slice(start, start + limit).map((doc) => toRow(doc, doc.relevance)), total, page, pages: Math.max(1, Math.ceil(total / limit)), facets };
+  return { items: filtered.slice(start, start + limit).map((doc) => (raw ? { ...toRow(doc, doc.relevance), doc } : toRow(doc, doc.relevance))), total, page, pages: Math.max(1, Math.ceil(total / limit)), facets };
 };

@@ -4537,3 +4537,11 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .sug-status { font-size: 12.5px; font-weight: 700; }
 .sug-item.is-approved .sug-status { color: #1e8e3e; } .sug-item.is-rejected .sug-status { color: #c0392b; }
 .sug-reason { margin: 0; font-size: 13px; opacity: .8; }
+
+/* C8: developer page */
+.dev-shell h2 { margin: 14px 0 6px; font-size: 17px; }
+.dev-points { margin: 0; padding-inline-start: 20px; display: grid; gap: 4px; }
+.dev-endpoints { display: grid; gap: 8px; margin: 0; }
+.dev-endpoints div { padding: 8px 10px; border-radius: 10px; background: color-mix(in oklch, var(--foreground) 5%, transparent); }
+.dev-endpoints dd { margin: 2px 0 0; font-size: 13px; opacity: .8; word-break: break-word; }
+.dev-code { padding: 10px 12px; border-radius: 10px; background: color-mix(in oklch, var(--foreground) 8%, transparent); overflow-x: auto; font-size: 13px; }

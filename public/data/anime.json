@@ -31458,5 +31458,24 @@
       "auto": true
     },
     "updatedAt": "2026-11-03 12:13:34"
+  },
+  {
+    "slug": "one-piece-film-baad",
+    "title": "One Piece Film: Baad",
+    "category": "Action",
+    "year": "",
+    "format": "Movie",
+    "sampleScore": 0,
+    "genres": [
+      "Action",
+      "Adventure",
+      "Fantasy"
+    ],
+    "synopsis": {
+      "fa": "فیلم هفدهم ون پیس در سال 2029 اکران می شود.",
+      "en": "Seventeenth One Piece movie, to be released in 2029.",
+      "auto": true
+    },
+    "updatedAt": "2026-11-03 15:06:34"
   }
 ]
