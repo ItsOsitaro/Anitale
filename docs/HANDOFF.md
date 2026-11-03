@@ -14,6 +14,7 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 **سرور (`server/`)**: `index` (راه‌اندازی)، `app` (همه routeهای Express، `requireAdmin`، `writeLimiter`، jobهای bulk)، `auth`، `users`، `db` (schema + migrate)، `repo` (کوئری‌ها)، `shape` (تبدیل ردیف→آیتم، `foldTitle`)، `schemas` (zod)، `settings`، `search` (ایندکس حافظه‌ای + `addWeighted` برای رتبه)، `sensitive`، `seo` (sitemap/meta، noindex)، `tenrai`، `anilist`، `extras` (شخصیت/عوامل/روابط/پیشنهاد/ویدیو/تم)، `people` (صفحه شخصیت و فرد)، `images`/`cover-resize`/`/api/ximg` (پروکسی و کش تصویر در `server/xcache/`)، `auto-import`، `missing-titles`، `reviews`، `notifications`، `mailer`، `health`، `export-data`، `seed`، `vpn`/`proxy`/`xray-config`، `pool`.
 **جدول‌های DB**: settings، anime، manga، users، user_entries (user_id, media_type, slug, status ∈ watching/completed/on_hold/dropped/planned, note, rating, progress, created_at, updated_at)، follows، auth_tokens، title_extras، people_cache، missing_titles، missing_requests، notifications، notification_state، reviews (یکی برای هر کاربر در هر عنوان؛ body، spoiler).
 **فرانت (`src/`)**: `App.jsx` (routeها: `/`، `/search`، `/anime/:idOrSlug`، `/manga/:idOrSlug`، `/character/:id`، `/person/:id`، `/dashboard`، `/user/:username`، `/import-list`، `/account`، صفحات auth، `/admin/*`)، `catalog-context.jsx`، `lib/catalog-rules.js` (قوانین رتبه/فیلتر کلاینت)، `lib/mal-xml.js`، `components/` (و `components/mobile/` برای MobileShell ≤820px)، `admin/*` (AnimeList، MangaList، AutoImport، BulkImport، HealthPage، MissingTitles، ReviewQueue، Schedule، SiteUsers، Translation، UserReviews، VpnPage، TitleImport، QuickAdd …)، `i18n.js` (fa/en) و `admin/i18n.js` (بلوک‌های جفتی en/fa). متن جدید UI را همیشه در هر دو زبان اضافه کن.
+**ماژول‌های جدید (B8–C8) و routeهای تازه: بخش 11.**
 **مستندات دیگر**: `AGENTS.md`، `README.md`، `FEATURE-QUEUES.md` (صف 1–28 همه ✅)، `docs/mobile-ui-spec.md`.
 
 ## 3. تاریخچه کار (به ترتیب)
@@ -26,6 +27,8 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 7. بررسی PDF کاتالوگ ویژگی‌های MAL که مالک ساخت → چک‌لیست (بخش 8).
 8. **Refresh-all ادمین به job پس‌زمینه** تبدیل شد (قبلاً بعد از چند ثانیه «Error !» می‌داد چون CDN درخواست طولانی را قطع می‌کرد).
 9. **فیلتر محتوای حساس** + **رتبه‌بندی بیزی** (A5, A1).
+10. بقیه‌ی فاز 1 و 2 (A2–A8، B1–B7): آمار جامعه، فیلدهای لیست، جستجوی پیشرفته، ژانر/تم/مخاطب، نقد و واکنش «مفید بود» و غیره (جزئیات در بخش 8).
+11. فاز 3 و بقیه‌ی فاز 2: B8، B9، C1، C2، C6، C7، C8 — نقشه‌ی ماژول‌ها در بخش 11.
 
 ## 4. معماری قابلیت‌های اخیر (باید هماهنگ بمانند)
 ### فیلتر حساس
@@ -45,6 +48,8 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 ## 5. دیپلوی و تله‌ها
 - **Syncthing**: پوشه پروژه روی سرور همگام می‌شود (فایل‌ها `syncthing:www-data`). یک بار exec bit فایل‌های `node_modules/.bin/*` از بین رفت → `vite: Permission denied`. راه‌حل ماندگار: `.stignore` با `node_modules` و `dist` در **هر دو دستگاه**، بعد `rm -rf node_modules && npm ci`. قبل از ثبت ignore هیچ پوشه همگام‌شده‌ای را حذف نکن (حذف به PC مالک هم می‌رسد). مالک این را اجرا کرده؛ هنوز تأیید نشده `.stignore` روی PC هم درست است.
 - `chmod -R u+rwX` به فایل‌ها x نمی‌دهد؛ `chmod +x node_modules/.bin/*`.
+- **هرگز فایل پروژه را روی سرور حذف نکن**: حذف از طریق Syncthing به PC هم می‌رسد (یک بار `src/lib/genre-kinds.js` همین‌طور پاک شد و build شکست خورد؛ با ارسال دوباره‌ی فایل درست شد).
+- اگر `git pull` روی سرور بگوید «local changes would be overwritten» (چون Syncthing فایل‌ها را زودتر رسانده)، راه‌حل: `git checkout -- <همان فایل‌ها>` (فقط فایل‌های ردیابی‌شده)، نه حذف فایل.
 - ایران بعضی mirrorهای apt را می‌بندد؛ نصب بسته ممکن است شکست بخورد.
 - `git pull` → «Already up to date» یعنی هنوز push نشده.
 - بعد از هر دیپلوی: پاک‌کردن کش آروان.
@@ -64,12 +69,35 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 5. همیشه `npx vite build` و `node -e "import('./server/app.js')"`.
 6. `exportData()` در تست `public/data/*.json` را بازنویسی می‌کند — آن‌ها را **کامیت نکن** (`git checkout public/data`).
 7. پورت: `fuser -k PORT/tcp`، نه `pkill -f`.
+8. **DB پایه‌ی تست**: یک کپی از دیتابیس (مثلاً از پشتیبان `/root/backup` یا `server/data.db` روی PC) را به‌عنوان `/tmp/t.db` کپی کن؛ هرگز روی `data.db` زنده تست نزن. کاتالوگ از DB خوانده می‌شود، نه از `public/data`؛ فیکسچر تست را با SQL روی DB تست عوض کن (مثلاً `UPDATE anime SET genres=… WHERE slug=…`). `scripts/dev/test-server.sh` همین کار را می‌کند.
+9. **کاربر تستی**: از `/register` بساز (`#auth-username`، `#auth-email`، `#auth-password`؛ نام‌کاربری حرف+عدد و رمز حداقل ~۱۰ کاراکتر مثل `longenough1`). تماس‌های API در Playwright را با `page.evaluate(fetch…)` از صفحه‌ی واردشده بزن؛ `ctx.request` ساده به‌خاطر بررسی هم‌مبدأ (`sameOriginOnly`) رد می‌شود، و در ابزارهای دیگر برای نوشتن هدر `Origin` هم‌مبدأ بفرست.
+10. موبایل: viewport ‏390×844؛ تب‌های جزئیات موبایل: خلاصه/نظرات/اطلاعات/تولید/مرتبط (+ رسانه)؛ تب‌های پروفایل موبایل: فهرست/فعالیت/درباره.
+11. `scripts/smoke.mjs` تست دودی API است (بخش «Commands» در AGENTS.md).
 
 ## 7. تصمیم‌های مالک (باز نکن)
 - فیلتر حساس: پیش‌فرض روشن + سوئیچ کاربر. ✔
 - رتبه: فقط امتیاز منبع با فرمول بیزی. ✔
 - **فعلاً نه**: فروم، کلاب‌ها، پیام خصوصی (C3–C5)، CSS دلخواه خام (به‌جایش چند تم رنگی آماده)، OAuth API.
 - تم پروفایل = چند تم رنگی از پیش‌تعریف‌شده.
+- **جزئیات تصمیم‌های هر قابلیت (مالک جواب داده؛ دوباره نپرس):**
+  - A5/A1: فیلتر حساس برای هر دستگاه جدا (`localStorage`)؛ رتبه فقط امتیاز منبع.
+  - B1 نقد: فقط واکنش «مفید بود»؛ حداقل طول نقد ۱۰ کاراکتر؛ مرتب‌سازی: جدیدترین (پیش‌فرض)، مفیدترین، بالاترین امتیاز، پایین‌ترین امتیاز.
+  - B2 پیشنهاد «اگر این را دوست داشتی»: زیر نقدها در صفحه‌ی عنوان؛ هر کاربر برای هر جفت عنوان فقط یکی؛ متن ۱۰–۳۰۰ کاراکتر؛ رأی «مفید بود». هنوز UI مدیریت ادمین ندارد (فقط API).
+  - B3 علاقه‌مندی‌ها: ۱۰ مورد برای هر دسته (انیمه، مانگا، شخصیت، فرد)؛ دکمه‌ی قلب در هر صفحه؛ عمومی.
+  - B4 حریم خصوصی: «دوستان» = کسانی که **صاحب فهرست** دنبال می‌کند؛ حریم فهرست انیمه و مانگا جدا؛ چیزی از فهرست خصوصی عمومی نمی‌ماند (آمار ناشناس جامعه ماند).
+  - B5 شباهت سلیقه: روش اختلاف امتیاز، حداقل ۸ عنوان مشترکِ امتیازدار، نمایش در پروفایل و مرتب‌سازی فهرست دنبال‌شده‌ها.
+  - B6 درباره‌ی من: مجاز: **درشت**، *کج*، لینک، تیتر کوچک، فهرست، اسپویلر؛ بدون تصویر و HTML خام؛ تا ۲۰۰۰ کاراکتر؛ فرم ساده با پیش‌نمایش زنده.
+  - B7 ترتیب تماشا: هنگام باز کردن صفحه و در صورت نبودن کش ساخته می‌شود؛ فهرست مرتب با سال و نوع؛ در بخش «مرتبط».
+  - B8: فقط منبع MAL (نه علاقه‌مندی کاربران خودمان)؛ ۵۰ برتر با صفحه‌بندی؛ صفحه‌ی جدا + لینک در «کشف کنید» و تب موبایل.
+  - B9: «محبوب‌ترین» فقط بر اساس members؛ «به‌زودی» = فصل بعد به ترتیب محبوبیت؛ دکمه‌ی +۱ هم در خانه هم در صفحه‌ی عنوان.
+  - C1: تب‌ها: قسمت‌ها، ویدیو، تصاویر؛ ویدیو فقط با کلیک بارگذاری شود.
+  - C2: صفحه‌ی استودیو + تهیه‌کننده/ناشر + مجله‌ی مانگا؛ فقط عنوان‌های موجود در انی‌تیل؛ نام‌ها در «اطلاعات» لینک شوند.
+  - C6: مجموعه با نام و توضیح؛ ۱۰ استک برای هر کاربر، ۵۰ عنوان در هر استک؛ عمومی/خصوصی + پسند؛ «افزودن مستقیم از صفحه‌ی عنوان» انتخاب نشد.
+  - C7: چهار نوع (خلاصه، عنوان، ژانر، گزارش)؛ هر کاربر واردشده؛ حداکثر ۵ در روز؛ صف ادمین با تفاوت قدیم/جدید، تأیید (اعمال خودکار) یا رد با دلیل.
+  - C8: داده: فهرست و جزئیات انیمه/مانگا، جستجو، برنامه پخش و برترین‌ها (نه آمار جامعه/نقدها)؛ بدون کلید؛ ۶۰ درخواست در دقیقه برای هر IP؛ حساس همیشه حذف.
+  - حساب کاربری: ثبت‌نام و بازیابی رمز با ایمیل (کد بازیابی رد شد؛ `server/mailer.js`، متغیرهای `SMTP_*`).
+  - جریان کار مالک: اول روی PC تست می‌کند، بعد روی سرور؛ هر قابلیت را جدا تأیید می‌کند. دلخواه او: نسخه‌ی PC و سرور (حتی دیتابیس) هم‌گام بماند؛ ولی تصمیم فنی فعلی این است که `data.db` همگام نشود (در `.stignore`، بخش 5).
+  - **قراردادهای محتوا**: هر عنوان حساس باید در APIهای عمومی/لیست‌ها حذف شود مگر در فهرست شخصی خود کاربر.
 
 ## 8. چک‌لیست بهبود (از PDF کاتالوگ MAL)
 **انجام‌شده**: A1 رتبه بیزی، A5 فیلتر حساس، A3 فیلدهای لیست (تاریخ شروع/پایان خودکار+دستی، دفعات تماشای مجدد، اولویت فقط برای «برای بعد»، برچسب آزاد؛ ایمپورت/اکسپورت XML/CSV/JSON؛ فیلتر برچسب و ترتیب اولویت در داشبورد دسکتاپ؛ در موبایل فقط داخل شیت ویرایش).
@@ -81,7 +109,14 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 - ~~A7~~ انجام شد: `src/lib/genre-kinds.js` (مجموعه‌های ثابت MAL برای تم و مخاطب؛ هر چیز ناشناخته = ژانر)؛ `splitInfoRows` ردیف Genres را به Genres/Themes/Demographic می‌شکند (App.jsx)، چیپ‌های موبایل (MobileDetailPage)، پنل ژانر جستجو و optgroup فیلتر کاتالوگ. در `tenrai.js` ردیف Demographic انیمه هم اضافه شد (عنوان‌های قبلی با refresh پر می‌شوند، تقسیم‌بندی بدون refresh کار می‌کند). فیلتر موبایل (FilterSheet) هنوز گروه‌بندی نشده.
 - ~~A8~~ انجام شد: نرمال‌سازی فارسی و کاربران از قبل بود؛ جستجوی شخصیت/فرد اضافه شد: `GET /api/search/people?q=` در `server/people.js` (Tenrai `/characters` و `/people`، کش حافظه ۱ ساعت، محدودیت ۲۰ در دقیقه؛ اگر Tenrai در دسترس نباشد از `people_cache` محلی جواب می‌دهد، `local:true`). UI: بخش‌های «شخصیت‌ها» و «افراد» در `searchPage.jsx` زیر کاربران. جستجوی هدر (combobox) فقط عنوان و کاربر دارد.
 **فاز 2**: ~~B1~~ انجام شد (واکنش «مفید بود» تک‌نوعی در جدول `review_votes`، PUT/DELETE `/api/user/reviews/:id/helpful`، نه روی نقد خود؛ مرتب‌سازی `sort=new|helpful|high|low` در `/api/community`؛ حداقل طول همان ۱۰ ماند) · ~~B2~~ انجام شد (`server/recs.js`: جدول `recs` با جفت بدون‌جهت، write-once، دلیل ۱۰–۳۰۰ حرف، رأی «مفید بود» در `rec_votes`؛ API: GET `/api/recs/:type/:slug`، POST `/api/user/recs`، PUT/DELETE `/api/user/recs/:id/helpful`، ادمین: GET/DELETE `/api/admin/recs` — **UI ادمین هنوز نیست**؛ کلاینت `components/Recommendations.jsx` زیر نقدها) · ~~B3~~ انجام شد (`server/favorites.js`: جدول `favorites`، سقف ۱۰ در هر دسته، شخصیت/فرد با snapshot نام و عکس از `people_cache` — فقط چیزی که قبلاً صفحه‌اش باز شده قابل افزودن است؛ API: GET `/api/favorites/:kind/:ref` (count+mine)، PUT/DELETE `/api/user/favorites/:kind/:ref`؛ `favorites` در `/api/users/:username`؛ UI در `components/Favorites.jsx`: دکمه قلب روی صفحه عنوان دسکتاپ/موبایل و صفحه شخصیت/فرد + بخش علاقه‌مندی‌ها در پروفایل؛ عمومی) · ~~B4~~ انجام شد (ستون‌های `users.privacy_anime/privacy_manga` = public|friends|private؛ «دوستان» = کسانی که **مالک** دنبالشان می‌کند؛ `canSeeList`/`VISIBLE_ENTRY_SQL` در `server/users.js`؛ اعمال‌شده روی `/api/users/:name` (+`hidden`)، `/api/users` (شمارش فقط لیست‌های عمومی)، فید، common-lists، امتیاز کنار نقد (`reviews.js`)، SEO پروفایل؛ آمار ناشناس عنوان (میانگین/شمارش وضعیت) عمداً می‌ماند؛ تنظیم در صفحه `/account` و `PUT /api/user/me {privacy}`) · ~~B5~~ انجام شد (`tasteSimilarity` در `server/users.js`: ۱ − میانگین اختلاف امتیاز/۹ روی عنوان‌های مشترکِ امتیازدار، فقط لیست‌هایی که بیننده اجازه دیدنشان را دارد؛ حداقل ۸ عنوان وگرنه `percent:null`؛ در `/api/users/:name` و followers/following (۱۰۰ نفر اول) برای کاربر واردشده؛ UI: `components/TasteMatch.jsx` روی پروفایل، درصد + دکمه مرتب‌سازی در `FollowListSheet`) · ~~B6~~ انجام شد (ستون `users.about` تا ۲۰۰۰ حرف؛ `PUT /api/user/me {about}`؛ فقط در `/api/users/:name` و `ownUser` می‌آید، نه در لیست‌ها؛ نمایش با رندر React بدون HTML خام در `src/lib/safe-markup.jsx` — **bold**, *italic*, [متن](https://…) فقط http/https با `rel=nofollow noopener noreferrer ugc`, `## تیتر`, لیست `- `/`1. `, اسپویلر `||…||`؛ ویرایشگر با نوار ابزار و پیش‌نمایش زنده در `components/AboutEditor.jsx`، داخل داشبورد دسکتاپ و `EditProfileSheet` موبایل؛ بیوی ۳۰۰ حرفی جداست) · ~~B7~~ انجام شد (`server/franchise.js`: `GET /api/franchise/:type/:malId` — در پس‌زمینه از Tenrai `/full` هر عنوان (فاکت‌ها + روابط) را یکی‌یکی می‌گیرد (حداکثر ۲۵ عنوان، فقط Prequel/Sequel/Parent story/Full story/Side story/Spin-off و فقط همان نوع انیمه/مانگا)، بر اساس تاریخ شروع مرتب می‌کند و در `franchise_cache` برای همهٔ اعضا ذخیره می‌کند (۳۰ روز)؛ کلاینت poll می‌کند؛ UI: `components/WatchOrder.jsx` داخل بخش «مرتبط» دسکتاپ و موبایل؛ گراف شاخه‌ای ساخته نشد، فهرست مرتب‌شده است) · B8 برترین شخصیت‌ها · B9 خانه: محبوب‌ترین، به‌زودی، آپدیت سریع +1 قسمت.
-**فاز 3 (وابسته به داده/تصمیم)**: C1 تب قسمت‌ها/ویدیو/تصاویر · C2 صفحه استودیو/تهیه‌کننده/مجله · C6 interest stacks · C7 پیشنهاد ویرایش کاربران + صف ادمین · C8 API عمومی با انتخاب فیلد و ETag.
+**فاز 3**: C1، C2، C6، C7، C8 همه انجام شد (زیر). C3–C5 عمداً کنار گذاشته شد (بخش 7).
+- ~~B8 برترین شخصیت‌ها~~ انجام شد: `server/topchars.js` (`GET /api/top/characters?page=1|2`, کش ۲۴ ساعته در جدول `top_cache`، در خطا نسخه‌ی قدیمی), صفحه‌ی `src/topCharactersPage.jsx` در `/top/characters` (۵۰ تا، ۲۵ تا در هر صفحه), لینک در `sidebarSections` و تب سوم در `MobileRankingPage`, ورودی SEO.
+- ~~B9 خانه~~ انجام شد: «محبوب‌ترین» با تعداد members (`membersOf` در `catalog-rules.js`)، «به‌زودی» = انیمه‌های فصل بعد یا Not yet aired مرتب با members (`selectUpcoming` در `home-data.js`، بخش خالی مخفی می‌شود)، دکمه‌ی +۱ قسمت (`components/QuickEpisode.jsx`) روی «ادامه‌ی تماشا» در خانه و صفحه‌ی هر انیمه (دسکتاپ و نوار پایین موبایل)؛ رسیدن به قسمت آخر خودکار «کامل‌شده» می‌کند.
+- ~~C1 تب قسمت‌ها/ویدیو/تصاویر~~ انجام شد: `server/media.js` (`GET /api/media/:type/:malId/:kind` با kind=episodes|videos|pictures، کش ۱۲ ساعته در `media_cache`، قسمت‌ها صفحه‌ای ۱۰۰تایی)، `src/components/MediaTabs.jsx` (دسکتاپ: بخش «رسانه»؛ موبایل: تب «رسانه»). علامت «دیده‌ام» progress فهرست کاربر را عوض می‌کند (دوباره زدن روی همان قسمت = برداشتن)؛ ویدیو با کلیک بارگذاری می‌شود؛ تصاویر در نمایشگر تمام‌صفحه (Esc/فلش). مانگا فقط تصاویر دارد.
+- ~~C2 استودیو/تهیه‌کننده/مجله~~ انجام شد: صفحه‌های `/studio/:name`، `/producer/:name`، `/magazine/:name` (`src/companyPage.jsx`؛ فهرست عنوان‌های انی‌تیل با مرتب‌سازی محبوب/امتیاز/جدیدترین و صفحه‌بندی ۲۴تایی، همه سمت کاربر از کاتالوگ). نام‌ها در بخش اطلاعات لینک شدند. اطلاعات مجله‌ی مانگا در جدول جدید `manga_serial` است که `server/magazines.js` در پس‌زمینه (هر ۲۰ دقیقه ۲۵ عنوان، بعد از ۹۰ ثانیه از استارت) از Tenrai پر می‌کند و در `listManga` به‌صورت `serialization` join می‌شود؛ یعنی مجله‌ی مانگاهای قدیمی کم‌کم ظاهر می‌شود.
+- ~~C6 استک‌های علاقه~~ انجام شد: `server/stacks.js` (جدول‌های `stacks`/`stack_items`/`stack_likes`؛ ۱۰ استک برای هر کاربر، ۵۰ عنوان در هر استک؛ عمومی/خصوصی؛ لایک روی استک دیگران؛ `GET /api/stacks`، `/api/stacks/:id`، `/api/users/:name/stacks`، `POST/PUT/DELETE /api/user/stacks…`)، `src/stacksPages.jsx` (`/stacks` مرور، `/stacks/:id` نمایش + ویرایشگر مالک با جست‌وجوی عنوان و جابه‌جایی/حذف، بخش «استک‌ها» در پروفایل)، لینک در سایدبار «کشف کنید». استک‌های خالی در مرور عمومی نمی‌آیند ولی در پروفایل هستند.
+- ~~C7 پیشنهاد ویرایش کاربران~~ انجام شد: `server/suggestions.js` (جدول `edit_suggestions`؛ نوع‌ها: خلاصه‌ی فارسی، عنوان فارسی، ژانر، گزارش اشتباه؛ حداکثر ۵ پیشنهاد در ۲۴ ساعت برای هر کاربر؛ یک پیشنهاد در انتظار از هر نوع برای هر عنوان؛ تأیید ادمین تغییر را خودکار اعمال می‌کند، رد نیاز به دلیل دارد). ستون جدید `anime.title_fa` (عنوان فارسی انیمه؛ در کارت‌ها و عنوان صفحه وقتی زبان فارسی است نشان داده می‌شود). UI: دکمه‌ی «پیشنهاد ویرایش» (`components/SuggestEdit.jsx`) در سایدبار دسکتاپ و تب «اطلاعات» موبایل؛ صفحه‌ی `/suggestions` (پیشنهادهای من با وضعیت و دلیل رد)؛ پنل ادمین `/admin/suggestions` با نمایش قدیم/جدید. کاتالوگ عمومی تا ~۱ دقیقه بعد از تأیید کش CDN/مرورگر است.
+- ~~C8: API عمومی~~ **انجام شد** — `server/api-v1.js`: `/api/v1` (anime, manga, جزئیات با slug یا malId, top, search, schedule)، بدون کلید، ۶۰ درخواست در دقیقه برای هر IP، محتوای حساس همیشه حذف، `fields` و ETag/304، CORS باز. صفحه‌ی مستندات: `/developers`.
 
 ## 9. کارهای باز / یادآوری
 - از مالک بپرس: بسته‌های B8، B9، C1، C2، C6، C7، C8 روی سرور اعمال و تأیید شده‌اند؟ «بروزرسانی همه» انیمه و مانگا (برای ذخیره ژانر Ecchi) زده شده؟
@@ -91,6 +126,9 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 - پیشنهاد امنیتی اختیاری: SSH فقط با کلید؛ بررسی unattended-upgrades.
 - تمیزکاری: واژه‌های قدیمی `PROVIDER`/Jikan در مستندات.
 - تست مسیر refresh-all مانگا.
+- UI مدیریت ادمین برای «پیشنهادهای اگر این را دوست داشتی» (B2) وجود ندارد؛ فقط API: `GET/DELETE /api/admin/recs`.
+- امنیت مخزن: فایل‌های `.env`/کپی‌های sync-conflict یک بار در تاریخچه‌ی گیت رفته‌اند؛ مالک چرخاندن رمزها را رد کرد (بخش 5). یادآوری کن که ریپو باید **خصوصی** بماند.
+- نبودن Tenrai واقعی در تست‌ها: هر قابلیتی که به Tenrai وابسته است (B2/B7، C1، C2، B8) فقط با mock تست شده؛ اولین بار روی سرور واقعی بررسی دستی لازم است.
 
 ## 10. قراردادهای کدنویسی
 - زبان UI: فارسی اولویت؛ هر رشته در `i18n.js` (fa/en)، ادمین در `admin/i18n.js`.
@@ -99,24 +137,17 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 - موبایل: هر صفحه جدید باید در ≤820px (MobileShell) بررسی شود (`docs/mobile-ui-spec.md`).
 - فایل‌های ایجادشده در `server/xcache/`, `server/*.db*`, `.env*` را کامیت نکن.
 
-
-- ~~B8 برترین شخصیت‌ها~~ انجام شد: `server/topchars.js` (`GET /api/top/characters?page=1|2`, کش ۲۴ ساعته در جدول `top_cache`، در خطا نسخه‌ی قدیمی), صفحه‌ی `src/topCharactersPage.jsx` در `/top/characters` (۵۰ تا، ۲۵ تا در هر صفحه), لینک در `sidebarSections` و تب سوم در `MobileRankingPage`, ورودی SEO.
-
-- ~~B9 خانه~~ انجام شد: «محبوب‌ترین» با تعداد members (`membersOf` در `catalog-rules.js`)، «به‌زودی» = انیمه‌های فصل بعد یا Not yet aired مرتب با members (`selectUpcoming` در `home-data.js`، بخش خالی مخفی می‌شود)، دکمه‌ی +۱ قسمت (`components/QuickEpisode.jsx`) روی «ادامه‌ی تماشا» در خانه و صفحه‌ی هر انیمه (دسکتاپ و نوار پایین موبایل)؛ رسیدن به قسمت آخر خودکار «کامل‌شده» می‌کند.
-
-- ~~C1 تب قسمت‌ها/ویدیو/تصاویر~~ انجام شد: `server/media.js` (`GET /api/media/:type/:malId/:kind` با kind=episodes|videos|pictures، کش ۱۲ ساعته در `media_cache`، قسمت‌ها صفحه‌ای ۱۰۰تایی)، `src/components/MediaTabs.jsx` (دسکتاپ: بخش «رسانه»؛ موبایل: تب «رسانه»). علامت «دیده‌ام» progress فهرست کاربر را عوض می‌کند (دوباره زدن روی همان قسمت = برداشتن)؛ ویدیو با کلیک بارگذاری می‌شود؛ تصاویر در نمایشگر تمام‌صفحه (Esc/فلش). مانگا فقط تصاویر دارد.
-
-- ~~C2 استودیو/تهیه‌کننده/مجله~~ انجام شد: صفحه‌های `/studio/:name`، `/producer/:name`، `/magazine/:name` (`src/companyPage.jsx`؛ فهرست عنوان‌های انی‌تیل با مرتب‌سازی محبوب/امتیاز/جدیدترین و صفحه‌بندی ۲۴تایی، همه سمت کاربر از کاتالوگ). نام‌ها در بخش اطلاعات لینک شدند. اطلاعات مجله‌ی مانگا در جدول جدید `manga_serial` است که `server/magazines.js` در پس‌زمینه (هر ۲۰ دقیقه ۲۵ عنوان، بعد از ۹۰ ثانیه از استارت) از Tenrai پر می‌کند و در `listManga` به‌صورت `serialization` join می‌شود؛ یعنی مجله‌ی مانگاهای قدیمی کم‌کم ظاهر می‌شود.
-
-- ~~C6 استک‌های علاقه~~ انجام شد: `server/stacks.js` (جدول‌های `stacks`/`stack_items`/`stack_likes`؛ ۱۰ استک برای هر کاربر، ۵۰ عنوان در هر استک؛ عمومی/خصوصی؛ لایک روی استک دیگران؛ `GET /api/stacks`، `/api/stacks/:id`، `/api/users/:name/stacks`، `POST/PUT/DELETE /api/user/stacks…`)، `src/stacksPages.jsx` (`/stacks` مرور، `/stacks/:id` نمایش + ویرایشگر مالک با جست‌وجوی عنوان و جابه‌جایی/حذف، بخش «استک‌ها» در پروفایل)، لینک در سایدبار «کشف کنید». استک‌های خالی در مرور عمومی نمی‌آیند ولی در پروفایل هستند.
-
-- ~~C7 پیشنهاد ویرایش کاربران~~ انجام شد: `server/suggestions.js` (جدول `edit_suggestions`؛ نوع‌ها: خلاصه‌ی فارسی، عنوان فارسی، ژانر، گزارش اشتباه؛ حداکثر ۵ پیشنهاد در ۲۴ ساعت برای هر کاربر؛ یک پیشنهاد در انتظار از هر نوع برای هر عنوان؛ تأیید ادمین تغییر را خودکار اعمال می‌کند، رد نیاز به دلیل دارد). ستون جدید `anime.title_fa` (عنوان فارسی انیمه؛ در کارت‌ها و عنوان صفحه وقتی زبان فارسی است نشان داده می‌شود). UI: دکمه‌ی «پیشنهاد ویرایش» (`components/SuggestEdit.jsx`) در سایدبار دسکتاپ و تب «اطلاعات» موبایل؛ صفحه‌ی `/suggestions` (پیشنهادهای من با وضعیت و دلیل رد)؛ پنل ادمین `/admin/suggestions` با نمایش قدیم/جدید. کاتالوگ عمومی تا ~۱ دقیقه بعد از تأیید کش CDN/مرورگر است.
-
-- ~~C8: API عمومی~~ **انجام شد** — `server/api-v1.js`: `/api/v1` (anime, manga, جزئیات با slug یا malId, top, search, schedule)، بدون کلید، ۶۰ درخواست در دقیقه برای هر IP، محتوای حساس همیشه حذف، `fields` و ETag/304، CORS باز. صفحه‌ی مستندات: `/developers`.
-
-
-## 11. نقشه ماژول‌های B8–C8 (همه چک‌لیست انجام شده — نشست جدید از اینجا شروع می‌کند)
+## 11. نقشه ماژول‌های A2–C8 (همه چک‌لیست انجام شده — نشست جدید از اینجا شروع می‌کند)
 چک‌لیست بخش 8 **کامل شد** (A1–A8، B1–B9، C1، C2، C6، C7، C8). C3–C5 (انجمن/کلاب/پیام خصوصی)، CSS سفارشی خام و OAuth عمداً کنار گذاشته شدند. ایده‌ی بعدی را با مالک مشورت کن.
+- **A2/A7** `src/lib/genre-kinds.js` (`genreKind`، `splitGenres`، `splitInfoRows`؛ مجموعه‌های ثابت MAL برای تم/مخاطب)، `server/reviews.js` (`communityStats` با `statuses`)، `src/components/CommunitySection.jsx`.
+- **A8** `server/people.js` (`/api/search/people`، کش حافظه ۱ ساعت، محدودیت ۲۰/دقیقه)، `src/searchPage.jsx`.
+- **B1** `server/reviews.js` (جدول `review_votes`، مرتب‌سازی `new|helpful|high|low`)، `HelpfulButton` در `CommunitySection.jsx`.
+- **B2** `server/recs.js` (جدول‌های `recs`، `rec_votes`؛ جفت نامرتب `slug_a<slug_b`) + `src/components/Recommendations.jsx`.
+- **B3** `server/favorites.js` (جدول `favorites`، ۱۰ مورد برای هر دسته) + `src/components/Favorites.jsx`.
+- **B4** ستون‌های `users.privacy_anime/privacy_manga` (در `server/db.js`)، `server/users.js` (`canSeeList`، `setPrivacy`، `VISIBLE_ENTRY_SQL`)، UI در `src/accountPages.jsx`.
+- **B5** `server/users.js` (`tasteSimilarity`) + `src/components/TasteMatch.jsx`، `FollowListSheet.jsx`.
+- **B6** ستون `users.about` + `src/lib/safe-markup.jsx` (`AboutRich`) + `src/components/AboutEditor.jsx`.
+- **B7** `server/franchise.js` (جدول `franchise_cache`، BFS پس‌زمینه روی Tenrai، حداکثر ۲۵ گره) + `src/components/WatchOrder.jsx`.
 - **B8** `server/topchars.js` + `src/topCharactersPage.jsx` — `/top/characters`، کش ۲۴ ساعته (`top_cache`).
 - **B9** `src/components/QuickEpisode.jsx` (+۱ قسمت و «ادامه‌ی تماشا»)، `src/home-data.js` (بزودی/محبوب‌ترین).
 - **C1** `server/media.js` (`/api/media/:type/:malId/:kind`، کش ۱۲ ساعته `media_cache`) + `src/components/MediaTabs.jsx`.
@@ -127,3 +158,30 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 
 ### تست سریع
 `bash scripts/dev/test-server.sh /مسیر/data.db` (mock + سرور روی 3057؛ توقف: `fuser -k 4010/tcp 3057/tcp`). mock حالا endpointهای C1/C2/B8 را هم دارد.
+
+### routeهای صفحه‌های جدید (`src/App.jsx`، همه با `WithHeader`)
+`/top/characters`، `/studio/:name`، `/producer/:name`، `/magazine/:name`، `/stacks`، `/stacks/:id`، `/suggestions`، `/developers`. لینک سایدبار در `src/sectionData.js`؛ ورودی سئو برای صفحه‌های کشف در `server/seo.js` (`DISCOVERY`).
+
+### جدول‌های جدید SQLite
+`top_cache` (B8)، `media_cache` (C1)، `manga_serial` (C2؛ در `server/repo.js` هم ساخته می‌شود)، `stacks`/`stack_items`/`stack_likes` (C6)، `edit_suggestions` (C7) و ستون `anime.title_fa` (C7؛ در `server/suggestions.js`). این ماژول‌ها جدولشان را با `CREATE TABLE IF NOT EXISTS` هنگام بارگذاری ماژول می‌سازند؛ بقیه‌ی مهاجرت‌ها در `server/db.js` است. هر دو روش مجازند، ولی با همان روشِ ماژولی که ویرایش می‌کنی هماهنگ بمان.
+
+### کش
+`/api/anime` و `/api/manga`: `Cache-Control: public, max-age=0, s-maxage=60, stale-while-revalidate=300` ← تغییر ادمین/پیشنهاد حدود یک دقیقه بعد دیده می‌شود. `/api/v1/*`: `max-age=300` + ETag. تصویرهای MAL از `/api/ximg?u=` (فقط پیشوند `EXTRAS_IMG_PREFIX`، حداکثر 1MB).
+
+### کلاینت Tenrai
+`tenraiGetRaw(path)` در `server/tenrai.js`: صف سریالی، فاصله‌ی 600ms، circuit breaker (`tenraiCircuitOpen`). هر ماژول جدید که به Tenrai می‌رود باید از همین استفاده کند، نه fetch مستقیم. از ایران ممکن است بدون `PROXY_URL` در دسترس نباشد.
+
+### متغیرهای محیطی (`server/.env`؛ نمونه: `server/.env.example`)
+ضروری: `ADMIN_USER`، `ADMIN_PASSWORD_HASH`، `SESSION_SECRET`، `PORT`، `TRUST_PROXY=1`، `SITE_URL`. اختیاری: `PROXY_URL`، `PROVIDER`، `TENRAI_DISABLED`، `TENRAI_BASE_URL`، `TENRAI_TIMEOUT_MS`، `TENRAI_SERVER_KEY`، `EXTRAS_IMG_PREFIX`، `DB_FILE`، `HOST`، ترجمه (`GEMINI_API_KEY`، `TRANSLATE_ENGINE`، …)، ایمیل (`SMTP_*`). هیچ‌وقت مقدار آن‌ها را نمایش یا کامیت نکن.
+
+### چک‌لیست افزودن صفحه یا قابلیت جدید
+1. سرور: ماژول `server/xxx.js` با `registerXxxRoutes(app, deps)` و ثبت در `server/app.js`؛ routeهای نوشتن: `writeLimiter` + zod.
+2. فرانت: صفحه در `src/`، route در `App.jsx`، لینک در `sectionData.js`، ورودی `DISCOVERY` در `server/seo.js` اگر صفحه‌ی عمومی است.
+3. متن‌ها فقط از `src/i18n.js` (fa و en)؛ ادمین از `src/admin/i18n.js`. اعداد با `formatNumber(value, lang)` (`src/lib/digits.js`) تا ارقام فارسی شوند.
+4. استایل: برای قابلیت‌های جدید (دسکتاپ و موبایل مشترک) به انتهای `style.css` ریشه اضافه کن؛ استایل مخصوص موبایل در `src/components/mobile/mobile.css`.
+5. موبایل (≤820px) را بررسی کن؛ محتوای حساس را در لیست‌ها/APIهای عمومی رعایت کن (بخش 4).
+6. `npm run build` + تست با mock (بخش 6)؛ بعد HANDOFF را به‌روز کن.
+
+## 12. اولویت قوانین (تضادهای مستندات)
+- `AGENTS.md` در بخش «Mobile UI redesign rules» قوانین دوره‌ی بازطراحی موبایل را دارد؛ آن بازطراحی تمام شده. **قانون فعلی:** تغییر UI دسکتاپ مجاز است (قابلیت‌های جدید دسکتاپ را هم دارند)، `style.css` ریشه فعال است و باید استفاده شود، `App.jsx` بزرگ شده و ویرایش‌های هدفمند در آن عادی است. قوانین RTL، i18n، توکن‌های CSS، بدون وابستگی جدید بدون اجازه و پوشه‌ی مخصوص فایل موقت همچنان برقرارند.
+- در تضاد بین مستندات: `CLAUDE.md` > این فایل > `AGENTS.md`.

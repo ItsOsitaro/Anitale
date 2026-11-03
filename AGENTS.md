@@ -61,13 +61,13 @@ Anitale — a MyAnimeList-style anime/manga site: React 19 + Vite 7 SPA (`src/`)
 
 ## Repo notes
 
-- `FEATURE-QUEUES.md` (Persian) is the feature roadmap; phases 1–2 (queues 1–28) are all done ✅ — check it before building something already shipped.
+- `FEATURE-QUEUES.md` (Persian) is the feature roadmap; phases 1–2 (queues 1–28) are all done ✅. The later improvement checklist (A/B/C series) is in docs/HANDOFF.md §8 and is also complete — check both before building something already shipped.
 - `.opencode/instructions/INSTRUCTIONS.md` (loaded via `opencode.json`) holds generic coding-style rules from the ECC setup; the ECC "80% test coverage" mandate does not apply here — there is no test infra.
 - Back up `server/data.db` and `public/covers/` — both are untracked working files, not in git.
 
 ## Mobile UI redesign rules
 - The full design spec is in docs/mobile-ui-spec.md. Always read the relevant section before coding.
-- NEVER change the desktop UI. All new styles apply only at max-width: 820px, and mobile components live in src/components/mobile/.
+- (Historical, from the mobile redesign — finished.) Current rule: desktop UI may change for new features; mobile-only styles apply at max-width: 820px and mobile components live in src/components/mobile/.
 - Use only existing CSS tokens (--primary, --card, --border, --secondary, --accent, --muted-foreground...). No hard-coded colors.
 - The site is RTL (dir="rtl"). Use logical properties (margin-inline-start, inset-inline-end, padding-inline). Font is Vazirmatn Variable.
 - Do not add new dependencies unless I approve them.
@@ -77,8 +77,8 @@ Anitale — a MyAnimeList-style anime/manga site: React 19 + Vite 7 SPA (`src/`)
 - Never create temporary files inside docs/ or the repo; use the OS temp folder if needed. Before `git add -A` run `git status` and unstage anything that is not part of the task.
 ## Project facts
 - Stack: React 19 + Vite 7, plain JSX (NO TypeScript), react-router-dom, Tailwind v4 (only for src/components/ui/* and tokens in src/tailwind.css) plus a large plain CSS file style.css at the repo root.
-- Almost everything lives in src/App.jsx (~1456 lines): SiteHeader (~line 76), HomePage (~629), SectionPage (catalog, ~974), DetailPage (~1122), AnimePage (~1396), AppRoutes (~1444).
-- Legacy mobile CSS is in style.css (media queries at 1100, 900, 820, 520, 700px). It is abandoned: never edit style.css; the new mobile UI replaces it.
+- Much of the desktop UI lives in src/App.jsx (~1500 lines: SiteHeader, HomePage, SectionPage, DetailPage, AnimePage, AppRoutes at the end). Newer pages live in their own files under src/ (e.g. companyPage.jsx, stacksPages.jsx, developersPage.jsx). Find things with grep, not line numbers.
+- style.css at the repo root is the main shared stylesheet and IS actively edited: new feature styles are appended to its end. Mobile-only styles go in src/components/mobile/mobile.css.
 - New mobile code goes in: src/hooks/use-is-mobile.js (named export useIsMobile, matchMedia "(max-width: 820px)"), src/components/mobile/*.jsx and one stylesheet src/components/mobile/mobile.css.
 - Switching desktop/mobile is done with the useIsMobile hook in AppRoutes (render MobileShell on mobile). Never make big edits to src/App.jsx; only small, targeted ones. Never move or rewrite desktop code.
 - server/settings.js is a local file; never commit it.
