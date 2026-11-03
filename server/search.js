@@ -15,6 +15,30 @@ const versionKey = () => {
   return `${a.n}:${a.m}|${m.n}:${m.m}`;
 };
 
+const infoValue = (item, label) => String((Array.isArray(item.information) ? item.information : []).find((row) => row.label === label)?.value || '').trim();
+const countOf = (text) => Number(String(text ?? '').replace(/[^\d]/g, '')) || 0;
+
+// Searchable facts that are not part of the title text: publication status bucket,
+// studios, age rating, popularity numbers, episode/chapter count and first letter.
+const factsOf = (item, kind) => {
+  const rawStatus = infoValue(item, 'Status').toLowerCase();
+  let status = '';
+  if (/currently|publishing|ongoing/.test(rawStatus)) status = 'airing';
+  else if (/not yet|upcoming|announced/.test(rawStatus)) status = 'upcoming';
+  else if (/finished|complete/.test(rawStatus)) status = 'finished';
+  else if (rawStatus) status = 'other';
+  const first = foldTitle(String(item.title || '')).replace(/[^a-z0-9\u0600-\u06ff]/gi, '').charAt(0).toUpperCase();
+  return {
+    status,
+    studios: infoValue(item, 'Studios').split(',').map((name) => name.trim()).filter(Boolean),
+    rating: infoValue(item, 'Rating').split(' - ')[0].trim(),
+    members: countOf(item.statistics?.members),
+    votes: countOf(item.statistics?.scoredBy),
+    episodes: kind === 'manga' ? (Number(item.chapters) || 0) : countOf(infoValue(item, 'Episodes')),
+    letter: /^[A-Z]$/.test(first) ? first : '#',
+  };
+};
+
 const buildDocs = () => {
   const animeBase = new Map();
   const docs = [];
@@ -26,6 +50,7 @@ const buildDocs = () => {
       titles: [item.title, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle),
       genres: (item.genres || []).map(foldTitle),
       sensitive: isSensitiveItem(item),
+      ...factsOf(item, 'anime'),
     });
   }
   for (const item of listManga()) {
@@ -35,6 +60,7 @@ const buildDocs = () => {
       titles: [item.title, item.titleFa, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle),
       genres: (item.genres || []).map(foldTitle),
       sensitive: isSensitiveItem(item),
+      ...factsOf(item, 'manga'),
     });
   }
   return docs;
@@ -102,6 +128,10 @@ const SORTS = {
   score: (a, b) => (b.weighted ?? 0) - (a.weighted ?? 0),
   new: (a, b) => (Number(b.item.year) || 0) - (Number(a.item.year) || 0),
   old: (a, b) => (Number(a.item.year) || 0) - (Number(b.item.year) || 0),
+  pop: (a, b) => b.members - a.members,
+  votes: (a, b) => b.votes - a.votes,
+  // Titles with an unknown count sink to the end.
+  eps: (a, b) => (b.episodes || -1) - (a.episodes || -1),
   az: (a, b) => String(a.item.title).localeCompare(String(b.item.title), 'en', { sensitivity: 'base' }),
 };
 
@@ -119,7 +149,9 @@ const toRow = (doc, relevance) => ({
   relevance,
 });
 
-export const searchCatalog = ({ q = '', type = 'all', genre = '', year = '', format = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false }) => {
+// genres / excludeGenres are arrays (a title must have every included genre and none of the excluded);
+// the old single `genre` and `year` still work. fromYear/toYear bound the year, inclusive.
+export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], excludeGenres = [], year = '', fromYear = 0, toYear = 0, format = '', status = '', studio = '', rating = '', letter = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false }) => {
   const needle = foldTitle(String(q).trim());
   const docs = getDocs();
 
@@ -138,15 +170,30 @@ export const searchCatalog = ({ q = '', type = 'all', genre = '', year = '', for
     genres: count(matched.flatMap((d) => d.item.genres || [])).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([value, n]) => ({ value, n })),
     years: count(matched.map((d) => String(d.item.year || '')).filter(Boolean)).sort((a, b) => b[0].localeCompare(a[0])).map(([value, n]) => ({ value, n })),
     formats: count(matched.map((d) => d.item.format).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
+    statuses: count(matched.map((d) => d.status).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
+    studios: count(matched.flatMap((d) => d.studios || [])).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 80).map(([value, n]) => ({ value, n })),
+    ratings: count(matched.map((d) => d.rating).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
   };
 
-  const wantedGenre = foldTitle(genre);
-  const filtered = matched.filter((doc) => (
-    (!genre || doc.genres.includes(wantedGenre))
-    && (!year || String(doc.item.year || '') === String(year))
-    && (!format || doc.item.format === format)
-    && (!minScore || (doc.item.sampleScore ?? 0) >= minScore)
-  ));
+  const included = [...(genre ? [genre] : []), ...genres].map(foldTitle);
+  const excluded = excludeGenres.map(foldTitle);
+  const from = Number(fromYear) || (year ? Number(year) : 0);
+  const to = Number(toYear) || (year ? Number(year) : 0);
+  const filtered = matched.filter((doc) => {
+    const docYear = Number(doc.item.year) || 0;
+    return (
+      included.every((g) => doc.genres.includes(g))
+      && !excluded.some((g) => doc.genres.includes(g))
+      && (!from || (docYear && docYear >= from))
+      && (!to || (docYear && docYear <= to))
+      && (!format || doc.item.format === format)
+      && (!status || doc.status === status)
+      && (!studio || (doc.studios || []).includes(studio))
+      && (!rating || doc.rating === rating)
+      && (!letter || doc.letter === letter)
+      && (!minScore || (doc.item.sampleScore ?? 0) >= minScore)
+    );
+  });
 
   const order = SORTS[sort];
   filtered.sort((a, b) => (order && sort ? order(a, b) : (b.relevance - a.relevance) || SORTS.score(a, b)));

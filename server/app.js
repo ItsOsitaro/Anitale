@@ -688,14 +688,24 @@ export const createApp = () => {
   app.get('/api/search/full', searchLimiter, (req, res) => {
     const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
     const text = String(req.query.q || '').slice(0, 80);
+    // Comma separated genre lists (at most 10 names), and a 4-digit year in a sane range.
+    const list = (value) => String(value || '').split(',').map((name) => name.trim().slice(0, 40)).filter(Boolean).slice(0, 10);
+    const yearOf = (value) => { const n = Number.parseInt(value, 10); return n >= 1900 && n <= 2100 ? n : 0; };
     const result = searchCatalog({
       q: text,
       type: pick(String(req.query.type || ''), ['anime', 'manga'], 'all'),
-      genre: String(req.query.genre || '').slice(0, 40),
+      genres: list(req.query.genre),
+      excludeGenres: list(req.query.xgenre),
       year: String(req.query.year || '').slice(0, 4),
+      fromYear: yearOf(req.query.from),
+      toYear: yearOf(req.query.to),
       format: String(req.query.format || '').slice(0, 30),
+      status: pick(String(req.query.status || ''), ['airing', 'finished', 'upcoming', 'other'], ''),
+      studio: String(req.query.studio || '').slice(0, 80),
+      rating: String(req.query.rating || '').slice(0, 12),
+      letter: /^[A-Za-z#]$/.test(String(req.query.letter || '')) ? String(req.query.letter).toUpperCase() : '',
       minScore: Math.min(10, Math.max(0, Number(req.query.min) || 0)),
-      sort: pick(String(req.query.sort || ''), ['score', 'new', 'old', 'az'], ''),
+      sort: pick(String(req.query.sort || ''), ['score', 'new', 'old', 'az', 'pop', 'votes', 'eps'], ''),
       page: Math.max(1, Number.parseInt(req.query.page, 10) || 1),
       sfw: req.query.sfw === '1',
     });

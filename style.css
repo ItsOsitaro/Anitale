@@ -4286,3 +4286,19 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .tag-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
 .tag-filter__sort { display: inline-flex; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 0.82rem; color: var(--muted-foreground); }
 .tag-filter__sort select { min-height: 32px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--foreground); font: inherit; }
+
+/* ---------- A6: advanced search ---------- */
+.search-genres { margin: 12px 0; border: 1px solid var(--border); border-radius: 14px; background: var(--card); padding: 8px 12px; }
+.search-genres > summary { cursor: pointer; font-weight: 600; }
+.search-genres > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 6px; }
+.search-genres__hint { margin: 6px 0 8px; font-size: 0.78rem; color: var(--muted-foreground); }
+.search-genres__chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.search-genre { display: inline-flex; align-items: center; gap: 4px; min-height: 32px; padding: 3px 11px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: inherit; font-size: 0.82rem; cursor: pointer; }
+.search-genre small { color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.search-genre:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.search-genre.is-in { border-color: oklch(0.58 0.13 152); background: color-mix(in oklch, oklch(0.58 0.13 152) 14%, var(--card)); }
+.search-genre.is-out { border-color: oklch(0.58 0.16 25); background: color-mix(in oklch, oklch(0.58 0.16 25) 12%, var(--card)); text-decoration: line-through; }
+.search-letters { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0; }
+.search-letters button { min-width: 32px; min-height: 32px; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: inherit; font-size: 0.82rem; cursor: pointer; }
+.search-letters button.is-active { border-color: var(--ring); background: color-mix(in oklch, var(--ring) 14%, var(--card)); font-weight: 700; }
+.search-letters button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

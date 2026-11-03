@@ -8,7 +8,11 @@ import { coverUrl } from '@/lib/cover';
 import { useShowSensitive } from './lib/catalog-rules.js';
 import SensitiveToggle from './components/SensitiveToggle.jsx';
 
-const PARAMS = ['q', 'type', 'genre', 'year', 'format', 'min', 'sort', 'page'];
+const PARAMS = ['q', 'type', 'genre', 'xgenre', 'year', 'from', 'to', 'format', 'status', 'studio', 'rating', 'letter', 'min', 'sort', 'page'];
+const FILTER_KEYS = ['genre', 'xgenre', 'year', 'from', 'to', 'format', 'status', 'studio', 'rating', 'letter', 'min'];
+const CLEARED = Object.fromEntries(FILTER_KEYS.map((key) => [key, '']));
+const LETTERS = [...'ABCDEFGHIJKLMNOPQRSTUVWXYZ', '#'];
+const csv = (value) => String(value || '').split(',').map((part) => part.trim()).filter(Boolean);
 const MIN_SCORES = [6, 7, 8, 9];
 
 export default function SearchPage() {
@@ -57,13 +61,25 @@ export default function SearchPage() {
   }, [queryString]);
 
   const goPage = (next) => { update({ page: next }, { keepPage: true }); topRef.current?.scrollIntoView({ block: 'start' }); };
-  const filtersActive = ['genre', 'year', 'format', 'min'].some((name) => get(name));
-  const facets = data?.facets || { genres: [], years: [], formats: [] };
+  const filtersActive = FILTER_KEYS.some((name) => get(name));
+  const facets = data?.facets || { genres: [], years: [], formats: [], statuses: [], studios: [], ratings: [] };
+  const included = csv(get('genre'));
+  const excluded = csv(get('xgenre'));
+  // Genre chips cycle: off → included → excluded → off.
+  const cycleGenre = (name) => {
+    const isIn = included.includes(name);
+    const isOut = excluded.includes(name);
+    const nextIn = isIn ? included.filter((g) => g !== name) : (isOut ? included : [...included, name]);
+    const nextOut = isIn ? [...excluded, name] : (isOut ? excluded.filter((g) => g !== name) : excluded);
+    update({ genre: nextIn.join(','), xgenre: nextOut.join(',') });
+  };
+  const pickedGenres = included.length + excluded.length;
+  const showStudioRating = type !== 'manga';
 
-  const select = (name, label, options, render = (o) => o.value) => (
+  const select = (name, label, options, render = (o) => o.value, current = get(name)) => (
     <label className="search-filter">
       <span>{label}</span>
-      <select value={get(name)} onChange={(event) => update({ [name]: event.target.value })}>
+      <select value={current} onChange={(event) => update({ [name]: event.target.value, ...(name === 'from' || name === 'to' ? { year: '' } : {}) })}>
         <option value="">{t('searchAny')}</option>
         {options.map((option) => <option key={option.value} value={option.value}>{render(option)}</option>)}
       </select>
@@ -95,9 +111,12 @@ export default function SearchPage() {
       </div>
 
       <div className="search-page__filters">
-        {select('genre', t('genreLabel'), facets.genres, (o) => `${o.value} (${o.n})`)}
-        {select('year', t('searchYear'), facets.years, (o) => `${o.value} (${o.n})`)}
+        {select('from', t('searchFrom'), facets.years, (o) => o.value, get('from') || get('year'))}
+        {select('to', t('searchTo'), facets.years, (o) => o.value, get('to') || get('year'))}
         {select('format', t('searchFormat'), facets.formats, (o) => `${o.value} (${o.n})`)}
+        {select('status', t('searchStatus'), facets.statuses, (o) => `${t(`st_${o.value}`)} (${o.n})`)}
+        {showStudioRating && facets.studios.length > 0 && select('studio', t('searchStudio'), facets.studios, (o) => `${o.value} (${o.n})`)}
+        {showStudioRating && facets.ratings.length > 0 && select('rating', t('searchRating'), facets.ratings, (o) => `${o.value} (${o.n})`)}
         {select('min', t('searchMinScore'), MIN_SCORES.map((value) => ({ value })), (o) => `${o.value}+`)}
         <label className="search-filter">
           <span>{t('searchSort')}</span>
@@ -106,12 +125,48 @@ export default function SearchPage() {
             {q && <option value="score">{t('searchSortScore')}</option>}
             <option value="new">{t('searchSortNew')}</option>
             <option value="old">{t('searchSortOld')}</option>
+            <option value="pop">{t('searchSortPop')}</option>
+            <option value="votes">{t('searchSortVotes')}</option>
+            <option value="eps">{t('searchSortEps')}</option>
             <option value="az">{t('searchSortAz')}</option>
           </select>
         </label>
         <SensitiveToggle />
-        {filtersActive && <Button type="button" variant="ghost" size="sm" onClick={() => update({ genre: '', year: '', format: '', min: '' })}>{t('searchClearFilters')}</Button>}
+        {filtersActive && <Button type="button" variant="ghost" size="sm" onClick={() => update(CLEARED)}>{t('searchClearFilters')}</Button>}
       </div>
+
+      {facets.genres.length > 0 && (
+        <details className="search-genres" open={pickedGenres > 0 || undefined}>
+          <summary>{t('genreLabel')}{pickedGenres > 0 ? ` · ${t('searchGenresPicked', { n: pickedGenres })}` : ''}</summary>
+          <p className="search-genres__hint">{t('searchGenreHint')}</p>
+          <div className="search-genres__chips">
+            {facets.genres.map((genre) => {
+              const state = included.includes(genre.value) ? 'in' : (excluded.includes(genre.value) ? 'out' : 'off');
+              return (
+                <button
+                  key={genre.value}
+                  type="button"
+                  className={`search-genre is-${state}`}
+                  aria-pressed={state !== 'off'}
+                  aria-label={`${genre.value}${state === 'in' ? ` — ${t('searchGenreInclude')}` : state === 'out' ? ` — ${t('searchGenreExclude')}` : ''}`}
+                  onClick={() => cycleGenre(genre.value)}
+                >
+                  {state === 'out' ? '−' : state === 'in' ? '+' : ''}<span dir="auto">{genre.value}</span><small>{genre.n}</small>
+                </button>
+              );
+            })}
+          </div>
+        </details>
+      )}
+
+      {get('sort') === 'az' && (
+        <div className="search-letters" role="group" aria-label={t('searchLetter')} dir="ltr">
+          <button type="button" aria-pressed={!get('letter')} className={!get('letter') ? 'is-active' : ''} onClick={() => update({ letter: '' })}>{t('searchLetterAll')}</button>
+          {LETTERS.map((letter) => (
+            <button key={letter} type="button" aria-pressed={get('letter') === letter} className={get('letter') === letter ? 'is-active' : ''} onClick={() => update({ letter: get('letter') === letter ? '' : letter })}>{letter}</button>
+          ))}
+        </div>
+      )}
 
       {failed && <p className="media-note" role="alert">{t('authGenericError')}</p>}
       {!data && !failed && <p className="media-note" role="status">{t('communityLoading')}</p>}
@@ -140,7 +195,7 @@ export default function SearchPage() {
             <div className="search-page__empty">
               <p>{t('searchNone')}</p>
               {(filtersActive || type !== 'all') && (
-                <Button type="button" variant="outline" size="sm" onClick={() => update({ genre: '', year: '', format: '', min: '', type: 'all' })}>{t('searchClearFilters')}</Button>
+                <Button type="button" variant="outline" size="sm" onClick={() => update({ ...CLEARED, type: 'all' })}>{t('searchClearFilters')}</Button>
               )}
             </div>
           ) : (
