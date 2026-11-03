@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { LogOut, X } from 'lucide-react';
@@ -93,6 +94,7 @@ export default function EditProfileSheet({ open, onClose, user }) {
             />
             <p className="edit-hint">{t('dashBioHint')}</p>
           </section>
+          <Link className="edit-account-link" to="/account" onClick={onClose}>{t('accountTitle')}</Link>
         </div>
         <div className="filter-sheet__footer">
           <button type="button" className="filter-sheet__clear entry-sheet__remove" onClick={() => { onClose(); user.logout(); }}>

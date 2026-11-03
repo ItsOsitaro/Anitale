@@ -1,11 +1,12 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
 import { foldTitle, mediaHref } from '@/catalog';
-import { useCatalog, useMangaCatalog, withMangaImages } from '@/catalog-context';
+import { useVisibleCatalog, useVisibleMangaCatalog, withMangaImages } from '@/catalog-context';
 import { displayTitle } from '@/home-data';
 import { useSiteLang } from '@/i18n';
+import { coverUrl } from '@/lib/cover';
 
 const RECENT_KEY = 'anitaleRecentSearches';
 const MAX_RECENT = 6;
@@ -26,10 +27,11 @@ const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href]';
 
 export default function MobileSearchOverlay({ open, onClose }) {
   const { t, lang } = useSiteLang();
-  const anime = useCatalog();
-  const manga = useMangaCatalog();
+  const anime = useVisibleCatalog();
+  const manga = useVisibleMangaCatalog();
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState(readRecent);
+  const navigate = useNavigate();
   const dialogRef = useRef(null);
   const inputRef = useRef(null);
 
@@ -51,7 +53,7 @@ export default function MobileSearchOverlay({ open, onClose }) {
   }, [entries, trimmed]);
 
   const popular = useMemo(
-    () => [...anime].sort((a, b) => (b.sampleScore ?? 0) - (a.sampleScore ?? 0)).slice(0, 5).map((item) => ({ item, mediaType: 'anime' })),
+    () => [...anime].sort((a, b) => (b.weightedScore ?? b.sampleScore ?? 0) - (a.weightedScore ?? a.sampleScore ?? 0)).slice(0, 5).map((item) => ({ item, mediaType: 'anime' })),
     [anime],
   );
 
@@ -108,7 +110,7 @@ export default function MobileSearchOverlay({ open, onClose }) {
     return (
       <li key={`${mediaType}-${item.slug}`}>
         <Link className="mobile-search__row" to={mediaHref(item, mediaType)} onClick={() => { remember(); onClose(); }}>
-          <img src={item.image} alt="" width="40" height="56" loading="lazy" decoding="async" />
+          <img src={coverUrl(item.image, 120)} alt="" width="40" height="56" loading="lazy" decoding="async" />
           <span className="mobile-search__row-copy">
             <span className="mobile-search__row-title">{title}</span>
             <span className="mobile-search__row-meta">
@@ -132,7 +134,7 @@ export default function MobileSearchOverlay({ open, onClose }) {
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => { if (e.key === 'Enter') remember(); }}
+            onKeyDown={(e) => { if (e.key === 'Enter' && trimmed) { remember(); onClose(); navigate(`/search?q=${encodeURIComponent(trimmed)}`); } }}
             placeholder={t('titleOrKeyword')}
             aria-label={t('titleOrKeyword')}
             enterKeyHint="search"
@@ -174,9 +176,13 @@ export default function MobileSearchOverlay({ open, onClose }) {
             <Search width={36} height={36} aria-hidden="true" />
             <h2>{t('mcNoResults')}</h2>
             <p>{t('mcSearchEmpty')}</p>
+            <Link className="mobile-search__all" to={`/search?q=${encodeURIComponent(trimmed)}`} onClick={() => { remember(); onClose(); }}>{t('searchAllResults', { q: trimmed })}</Link>
           </div>
         ) : (
-          <ul className="mobile-search__list" aria-live="polite">{results.map(row)}</ul>
+          <>
+            <ul className="mobile-search__list" aria-live="polite">{results.map(row)}</ul>
+            <Link className="mobile-search__all" to={`/search?q=${encodeURIComponent(trimmed)}`} onClick={() => { remember(); onClose(); }}>{t('searchAllResults', { q: trimmed })}</Link>
+          </>
         )}
       </div>
     </div>,

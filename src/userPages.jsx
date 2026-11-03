@@ -6,10 +6,17 @@ import { useSiteLang } from './i18n.js';
 import { useCatalog, useMangaCatalog, withMangaImages } from './catalog-context.jsx';
 import { mediaHref } from './catalog.js';
 import { useUser, userApi } from './user.jsx';
+import FollowListSheet from '@/components/FollowListSheet';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useIsMobile } from '@/hooks/use-is-mobile';
 import MobileDashboard from '@/components/mobile/MobileDashboard';
 import MobileProfile from '@/components/mobile/MobileProfile';
+import { coverUrl } from '@/lib/cover';
+import { isEmail } from './accountPages.jsx';
+import { profileInsights } from '@/lib/profile-insights';
+import { FavoriteGenres, ProfileReviews, RecentActivity, StatusBreakdown, TopRated } from '@/components/ProfileInsights';
+import AiringAlertList from '@/components/AiringAlertList';
+import { useAiringAlerts } from '@/hooks/use-airing-alerts';
 
 export const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,24}$/;
 
@@ -87,7 +94,7 @@ function EntryCard({ entry, item, mediaType, onRemove, onNoteChange, onRatingCha
         <button className="entry-remove" type="button" onClick={() => onRemove(entry.slug)} aria-label={ariaLabel ?? t('removeFromList')}>×</button>
       )}
       {item?.image
-        ? <img src={item.image} alt="" loading="lazy" />
+        ? <img src={coverUrl(item.image, 240)} alt="" loading="lazy" />
         : <span className="entry-cover-empty" aria-hidden="true">{(entry.slug || '?').slice(0, 2)}</span>}
       <div className="entry-copy">
         {item
@@ -167,9 +174,10 @@ export function AuthPage({ mode = 'login' }) {
   const { setMe, refresh } = useUser();
   const navigate = useNavigate();
   const isRegister = mode === 'register';
-  const [fields, setFields] = useState({ username: '', password: '' });
+  const [fields, setFields] = useState({ username: '', email: '', password: '' });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  const [welcome, setWelcome] = useState(null); // { email } right after registering
 
   useEffect(() => {
     document.title = `${t(isRegister ? 'authRegister' : 'authLogin')} · ${t('siteName')}`;
@@ -179,17 +187,20 @@ export function AuthPage({ mode = 'login' }) {
     event.preventDefault();
     const username = fields.username.trim();
     if (isRegister && !USERNAME_PATTERN.test(username)) { setError(t('usernameRule')); return; }
-    if (fields.password.length < 6) { setError(t('passwordRule')); return; }
+    if (isRegister && !isEmail(fields.email)) { setError(t('emailInvalid')); return; }
+    if (fields.password.length < (isRegister ? 8 : 1)) { setError(t('passwordRule')); return; }
     setSubmitting(true);
     setError('');
     try {
-      const { user } = isRegister
-        ? await userApi.register({ username, password: fields.password })
+      const result = isRegister
+        ? await userApi.register({ username, email: fields.email.trim(), password: fields.password })
         : await userApi.login(username, fields.password);
-      setMe(user);
+      setMe(result.user);
       // Pull the fresh server state (and migrate this browser's guest lists into the account).
       await refresh(true);
-      navigate('/dashboard');
+      // A new account is told to confirm its email, then moves on.
+      if (isRegister) setWelcome({ email: result.user.email });
+      else navigate('/dashboard');
     } catch (err) {
       setError(authErrorMessage(err, t));
     } finally {
@@ -203,7 +214,15 @@ export function AuthPage({ mode = 'login' }) {
     <main className="auth-shell">
       <section className="auth-card" aria-labelledby="authHeading">
         <span className="auth-mark" aria-hidden="true">{lang === 'fa' ? 'م' : 'M'}</span>
-        <h1 id="authHeading">{t(isRegister ? 'authRegister' : 'authLogin')}</h1>
+        <h1 id="authHeading">{welcome ? t('welcomeTitle') : t(isRegister ? 'authRegister' : 'authLogin')}</h1>
+        {welcome ? (
+          <div className="mail-notice" role="status">
+            <p className="auth-tagline">{t('welcomeCheckEmail', { email: welcome.email })}</p>
+            <p className="auth-hint">{t('welcomeHint')}</p>
+            <Button type="button" className="auth-submit" onClick={() => navigate('/dashboard')}>{t('welcomeContinue')}</Button>
+          </div>
+        ) : (
+        <>
         <p className="auth-tagline">{t(isRegister ? 'authTaglineRegister' : 'authTaglineLogin')}</p>
         <form onSubmit={submit} noValidate>
           <div className="auth-field">
@@ -211,6 +230,13 @@ export function AuthPage({ mode = 'login' }) {
             <Input id="auth-username" dir="ltr" autoComplete="username" value={fields.username} onChange={setField('username')} />
             {isRegister && <small className="auth-hint">{t('authUsernameHint')}</small>}
           </div>
+          {isRegister && (
+            <div className="auth-field">
+              <label htmlFor="auth-email">{t('emailLabel')}</label>
+              <Input id="auth-email" dir="ltr" type="email" autoComplete="email" inputMode="email" value={fields.email} onChange={setField('email')} />
+              <small className="auth-hint">{t('emailHint')}</small>
+            </div>
+          )}
           <div className="auth-field">
             <label htmlFor="auth-password">{t('authPassword')}</label>
             <Input id="auth-password" dir="ltr" type="password" autoComplete={isRegister ? 'new-password' : 'current-password'} value={fields.password} onChange={setField('password')} />
@@ -219,18 +245,35 @@ export function AuthPage({ mode = 'login' }) {
           <Button className="auth-submit" type="submit" disabled={submitting}>
             {submitting ? t('authSubmitting') : t(isRegister ? 'authSubmitRegister' : 'authSubmitLogin')}
           </Button>
+          {!isRegister && <p className="auth-forgot"><Link to="/forgot">{t('forgotLink')}</Link></p>}
         </form>
         <p className="auth-switch">
           {t(isRegister ? 'authSwitchHave' : 'authSwitchNone')}
           {' '}
           <Link to={isRegister ? '/login' : '/register'}>{t(isRegister ? 'authSwitchLogin' : 'authDoRegister')}</Link>
         </p>
+        </>
+        )}
       </section>
     </main>
   );
 }
 
 // ---------- Dashboard (signed-in view) ----------
+
+// Today's airing titles from the viewer's «watching» list (desktop dashboard).
+function AiringToday() {
+  const { t } = useSiteLang();
+  const alerts = useAiringAlerts();
+  if (alerts.items.length === 0) return null;
+  return (
+    <section className="airing-panel" aria-labelledby="airingPanelHeading">
+      <h2 id="airingPanelHeading">{t('airingToday')}{alerts.unread > 0 && <span className="airing-panel__count">{alerts.unread}</span>}</h2>
+      <p>{t('alertsHint')}</p>
+      <AiringAlertList alerts={alerts} />
+    </section>
+  );
+}
 
 export function UserDashboard() {
   const { lang, t } = useSiteLang();
@@ -348,8 +391,12 @@ export function UserDashboard() {
             <Link to={`/user/${encodeURIComponent(me.username)}`}>{t('dashViewProfile')}</Link>
           </p>
         </div>
+        <Button className="dash-logout" variant="outline" size="sm" nativeButton={false} render={<Link to="/import-list" />}>{t('importLink')}</Button>
+        <Button className="dash-logout" variant="outline" size="sm" nativeButton={false} render={<Link to="/account" />}>{t('accountTitle')}</Button>
         <Button className="dash-logout" variant="outline" size="sm" type="button" onClick={user.logout}>{t('dashLogout')}</Button>
       </section>
+
+      <AiringToday />
 
       <div className="dash-stats" role="list">
         <div className="stamp" role="listitem" style={{ '--bloom': me.bloom ?? 12 }}>
@@ -563,6 +610,7 @@ export function UserPublicProfile() {
   const [notFound, setNotFound] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [tab, setTab] = useState('anime');
+  const [followSheet, setFollowSheet] = useState(null); // 'followers' | 'following' | null
   // Follow-graph state: null until the profile loads, then a local override
   // { followers, following, isFollowing } after a follow/unfollow action.
   const [followCountsState, setFollowCountsState] = useState(null);
@@ -618,15 +666,19 @@ export function UserPublicProfile() {
     : null;
 
   const resolve = (entry) => (tab === 'anime' ? animeBySlug : mangaBySlug).get(entry.slug);
+  const insights = profileInsights(entries, animeBySlug, mangaBySlug);
 
   if (isMobile) {
     return (
       <MobileProfile
+        onOpenFollows={setFollowSheet}
+        followSheet={followSheet}
         profile={profile}
         entries={entries}
         animeBySlug={animeBySlug}
         mangaBySlug={mangaBySlug}
         followCounts={followCounts}
+        reviews={data.reviews || []}
         isOwner={Boolean(isOwner)}
         followButton={(
           <FollowButton
@@ -642,6 +694,7 @@ export function UserPublicProfile() {
 
   return (
     <main className="profile-shell">
+      <FollowListSheet username={profile.username} kind={followSheet} onClose={() => setFollowSheet(null)} />
       <section className="profile-banner" style={{ '--bloom': profile.bloom ?? 12 }}>
         {isOwner && <Link className="own-chip" to="/dashboard">{t('ownProfile')}</Link>}
         <div className="profile-id">
@@ -652,8 +705,8 @@ export function UserPublicProfile() {
               <time dateTime={profile.joinedAt}>{t('dashJoined', { date: new Date(profile.joinedAt).toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-GB') })}</time>
             </p>
             <p className="profile-follow-counts">
-              <span><strong>{followCounts.followers}</strong> {t('followersLabel')}</span>
-              <span><strong>{followCounts.following}</strong> {t('followingLabel')}</span>
+              <button type="button" onClick={() => setFollowSheet('followers')}><strong>{followCounts.followers}</strong> {t('followersLabel')}</button>
+              <button type="button" onClick={() => setFollowSheet('following')}><strong>{followCounts.following}</strong> {t('followingLabel')}</button>
             </p>
           </div>
           <FollowButton
@@ -679,6 +732,20 @@ export function UserPublicProfile() {
           </div>
         )}
       </div>
+
+      {insights.total > 0 && (
+        <div className="pi-grid">
+          <div className="pi-col">
+            <StatusBreakdown insights={insights} />
+            <FavoriteGenres insights={insights} />
+            <TopRated insights={insights} />
+          </div>
+          <div className="pi-col">
+            <RecentActivity insights={insights} />
+            <ProfileReviews reviews={data.reviews} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
+          </div>
+        </div>
+      )}
 
       {listEntries.length > 0 && (
         <section className="dash-lists panel" aria-label={t('profileLists')}>

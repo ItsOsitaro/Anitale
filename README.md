@@ -34,7 +34,7 @@ npm run serve              # builds the site, then serves site + API on http://1
 3. Covers are stored in `public/covers/`, data in `server/data.db` (back these two up).
 
 Refreshing an existing entry works the same way: in the edit form, search or paste the MAL link / ID and press
-**Refresh form** to overwrite every field with the latest source data (Jikan, or AniList when Jikan is unreachable).
+**Refresh form** to overwrite every field with the latest source data (Tenrai, or AniList when Tenrai is unreachable).
 The current slug and airing day are kept, and nothing is written until you press **Save**.
 
 Shortcuts for entries that already have a MyAnimeList id stored:
@@ -60,13 +60,14 @@ npm run export:data
 ```
 
 
-### If MyAnimeList / Jikan is blocked
+### If MyAnimeList data sources are blocked
 
-Importing prefers `api.jikan.moe` (needs `cdn.myanimelist.net` for covers). If Jikan is unreachable, the server
-automatically falls back to the AniList GraphQL API (`graphql.anilist.co`) for both search and import — same draft
-shape, no configuration needed (scores come from AniList, so they can differ slightly from MAL). With a VPN you can
-instead point the server at its local proxy by setting `PROXY_URL` in `server/.env`, e.g.
-`PROXY_URL=http://127.0.0.1:10809`, then restart, to use genuine Jikan data. Manual entry works offline.
+Importing prefers Tenrai (`api.tenrai.org`, MyAnimeList data; covers come from `cdn.myanimelist.net`). If Tenrai is
+unreachable or refuses the request (401/403/5xx), the server automatically falls back to the AniList GraphQL API
+(`graphql.anilist.co`) for both search and import — same draft shape, no configuration needed (scores come from
+AniList, so they can differ slightly from MAL). With a VPN you can point the server at a local proxy: use the admin
+**VPN** page, or set `PROXY_URL` in `server/.env`, e.g. `PROXY_URL=http://127.0.0.1:10809`, then restart.
+Manual entry works offline.
 
 ## Notes
 
@@ -75,27 +76,8 @@ instead point the server at its local proxy by setting `PROXY_URL` in `server/.e
 - Scripts: `npm run seed` (re-import JSON, skips existing), `npm run hash-password -- <pw>`.
 - Stack: React 19, react-router, Vite 7, Express 5, Node built-in SQLite (needs Node >= 22.13), zod, multer, bcryptjs.
 
-### Storage: SQLite locally, Neon Postgres on Vercel
+### Storage
 
-The same SQL runs on two engines behind one synchronous handle (`server/db.js`):
-
-- **Local development** keeps Node's built-in SQLite (`server/data.db`) — no network dependency,
-  nothing to configure.
-- **The Vercel deployment** runs on [Neon Postgres](https://neon.tech), provisioned once through the
-  Vercel Marketplace (`vercel integration add neon`). The connection string arrives as `POSTGRES_URL`
-  and is never stored in the repo. When that variable is present, `server/pg.js` (a worker-thread
-  bridge mirroring node:sqlite's API, with the sqlite→postgres dialect translation) serves every
-  existing database call site, and writes persist across instances and restarts.
-
-Migrating data between the engines (or refreshing the deployment copy) is idempotent:
-
-```bash
-node scripts/pg-migrate.mjs   # reads server/data.db, upserts into POSTGRES_URL (from .env.local)
-```
-
-Cover files stay durable on the deployment too: writes keep their synchronous
-`/tmp` API and mirror into [Vercel Blob](https://vercel.com/docs/vercel-blob) (store
-`anitale-covers`, `BLOB_READ_WRITE_TOKEN` from the Marketplace link). The `/covers/:name`
-route serves the warm-instance copy first, else redirects to the store's public CDN
-URL — local development and the committed covers never use it.
+Everything lives in Node's built-in SQLite (`server/data.db`, WAL journal). Covers are plain files
+in `public/covers/`, served by Express at `/covers/:name`. Back up both together.
 

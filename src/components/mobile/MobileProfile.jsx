@@ -5,11 +5,15 @@ import { mediaHref } from '@/catalog';
 import { useSiteLang } from '@/i18n';
 import { initialOf } from './entry-utils';
 import { cn } from 'cn';
+import { profileInsights } from '@/lib/profile-insights';
+import { FavoriteGenres, ProfileReviews, RecentActivity, StatusBreakdown, TopRated } from '../ProfileInsights';
+import { coverUrl } from '@/lib/cover';
+import FollowListSheet from '../FollowListSheet';
 
 const TABS = ['list', 'activity', 'about'];
 const TAB_KEYS = { list: 'dbTabList', activity: 'dbTabActivity', about: 'dbTabAbout' };
 
-export default function MobileProfile({ profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton }) {
+export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [] }) {
   const { t, lang } = useSiteLang();
   const [tab, setTab] = useState('list');
   const [media, setMedia] = useState('anime');
@@ -32,8 +36,10 @@ export default function MobileProfile({ profile, entries, animeBySlug, mangaBySl
 
   const rated = all.filter(({ entry }) => entry.rating != null);
   const avg = rated.length ? (rated.reduce((s, { entry }) => s + entry.rating, 0) / rated.length).toFixed(1) : '—';
+  const insights = useMemo(() => profileInsights(entries, animeBySlug, mangaBySlug), [entries, animeBySlug, mangaBySlug]);
+  // Newest change first (a rating or progress update counts, not just adding a title).
   const activity = useMemo(
-    () => [...all].sort((a, b) => String(b.entry.added || '').localeCompare(String(a.entry.added || ''))).slice(0, 30),
+    () => [...all].sort((a, b) => String(b.entry.updated || b.entry.added || '').localeCompare(String(a.entry.updated || a.entry.added || ''))).slice(0, 30),
     [all],
   );
   const statusLabel = (status, mediaType) => (status === 'watching' && mediaType === 'manga' ? t('status_reading') : t(`status_${status}`));
@@ -42,17 +48,18 @@ export default function MobileProfile({ profile, entries, animeBySlug, mangaBySl
 
   return (
     <main className="mprofile" style={{ '--bloom': bloom }}>
+      <FollowListSheet username={profile.username} kind={followSheet} onClose={() => onOpenFollows(null)} />
       <header className="mprofile__hero">
         <div className="mprofile__backdrop" aria-hidden="true">
-          {collage.map((src) => <img key={src} src={src} alt="" />)}
+          {collage.map((src) => <img key={src} src={coverUrl(src, 240)} alt="" />)}
         </div>
         <div className="mprofile__idrow">
           <span className="mprofile__avatar" aria-hidden="true">{initialOf(profile.username)}</span>
         </div>
         <h1 className="mprofile__name">{profile.username}</h1>
         <p className="mprofile__follow-counts">
-          <span><strong>{followCounts.followers}</strong> {t('followersLabel')}</span>
-          <span><strong>{followCounts.following}</strong> {t('followingLabel')}</span>
+          <button type="button" onClick={() => onOpenFollows('followers')}><strong>{followCounts.followers}</strong> {t('followersLabel')}</button>
+          <button type="button" onClick={() => onOpenFollows('following')}><strong>{followCounts.following}</strong> {t('followingLabel')}</button>
         </p>
         {isOwner ? (
           <Link className="mprofile__own" to="/dashboard">{t('ownProfile')}</Link>
@@ -99,7 +106,7 @@ export default function MobileProfile({ profile, entries, animeBySlug, mangaBySl
                 return (
                   <li key={entry.slug}>
                     <Link className="wall__tile" to={item ? mediaHref(item, media) : '#'} aria-label={item ? displayTitle(item, lang) : entry.slug}>
-                      {item?.image ? <img src={item.image} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
+                      {item?.image ? <img src={coverUrl(item.image, 120)} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
                       <span className={`wall__status status-${entry.status || 'watching'}`} aria-hidden="true" />
                       {entry.rating != null && <span className="wall__rating" dir="ltr">{entry.rating}</span>}
                     </Link>
@@ -124,7 +131,7 @@ export default function MobileProfile({ profile, entries, animeBySlug, mangaBySl
                   <li key={`${mediaType}-${entry.slug}`}>
                     <Link className="lib-row" to={item ? mediaHref(item, mediaType) : '#'}>
                       <span className="lib-row__cover">
-                        {item?.image ? <img src={item.image} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
+                        {item?.image ? <img src={coverUrl(item.image, 120)} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
                       </span>
                       <span className="lib-row__copy">
                         <span className="lib-row__title" dir="auto">{item ? displayTitle(item, lang) : entry.slug}</span>
@@ -148,6 +155,10 @@ export default function MobileProfile({ profile, entries, animeBySlug, mangaBySl
         <section className="mprofile__panel mprofile__about">
           <p className="mprofile__bio" dir="auto">{profile.bio || t('dbNoBio')}</p>
           <p className="mprofile__joined"><time dateTime={profile.joinedAt}>{t('dashJoined', { date: joined })}</time></p>
+          <StatusBreakdown insights={insights} />
+          <FavoriteGenres insights={insights} />
+          <TopRated insights={insights} />
+          <ProfileReviews reviews={reviews} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
         </section>
       )}
     </main>

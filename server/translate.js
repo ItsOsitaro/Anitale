@@ -188,12 +188,20 @@ const localTranslateQueued = (text) => {
   return run;
 };
 
+// Fetch that goes through PROXY_URL when one is configured (same local proxy the
+// importers use), else a plain fetch. Used by the keyless providers below so a
+// blocked Google/MyMemory endpoint works once the proxy is set up.
+const proxiedFetch = (url, options = {}) => {
+  const dispatcher = geminiDispatcher();
+  return dispatcher ? undiciFetch(url, { ...options, dispatcher }) : fetch(url, options);
+};
+
 // ---- provider 1: Google Translate (gtx) -----------------------------------
 const googleTranslate = async (text) => {
   const parts = [];
   for (const chunk of chunkSource(text, 460)) {
     const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=en&tl=fa&dt=t&q=${encodeURIComponent(chunk)}`;
-    const response = await fetch(url, {
+    const response = await proxiedFetch(url, {
       headers: {
         accept: 'application/json, text/javascript',
         'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
@@ -217,7 +225,7 @@ const myMemoryTranslate = async (text) => {
   const parts = [];
   for (const chunk of chunkSource(text, MYMEMORY_CHUNK)) {
     const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(chunk)}&langpair=en|fa${email ? `&de=${encodeURIComponent(email)}` : ''}`;
-    const response = await fetch(url, {
+    const response = await proxiedFetch(url, {
       headers: { accept: 'application/json' },
       signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
     });

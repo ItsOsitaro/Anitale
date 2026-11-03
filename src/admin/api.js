@@ -43,8 +43,10 @@ export const api = {
     form.append('cover', file);
     return request('POST', `/api/anime/${encodeURIComponent(slug)}/cover`, form);
   },
-  jikanSearch: (q) => request('GET', `/api/admin/jikan/search?q=${encodeURIComponent(q)}`),
-  jikanImport: (malId, currentSlug = '') => request('POST', '/api/admin/jikan/import', { malId, currentSlug }),
+  missingTitles: () => request('GET', '/api/admin/missing-titles'),
+  missingDismiss: (items) => request('POST', '/api/admin/missing-titles/dismiss', { items }),
+  catalogSearch: (q, type = 'anime') => request('GET', `/api/admin/catalog/search?q=${encodeURIComponent(q)}&type=${type}`),
+  catalogImport: (malId, currentSlug = '') => request('POST', '/api/admin/catalog/import', { malId, currentSlug }),
   bulkImport: ({ from, to, mediaType, preview, ids, discover, genre, year, minScore }) => request('POST', '/api/admin/anime/import-bulk', {
     ...(from !== undefined ? { from, to } : {}),
     ...(ids !== undefined ? { ids } : {}),
@@ -58,12 +60,31 @@ export const api = {
   mangaUpdate: (slug, patch) => request('PATCH', `/api/admin/manga/${encodeURIComponent(slug)}`, patch),
   mangaRefresh: (slug) => request('POST', `/api/admin/manga/${encodeURIComponent(slug)}/refresh`),
   mangaRefreshAll: () => request('POST', '/api/admin/manga/refresh-all'),
+  mangaRefreshAllStatus: () => request('GET', '/api/admin/manga/refresh-all'),
   setMangaBilingual: (slug, { titleFa, synopsisFa }) => request('PATCH', `/api/admin/manga/${slug}`, { titleFa, synopsisFa }),
   refresh: (slug) => request('POST', `/api/admin/anime/${encodeURIComponent(slug)}/refresh`),
   refreshAll: () => request('POST', '/api/admin/anime/refresh-all'),
+  refreshAllStatus: () => request('GET', '/api/admin/anime/refresh-all'),
   // Persian backfill job (local NLLB engine): one bounded slice per call.
+  reviewList: (params = {}) => request('GET', `/api/admin/translate/review?${new URLSearchParams(params)}`),
+  reviewAct: (media, slug, body) => request('POST', `/api/admin/translate/review/${media}/${encodeURIComponent(slug)}`, body),
+  reviewBulk: (items) => request('POST', '/api/admin/translate/review-bulk', { items }),
+  translateStatus: () => request('GET', '/api/admin/translate/status'),
+  vpnGet: () => request('GET', '/api/admin/vpn'),
+  vpnApply: (kind, config) => request('POST', '/api/admin/vpn', { kind, config }),
+  vpnActivate: (kind) => request('POST', '/api/admin/vpn/activate', { kind }),
+  vpnTest: () => request('POST', '/api/admin/vpn/test'),
+  vpnTurnOff: () => request('DELETE', '/api/admin/vpn'),
+  vpnDeleteProfile: (kind) => request('DELETE', `/api/admin/vpn/${kind}`),
+  health: () => request('GET', '/api/admin/health'),
+  healthProbe: () => request('POST', '/api/admin/health/probe', {}),
+  autoImportGet: () => request('GET', '/api/admin/auto-import'),
+  autoImportSet: (enabled) => request('POST', '/api/admin/auto-import', { enabled }),
+  autoImportRun: () => request('POST', '/api/admin/auto-import/run'),
   backfill: (body = {}) => request('POST', '/api/admin/translate/backfill', body),
   // Site-user management
+  reviewsList: (q, page) => request('GET', `/api/admin/reviews?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
+  reviewsRemove: (id) => request('DELETE', `/api/admin/reviews/${id}`),
   usersList: (q, page) => request('GET', `/api/admin/users?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
   usersGet: (username) => request('GET', `/api/admin/users/${encodeURIComponent(username)}`),
   usersCreate: (payload) => request('POST', '/api/admin/users', payload),
@@ -72,3 +93,22 @@ export const api = {
   usersRemoveEntry: (username, mediaType, slug) => request('DELETE', `/api/admin/users/${encodeURIComponent(username)}/entries/${mediaType}/${encodeURIComponent(slug)}`),
   stats: () => request('GET', '/api/admin/stats'),
 };
+
+// Starts a server-side bulk job and polls it until it finishes (a single long request would be cut by the CDN).
+// A few failed polls in a row are tolerated: the job keeps running on the server.
+export async function runBulkJob(start, status, onProgress) {
+  let state = await start();
+  let misses = 0;
+  while (state.running) {
+    onProgress?.(state);
+    await new Promise((resolve) => { setTimeout(resolve, 2000); });
+    try {
+      state = await status();
+      misses = 0;
+    } catch (error) {
+      misses += 1;
+      if (misses >= 8) throw error;
+    }
+  }
+  return state;
+}

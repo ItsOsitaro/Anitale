@@ -8,6 +8,7 @@ import EntrySheet from './EntrySheet';
 import EditProfileSheet from './EditProfileSheet';
 import { entryTotal, initialOf, progressPercent } from './entry-utils';
 import { cn } from 'cn';
+import { coverUrl } from '@/lib/cover';
 
 const STATUS_ORDER = ['watching', 'completed', 'on_hold', 'dropped', 'planned'];
 
@@ -101,6 +102,8 @@ export default function MobileDashboard({ me, entries, animeBySlug, mangaBySlug,
         <div role="listitem"><strong dir="ltr">{avg}</strong><span>{t('dashAvgRating')}</span></div>
       </div>
 
+      <Link className="mdash__import" to="/import-list">{t('importLink')}</Link>
+
       {empty ? (
         <section className="mdash__empty">
           <h2>{t('dashEmpty')}</h2>
@@ -119,7 +122,7 @@ export default function MobileDashboard({ me, entries, animeBySlug, mangaBySlug,
                   return (
                     <article key={`${mediaType}-${entry.slug}`} className="going-card">
                       <Link to={item ? mediaHref(item, mediaType) : '#'} className="going-card__cover" aria-label={item ? displayTitle(item, lang) : entry.slug}>
-                        {item?.image ? <img src={item.image} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
+                        {item?.image ? <img src={coverUrl(item.image, 120)} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
                       </Link>
                       <div className="going-card__body">
                         <button type="button" className="going-card__title" onClick={() => setSelected({ mediaType, slug: entry.slug })} dir="auto">
@@ -221,7 +224,7 @@ export default function MobileDashboard({ me, entries, animeBySlug, mangaBySlug,
                     <li key={entry.slug}>
                       <button type="button" className="lib-row" onClick={() => setSelected({ mediaType: tab, slug: entry.slug })}>
                         <span className="lib-row__cover">
-                          {item?.image ? <img src={item.image} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
+                          {item?.image ? <img src={coverUrl(item.image, 120)} alt="" loading="lazy" decoding="async" /> : <span>{entry.slug.slice(0, 2)}</span>}
                         </span>
                         <span className="lib-row__copy">
                           <span className="lib-row__title" dir="auto">{item ? displayTitle(item, lang) : entry.slug}</span>

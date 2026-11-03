@@ -25,7 +25,9 @@ export const seedFromJson = () => {
       format: item.format,
       score: item.sampleScore ?? null,
       airingDay: item.airingDay || '',
-      synopsis: item.synopsis,
+      // export-data.js writes bilingual synopses as { fa, en }; older files hold a plain string.
+      synopsis: typeof item.synopsis === 'object' && item.synopsis ? (item.synopsis.en || '') : item.synopsis,
+      ...(typeof item.synopsis === 'object' && item.synopsis && item.synopsis.fa ? { synopsisFa: item.synopsis.fa } : {}),
       genres: item.genres || [],
       alternativeTitles: { synonyms: [], japanese: '', english: '', ...(extra.alternativeTitles || item.alternativeTitles) },
       information: extra.information || item.information || [],
@@ -50,7 +52,8 @@ export const seedMangaIfEmpty = () => {
   let added = 0;
   for (const item of manga) {
     if (getMangaBySlug(item.slug)) continue;
-    insertManga(item);
+    const cover = ['png', 'jpg', 'webp'].map((ext) => `${item.slug}.${ext}`).find((name) => fs.existsSync(path.join(COVERS_DIR, name))) || '';
+    insertManga(item, { cover });
     added += 1;
   }  return added;
 };

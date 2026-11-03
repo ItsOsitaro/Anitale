@@ -16,7 +16,7 @@ export const displayTitle = (item, lang) => (
   typeof item.title === 'string' ? (lang === 'fa' && item.titleFa ? item.titleFa : item.title) : L(item.title, lang)
 );
 
-const getCurrentSeasonInfo = () => {
+export const getCurrentSeasonInfo = () => {
   const now = new Date();
   const month = now.getMonth() + 1; // 1-12
   const year = now.getFullYear();
@@ -35,7 +35,7 @@ const seasonNameMap = {
   fall: ['fall', 'autumn'],
 };
 
-const getItemSeasonInfo = (item) => {
+export const getItemSeasonInfo = (item) => {
   // Look for premiered/season info in information array
   if (Array.isArray(item.information)) {
     for (const info of item.information) {
@@ -161,7 +161,7 @@ export const selectCurrentSeasonPicks = ({ animeCatalog }) => {
 };
 
 export const selectHomePicks = ({ animeCatalog, mangaCatalog }) => {
-  const topAnime = sortBy(animeCatalog, (anime) => -anime.sampleScore).slice(0, 5);
+  const topAnime = sortBy(animeCatalog, (anime) => -(anime.weightedScore ?? anime.sampleScore ?? 0)).slice(0, 5);
   const trendingAnime = animeCatalog.slice(5, 10);
   const currentSeason = sortBy(animeCatalog, (anime) => -Number(anime.year)).slice(0, 5);
   const airingAnime = buildSchedule(animeCatalog)

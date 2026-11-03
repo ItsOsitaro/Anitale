@@ -1,5 +1,6 @@
 import './config.js';
 import express from 'express';
+import compression from 'compression';
 import multer from 'multer';
 import rateLimit from 'express-rate-limit';
 import { ZodError } from 'zod';
@@ -10,16 +11,29 @@ import {
   clearSession, clearUserSession, currentSiteUser, currentUser, isAuthConfigured, requireAdmin, requireSiteUser,
   sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials,
 } from './auth.js';
-import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteProfileInput, siteRegisterInput, siteUserEntryInput, WEEKDAYS } from './schemas.js';
+import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.js';
+import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
-import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, createUser, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, titleExists } from './reviews.js';
+import { listNotifications, markNotificationsRead, notifyFollow, notifyFollowersOfReview } from './notifications.js';
+import { isSensitiveItem } from './sensitive.js';
+import { searchCatalog } from './search.js';
 import { exportData } from './export-data.js';
-import { BLOB_MODE, coverUrlFor,  cleanupTemp, handleCoverRequest, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover, renameBlobCover,
+import { coverUrlFor,  cleanupTemp, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover,
 } from './images.js';
-import { downloadImage, fetchAnimeFull, fetchMangaFull, jikanCircuitOpen, mapJikanMangaToDraft, mapJikanToDraft, searchAnime } from './jikan.js';
+import { downloadImage, fetchAnimeFull, fetchMangaFull, tenraiCircuitOpen, mapTenraiMangaToDraft, mapTenraiToDraft, searchAnime, searchManga } from './tenrai.js';
 import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
 import { mapPool } from './pool.js';
+import { activateVpn, applyVpn, deleteVpnProfile, testVpn, turnOffVpn, vpnStatus } from './vpn.js';
+import { getAutoImportState, runAutoImport, setAutoImportEnabled } from './auto-import.js';
+import { registerSeoRoutes } from './seo.js';
+import { registerExtrasRoutes } from './extras.js';
+import { registerPeopleRoutes } from './people.js';
+import { registerHealthRoutes } from './health.js';
+import { recordMissing, registerMissingRoutes } from './missing-titles.js';
+import { coverResizeHandler } from './cover-resize.js';
 import { translateSynopsis, planPersian, draftPersian, inlinePersianEnabled } from './translate.js';
 
 const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { status, ...extra });
@@ -48,17 +62,17 @@ const renameCover = (cover, newSlug) => {
   const from = path.join(COVERS_DIR, cover);
   if (!fs.existsSync(from)) return cover;
   fs.copyFileSync(from, path.join(COVERS_DIR, next)); // copy: the old file may still be used by the static fallback data
-  renameBlobCover(cover, next);
   return next;
 };
 
 export const createApp = () => {
   const app = express();
   app.disable('x-powered-by');
-  // Behind Vercel's proxy every request arrives from the platform; with
-  // TRUST_PROXY=1 the rate limiters key on the real client instead of one
-  // shared platform IP (and the CSRF host check can read x-forwarded-host).
+  // Behind nginx/Caddy every request arrives from the proxy; with TRUST_PROXY=1
+  // the rate limiters key on the real client instead of one shared proxy IP
+  // (and the CSRF host check can read x-forwarded-host).
   if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
+  app.use(compression());
   // Baseline browser hardening; CSP (SPA + inline styles) is a manual follow-up.
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -90,12 +104,93 @@ export const createApp = () => {
   const registerLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 8, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many registration attempts. Try again later.' } });
   const siteLoginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 15, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many login attempts. Try again later.' } });
 
+  const mailLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many email requests. Try again later.' } });
+
+  // Link redemption is guarded by 256-bit tokens, so its limit can be looser (shared carrier IPs).
+  const tokenLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 40, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many attempts. Try again later.' } });
+
+  // Mail problems must never break the action that triggered them.
+  const sendVerification = async (row) => {
+    try {
+      if (!row.email || row.email_verified_at || tokenIssuedRecently(row.id, 'verify')) return;
+      const link = `${siteUrl()}/verify-email?token=${issueToken(row.id, 'verify')}`;
+      await sendMail({ to: row.email, ...verifyEmailMail({ username: row.username, link }) });
+    } catch (err) { console.error('[mail] verification failed:', err.message); }
+  };
+
   app.post('/api/user/register', registerLimiter, async (req, res) => {
     const input = siteRegisterInput.parse(req.body);
     if (getUserByUsername(input.username)) throw httpError(409, `Username "${input.username}" is already taken`);
+    if (getUserByEmail(input.email)) throw httpError(409, 'This email is already used by another account');
     const user = await createUser(input);
     setUserSession(req, res, user.username);
-    res.status(201).json({ user });
+    await sendVerification(getUserByUsername(user.username));
+    res.status(201).json({ user: ownUser(getUserByUsername(user.username)) });
+  });
+
+  // Forgot password: always answers ok, so emails cannot be probed.
+  // Only verified addresses get a link.
+  app.post('/api/user/forgot', mailLimiter, async (req, res) => {
+    const { email } = siteForgotInput.parse(req.body);
+    const row = getUserByEmail(email);
+    if (row && row.email_verified_at && !tokenIssuedRecently(row.id, 'reset')) {
+      try {
+        const link = `${siteUrl()}/reset-password?token=${issueToken(row.id, 'reset')}`;
+        await sendMail({ to: row.email, ...resetPasswordMail({ username: row.username, link }) });
+      } catch (err) { console.error('[mail] reset failed:', err.message); }
+    }
+    res.json({ ok: true });
+  });
+
+  app.post('/api/user/reset', tokenLimiter, async (req, res) => {
+    const input = siteResetInput.parse(req.body);
+    const row = consumeToken(input.token, 'reset');
+    if (!row) throw httpError(400, 'This link is invalid or has expired. Request a new one.');
+    await setUserPassword(row.id, input.newPassword);
+    markEmailVerified(row.id); // opening the link proves the inbox is theirs
+    setUserSession(req, res, row.username);
+    res.json({ user: ownUser(getUserByUsername(row.username)) });
+  });
+
+  app.post('/api/user/verify-email', tokenLimiter, (req, res) => {
+    const { token } = siteVerifyInput.parse(req.body);
+    const row = consumeToken(token, 'verify');
+    if (!row) throw httpError(400, 'This link is invalid or has expired. Request a new one.');
+    markEmailVerified(row.id);
+    res.json({ ok: true });
+  });
+
+  app.post('/api/user/resend-verification', requireSiteUser, mailLimiter, async (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row?.email) throw httpError(400, 'Add an email first');
+    if (row.email_verified_at) return res.json({ ok: true, alreadyVerified: true });
+    if (tokenIssuedRecently(row.id, 'verify')) throw httpError(429, 'A link was just sent. Wait a minute and try again.');
+    await sendVerification(row);
+    res.json({ ok: true });
+  });
+
+  // Add or change the email (needs the password; the new address starts unverified).
+  app.post('/api/user/email', requireSiteUser, siteLoginLimiter, async (req, res) => {
+    const input = siteEmailChangeInput.parse(req.body);
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    if (!(await verifySiteCredentials(row.username, input.password)).ok) throw httpError(403, 'Password is wrong');
+    const taken = getUserByEmail(input.email);
+    if (taken && taken.id !== row.id) throw httpError(409, 'This email is already used by another account');
+    if (!(taken && taken.id === row.id)) setUserEmail(row.id, input.email);
+    await sendVerification(getUserByUsername(row.username));
+    res.json({ user: ownUser(getUserByUsername(row.username)) });
+  });
+
+  // Logged-in: change password (revokes other sessions, keeps this one).
+  app.post('/api/user/password', requireSiteUser, siteLoginLimiter, async (req, res) => {
+    const input = siteChangePasswordInput.parse(req.body);
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    if (!(await verifySiteCredentials(row.username, input.currentPassword)).ok) throw httpError(403, 'Current password is wrong');
+    await setUserPassword(row.id, input.newPassword);
+    setUserSession(req, res, row.username);
+    res.json({ ok: true });
   });
 
   app.post('/api/user/login', siteLoginLimiter, async (req, res) => {
@@ -103,7 +198,7 @@ export const createApp = () => {
     const result = await verifySiteCredentials(username, password);
     if (!result.ok) throw httpError(401, 'Wrong username or password');
     setUserSession(req, res, result.username);
-    res.json({ user: publicUser(getUserByUsername(result.username)), ok: true });
+    res.json({ user: ownUser(getUserByUsername(result.username)), ok: true });
   });
 
   app.get('/api/user/me', (req, res) => {
@@ -112,7 +207,7 @@ export const createApp = () => {
     if (!row) return res.json({ user: null });
     // Stale token (password changed meanwhile) counts as logged out here too.
     if (!userTokenValid(row, req)) return res.json({ user: null });
-    res.json({ user: publicUser(row), entries: listEntries(row.id) });
+    res.json({ user: ownUser(row), entries: listEntries(row.id) });
   });
 
   app.put('/api/user/me', requireSiteUser, (req, res) => {
@@ -141,6 +236,93 @@ export const createApp = () => {
     if (!row) throw httpError(401, 'Not logged in');
     upsertEntry(row.id, input.mediaType, input.slug, input.status, input.note, input.rating, input.progress);
     res.json(listEntries(row.id));
+  });
+
+  // Download the member's own list: MyAnimeList-compatible XML (re-importable there), CSV or JSON.
+  const exportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many exports. Try again later.' } });
+  app.get('/api/user/export', requireSiteUser, exportLimiter, (req, res) => {
+    const type = req.query.type === 'manga' ? 'manga' : 'anime';
+    const format = ['xml', 'csv', 'json'].includes(req.query.format) ? req.query.format : 'xml';
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    const table = type === 'anime' ? 'anime' : 'manga';
+    const entries = db.prepare(`
+      SELECT e.slug, e.status, e.note, e.rating, e.progress, e.created_at, t.title, t.mal_id
+      FROM user_entries e LEFT JOIN ${table} t ON t.slug = e.slug
+      WHERE e.user_id = ? AND e.media_type = ? ORDER BY e.created_at, e.rowid
+    `).all(row.id, type);
+    const statusText = {
+      watching: type === 'anime' ? 'Watching' : 'Reading', completed: 'Completed', on_hold: 'On-Hold', dropped: 'Dropped',
+      planned: type === 'anime' ? 'Plan to Watch' : 'Plan to Read',
+    };
+    const stamp = new Date().toISOString().slice(0, 10);
+    const base = `anitale-${type}list-${stamp}`;
+    res.setHeader('Cache-Control', 'no-store');
+    res.setHeader('Content-Disposition', `attachment; filename="${base}.${format}"`);
+    const cdata = (value) => `<![CDATA[${String(value ?? '').replace(/\]\]>/g, ']]]]><![CDATA[>')}]]>`;
+    if (format === 'json') {
+      res.type('application/json; charset=utf-8').send(JSON.stringify({ type, exportedAt: new Date().toISOString(), entries: entries.map((e) => ({ malId: e.mal_id, title: e.title, slug: e.slug, status: e.status, score: e.rating, progress: e.progress, note: e.note })) }, null, 2));
+      return;
+    }
+    if (format === 'csv') {
+      const cell = (value) => { let text = String(value ?? ''); if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`; return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; };
+      const lines = [['mal_id', 'title', 'status', 'score', type === 'anime' ? 'episodes_watched' : 'chapters_read', 'note'].join(',')];
+      for (const e of entries) lines.push([e.mal_id ?? '', cell(e.title), statusText[e.status], e.rating ?? '', e.progress ?? '', cell(e.note)].join(','));
+      res.type('text/csv; charset=utf-8').send(`﻿${lines.join('\r\n')}\r\n`);
+      return;
+    }
+    // XML: MyAnimeList can only hold titles it knows, so entries without a MAL id are left out.
+    const usable = entries.filter((e) => e.mal_id);
+    const parts = ['<?xml version="1.0" encoding="UTF-8" ?>', '<myanimelist>', '\t<myinfo>', `\t\t<user_id>0</user_id>`, `\t\t<user_name>${cdata(row.username)}</user_name>`,
+      `\t\t<user_export_type>${type === 'anime' ? 1 : 2}</user_export_type>`, `\t\t<user_total_${type}>${usable.length}</user_total_${type}>`, '\t</myinfo>'];
+    for (const e of usable) {
+      const score = e.rating || 0;
+      const date = '0000-00-00';
+      if (type === 'anime') {
+        parts.push('\t<anime>', `\t\t<series_animedb_id>${e.mal_id}</series_animedb_id>`, `\t\t<series_title>${cdata(e.title)}</series_title>`,
+          `\t\t<my_watched_episodes>${e.progress ?? 0}</my_watched_episodes>`, `\t\t<my_start_date>${date}</my_start_date>`, `\t\t<my_finish_date>${date}</my_finish_date>`,
+          `\t\t<my_score>${score}</my_score>`, `\t\t<my_status>${statusText[e.status]}</my_status>`, `\t\t<my_comments>${cdata(e.note)}</my_comments>`, '\t\t<update_on_import>1</update_on_import>', '\t</anime>');
+      } else {
+        parts.push('\t<manga>', `\t\t<manga_mangadb_id>${e.mal_id}</manga_mangadb_id>`, `\t\t<manga_title>${cdata(e.title)}</manga_title>`,
+          `\t\t<my_read_chapters>${e.progress ?? 0}</my_read_chapters>`, `\t\t<my_start_date>${date}</my_start_date>`, `\t\t<my_finish_date>${date}</my_finish_date>`,
+          `\t\t<my_score>${score}</my_score>`, `\t\t<my_status>${statusText[e.status]}</my_status>`, `\t\t<my_comments>${cdata(e.note)}</my_comments>`, '\t\t<update_on_import>1</update_on_import>', '\t</manga>');
+      }
+    }
+    parts.push('</myanimelist>');
+    res.type('application/xml; charset=utf-8').send(parts.join('\n'));
+  });
+
+  // Import a chunk of a MyAnimeList export. Titles are matched by MAL id against the local catalog;
+  // existing entries are kept unless overwrite is set. Unmatched ids are returned so the page can list them.
+  const malImportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many imports. Try again later.' } });
+  app.post('/api/user/import-mal', requireSiteUser, malImportLimiter, (req, res) => {
+    const input = malImportInput.parse(req.body);
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    const slugByMal = {
+      anime: new Map(db.prepare('SELECT mal_id, slug FROM anime WHERE mal_id IS NOT NULL').all().map((r) => [r.mal_id, r.slug])),
+      manga: new Map(db.prepare('SELECT mal_id, slug FROM manga WHERE mal_id IS NOT NULL').all().map((r) => [r.mal_id, r.slug])),
+    };
+    const owned = new Set(db.prepare('SELECT media_type, slug FROM user_entries WHERE user_id = ?').all(row.id).map((e) => `${e.media_type}:${e.slug}`));
+    const result = { added: 0, updated: 0, skipped: 0, unmatched: [] };
+    const missingToRecord = [];
+    db.exec('BEGIN');
+    try {
+      for (const item of input.items) {
+        const slug = slugByMal[item.type].get(item.malId);
+        if (!slug) { result.unmatched.push({ type: item.type, malId: item.malId }); missingToRecord.push(item); continue; }
+        const key = `${item.type}:${slug}`;
+        if (owned.has(key) && !input.overwrite) { result.skipped += 1; continue; }
+        upsertEntry(row.id, item.type, slug, item.status, undefined, item.score ? item.score : undefined, item.progress);
+        if (owned.has(key)) result.updated += 1; else { result.added += 1; owned.add(key); }
+      }
+      recordMissing(row.id, missingToRecord);
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
+    }
+    res.json(result);
   });
 
   app.delete('/api/user/entries/:mediaType/:slug', requireSiteUser, (req, res) => {
@@ -194,10 +376,70 @@ export const createApp = () => {
         anime: mine.anime.map(({ note, ...rest }) => rest),
         manga: mine.manga.map(({ note, ...rest }) => rest),
       },
+      reviews: listUserReviews(row.id),
       followers: counts.followers,
       following: counts.following,
       ...(viewer && viewer.id !== row.id ? { isFollowing: isFollowing(viewer.id, row.id) } : {}),
     });
+  });
+
+  // ---------- Notifications (bell) ----------
+  app.get('/api/user/notifications', requireSiteUser, (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    res.setHeader('Cache-Control', 'no-store');
+    res.json(listNotifications(row.id));
+  });
+
+  app.post('/api/user/notifications/read', requireSiteUser, writeLimiter, (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    const ids = Array.isArray(req.body?.ids) ? req.body.ids.map(Number) : null;
+    markNotificationsRead(row.id, req.body?.all === true ? null : (ids || []));
+    res.json({ ok: true });
+  });
+
+  // ---------- Community score + reviews ----------
+  const reviewLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many review changes. Try again later.' } });
+  const mediaParam = (req) => {
+    const mediaType = req.params.mediaType;
+    if (mediaType !== 'anime' && mediaType !== 'manga') throw httpError(404, 'Not found');
+    return mediaType;
+  };
+  const viewerId = (req) => {
+    const name = currentSiteUser(req);
+    const row = name ? getUserByUsername(name) : null;
+    return row && userTokenValid(row, req) ? row.id : null;
+  };
+
+  app.get('/api/community/:mediaType/:slug', (req, res) => {
+    const mediaType = mediaParam(req);
+    res.setHeader('Cache-Control', 'no-cache');
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const reviews = listReviews(mediaType, req.params.slug, { viewerId: viewerId(req), limit: 10, offset: (page - 1) * 10 });
+    res.json({ stats: communityStats(mediaType, req.params.slug), reviews: reviews.items, total: reviews.total, page });
+  });
+
+  app.post('/api/user/reviews', requireSiteUser, reviewLimiter, (req, res) => {
+    const input = siteReviewInput.parse(req.body);
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    if (!titleExists(input.mediaType, input.slug)) throw httpError(404, 'Title not found');
+    if (!addReview(row.id, input.mediaType, input.slug, input.body, input.spoiler)) throw httpError(409, 'You already reviewed this title');
+    notifyFollowersOfReview(row.id, input.mediaType, input.slug);
+    res.status(201).json({ ok: true });
+  });
+
+  app.get('/api/admin/reviews', requireAdmin, (req, res) => {
+    const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 15));
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const { items, total } = adminListReviews({ q: String(req.query.q || ''), limit, offset: (page - 1) * limit });
+    res.json({ items, total, page, pages: Math.max(1, Math.ceil(total / limit)) });
+  });
+
+  app.delete('/api/admin/reviews/:id', requireAdmin, (req, res) => {
+    if (!adminDeleteReview(Number(req.params.id))) throw httpError(404, 'Review not found');
+    res.json({ ok: true });
   });
 
   // Follow graph — follow, unfollow, and both connection lists.
@@ -207,7 +449,7 @@ export const createApp = () => {
     const viewer = getUserByUsername(currentSiteUser(req));
     if (!viewer) throw httpError(401, 'Not logged in');
     if (viewer.id === target.id) throw httpError(400, 'You cannot follow yourself');
-    followUser(viewer.id, target.id);
+    if (followUser(viewer.id, target.id)) notifyFollow(target.id, viewer.id);
     res.json({ following: true, followers: followCounts(target.id).followers });
   });
 
@@ -272,15 +514,22 @@ export const createApp = () => {
   });
 
   // ---------- Public catalog ----------
+  // Catalog reads are public and identical for everyone, so the CDN may serve
+  // them for a minute and refresh in the background (admin edits show up within
+  // ~1 minute; browsers revalidate every time because max-age is absent).
+  const publicCatalogCache = (res) => res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
   app.get('/api/anime', (req, res) => {
+    publicCatalogCache(res);
     res.json(db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem));
   });
   app.get('/api/anime/:slug', (req, res) => {
     const row = getBySlug(req.params.slug);
     if (!row) throw httpError(404, 'Anime not found');
+    publicCatalogCache(res);
     res.json(rowToItem(row));
   });
   app.get('/api/manga', (req, res) => {
+    publicCatalogCache(res);
     res.json(listManga());
   });
 
@@ -381,8 +630,10 @@ export const createApp = () => {
     // One pass builds the anime cover fallback map AND the anime hits.
     const animeBase = new Map();
     const hits = [];
+    const sfw = req.query.sfw === '1';
     for (const item of db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem)) {
       animeBase.set(item.slug, item.image || '');
+      if (sfw && isSensitiveItem(item)) continue;
       const titles = titlesOf(item);
       if (!titles.includes(query) && !titles.some((value) => value.includes(query))) continue;
       hits.push({
@@ -396,6 +647,7 @@ export const createApp = () => {
       });
     }
     for (const item of listManga()) {
+      if (sfw && isSensitiveItem(item)) continue;
       const titles = [...titlesOf(item), ...[item.titleFa].filter(Boolean).map(foldTitle)];
       if (!titles.includes(query) && !titles.some((value) => value.includes(query))) continue;
       hits.push({
@@ -422,6 +674,33 @@ export const createApp = () => {
       }));
 
     res.json({ items: hits.sort((a, b) => a.rank - b.rank).slice(0, 8), users });
+  });
+
+  // Full search page: relevance ranking, typo tolerance, filters and facets.
+  const searchLimiter = rateLimit({ windowMs: 60_000, limit: 90, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many searches' } });
+  app.get('/api/search/full', searchLimiter, (req, res) => {
+    const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
+    const text = String(req.query.q || '').slice(0, 80);
+    const result = searchCatalog({
+      q: text,
+      type: pick(String(req.query.type || ''), ['anime', 'manga'], 'all'),
+      genre: String(req.query.genre || '').slice(0, 40),
+      year: String(req.query.year || '').slice(0, 4),
+      format: String(req.query.format || '').slice(0, 30),
+      minScore: Math.min(10, Math.max(0, Number(req.query.min) || 0)),
+      sort: pick(String(req.query.sort || ''), ['score', 'new', 'old', 'az'], ''),
+      page: Math.max(1, Number.parseInt(req.query.page, 10) || 1),
+      sfw: req.query.sfw === '1',
+    });
+    const needle = foldTitle(text.trim());
+    const users = needle
+      ? db.prepare('SELECT username, bio, avatar_color FROM users ORDER BY id ASC').all()
+        .filter((row) => foldTitle(row.username).includes(needle))
+        .slice(0, 6)
+        .map((row) => ({ username: row.username, bio: String(row.bio || '').slice(0, 80), bloom: Number.parseInt(row.avatar_color, 10) || 12 }))
+      : [];
+    res.setHeader('Cache-Control', 'no-cache');
+    res.json({ ...result, users });
   });
 
   // ---------- Admin: list ----------
@@ -502,24 +781,25 @@ export const createApp = () => {
     res.json(rowToItem(getBySlug(row.slug)));
   });
 
-  // ---------- Admin: Jikan / MyAnimeList import ----------
-  app.get('/api/admin/jikan/search', requireAdmin, async (req, res) => {
+  // ---------- Admin: MyAnimeList import (Tenrai first, AniList as fallback) ----------
+  app.get('/api/admin/catalog/search', requireAdmin, async (req, res) => {
     const q = String(req.query.q || '').trim();
     if (q.length < 2) throw httpError(400, 'Type at least 2 characters');
+    const mediaType = req.query.type === 'manga' ? 'manga' : 'anime';
     let results;
     try {
-      results = await searchAnime(q);
+      results = mediaType === 'manga' ? await searchManga(q) : await searchAnime(q);
     } catch (error) {
-      // Jikan blocked/unreachable -> transparent AniList fallback (same response shape).
+      // Tenrai unreachable/refusing -> transparent AniList fallback (same response shape).
       if (!error?.network) throw error;
-      console.log(`[import] Jikan unreachable, falling back to AniList for search "${q}"`);
-      results = await anilistSearch(q);
+      console.log(`[import] Tenrai unreachable, falling back to AniList for ${mediaType} search "${q}"`);
+      results = await anilistSearch(q, mediaType);
     }
-    const known = new Map(db.prepare('SELECT mal_id, slug FROM anime WHERE mal_id IS NOT NULL').all().map((r) => [r.mal_id, r.slug]));
+    const known = new Map(db.prepare(`SELECT mal_id, slug FROM ${mediaType} WHERE mal_id IS NOT NULL`).all().map((r) => [r.mal_id, r.slug]));
     res.json(results.map((item) => ({ ...item, existingSlug: known.get(item.malId) || null })));
   });
 
-  app.post('/api/admin/jikan/import', requireAdmin, async (req, res) => {
+  app.post('/api/admin/catalog/import', requireAdmin, async (req, res) => {
     const malId = Number(req.body?.malId);
     if (!Number.isInteger(malId) || malId <= 0) throw httpError(400, 'malId must be a positive integer');
     const existing = getByMalId(malId);
@@ -591,22 +871,53 @@ export const createApp = () => {
     };
   };
 
+  // ---------- Bulk refresh as a background job ----------
+  // Refreshing every title takes minutes (one source request + cover per row). A single HTTP request that
+  // long is cut by the CDN / nginx timeout, so the admin starts a job and polls its progress instead.
+  // The job keeps running on the server even if the admin page is closed; clicking the button again
+  // while it runs just joins the running job.
+  const bulkJobs = new Map();
+  const bulkView = (job) => {
+    if (!job) return { running: false, total: 0, done: 0, idle: true };
+    const { running, total, done } = job;
+    const base = { running, total, done, updated: job.results.filter((r) => r.ok).length, failed: job.results.filter((r) => !r.ok).length };
+    return running ? base : { ...base, results: job.results };
+  };
+  const startBulk = (kind, rows, runRow, onFinish) => {
+    const running = bulkJobs.get(kind);
+    if (running?.running) return running;
+    const job = { running: true, total: rows.length, done: 0, results: [] };
+    bulkJobs.set(kind, job);
+    (async () => {
+      for (const row of rows) {
+        try {
+          job.results.push(await runRow(row));
+        } catch (error) {
+          job.results.push({ slug: row.slug, title: row.title, ok: false, error: error.message || String(error) });
+        }
+        job.done += 1;
+      }
+    })()
+      .catch((error) => console.error(`[${kind} refresh-all]`, error))
+      .finally(() => {
+        try { onFinish?.(); } catch (error) { console.error(`[${kind} refresh-all finish]`, error); }
+        job.running = false;
+      });
+    return job;
+  };
+
   // Refresh every manga row that has a MyAnimeList id (admin bulk action).
-  app.post('/api/admin/manga/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
+  app.post('/api/admin/manga/refresh-all', requireAdmin, writeLimiter, (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM manga WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
     const deferPersian = !inlinePersianEnabled();
-    const results = [];
-    for (const row of rows) {
-      try {
-        const { item, coverWarning, changes } = await refreshMangaFromSource(row, { deferPersian });
-        results.push({ slug: row.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) });
-      } catch (error) {
-        results.push({ slug: row.slug, title: row.title, ok: false, error: error.message || String(error) });
-      }
-    }
-    res.json({ updated: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, results });
+    startBulk('manga', rows, async (row) => {
+      const { item, coverWarning, changes } = await refreshMangaFromSource(row, { deferPersian });
+      return { slug: row.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) };
+    });
+    res.json(bulkView(bulkJobs.get('manga')));
   });
+  app.get('/api/admin/manga/refresh-all', requireAdmin, (req, res) => res.json(bulkView(bulkJobs.get('manga'))));
 
 // Queue 25: refresh one manga row (its button in the admin manga list).
 app.post('/api/admin/manga/:slug/refresh', requireAdmin, writeLimiter, async (req, res) => {
@@ -678,25 +989,25 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   // in the manga catalog with mal_id/score/cover.
   const BULK_MAX = 50;
 
-  // Shared manga fetch: Jikan first, AniList on network failure (draft keys: malId, title, category, year, format, score, genres, synopsis, information, availableAt, coverUrl).
-  // PROVIDER=anilist and the Jikan breaker both switch this to AniList directly —
+  // Shared manga fetch: Tenrai first, AniList on network failure (draft keys: malId, title, category, year, format, score, genres, synopsis, information, availableAt, coverUrl).
+  // PROVIDER=anilist and the Tenrai breaker both switch this to AniList directly —
   // a fresh server otherwise pays a connection timeout per import before the fallback.
-  const anilistDirect = () => jikanCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
+  const anilistDirect = () => tenraiCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
 
   const fetchMangaDraft = async (malId) => {
     let payload;
     try {
       if (anilistDirect()) payload = await anilistMangaDraft(malId);
-      else payload = mapJikanMangaToDraft(await fetchMangaFull(malId));
+      else payload = mapTenraiMangaToDraft(await fetchMangaFull(malId));
     } catch (error) {
       if (!error?.network) throw error;
-      console.log(`[bulk] Jikan unreachable, falling back to AniList for manga ${malId}`);
+      console.log(`[bulk] Tenrai unreachable, falling back to AniList for manga ${malId}`);
       payload = await anilistMangaDraft(malId);
     }
     return payload;
   };
 
-  app.post('/api/admin/anime/import-bulk', requireAdmin, writeLimiter, async (req, res) => {
+  const bulkImportHandler = async (req, res) => {
     const mediaType = req.body?.mediaType === 'manga' ? 'manga' : 'anime';
     // Queue 26: facet discovery mode — returns candidate rows, writes nothing.
     if (req.body?.discover) {
@@ -729,12 +1040,12 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
       ).all(...ids).map((r) => [r.mal_id, r]));
     })();
 
-    // Fast path (batched AniList): when Jikan is not usable (breaker open,
-    // JIKAN_DISABLED=1, or PROVIDER=anilist), every missing id resolves in ONE
+    // Fast path (batched AniList): when Tenrai is not usable (breaker open,
+    // TENRAI_DISABLED=1, or PROVIDER=anilist), every missing id resolves in ONE
     // batched GraphQL query and covers download concurrently — instead of N
-    // serial Jikan connection timeouts + N throttled AniList queries.
-    // With a healthy Jikan, per-item Jikan-first behavior is preserved.
-    let fastMode = jikanCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
+    // serial Tenrai connection timeouts + N throttled AniList queries.
+    // With a healthy Tenrai, per-item Tenrai-first behavior is preserved.
+    let fastMode = tenraiCircuitOpen() || /anilist/i.test(String(process.env.PROVIDER || ''));
     let fastDrafts = new Map();   // malId -> draft (same shape as single import)
     const fastMissing = new Set(); // ids the provider has no row for
     const fastCovers = new Map(); // malId -> { token, warning } (staged temp covers)
@@ -746,10 +1057,10 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
         many = mediaType === 'anime' ? await anilistImportMany(need) : await anilistMangaDraftMany(need);
       } catch (error) {
         // AniList down (routine outage / datacenter block): hand the batch back
-        // to the per-item loop, which transparently uses Jikan where it's
+        // to the per-item loop, which transparently uses Tenrai where it's
         // reachable (the deployment's datacenter IPs usually can). With
-        // JIKAN_DISABLED the caller asked for AniList-only, so rethrow.
-        if (process.env.JIKAN_DISABLED === '1') throw error;
+        // TENRAI_DISABLED the caller asked for AniList-only, so rethrow.
+        if (process.env.TENRAI_DISABLED === '1') throw error;
         fastMode = false;
         console.log(`[bulk] AniList batch unavailable (${error.message}); falling back to per-item providers`);
       }
@@ -926,18 +1237,20 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     }
     if (imported > 0) exportData();
     res.json({ mediaType, preview, imported, exists, failed, missing, results });
-  });
+  };
+  app.locals.bulkImport = bulkImportHandler;
+  app.post('/api/admin/anime/import-bulk', requireAdmin, writeLimiter, bulkImportHandler);
 
-  // Shared: fetch an anime's latest external data (Jikan first unless disabled/broken,
+  // Shared: fetch an anime's latest external data (Tenrai first unless disabled/broken,
   // transparent AniList fallback) + temp cover.
   const fetchExternalDraft = async (malId) => {
     let payload;
     try {
       if (anilistDirect()) payload = await anilistImport(malId);
-      else payload = mapJikanToDraft(await fetchAnimeFull(malId));
+      else payload = mapTenraiToDraft(await fetchAnimeFull(malId));
     } catch (error) {
       if (!error?.network) throw error;
-      console.log(`[import] Jikan unreachable, falling back to AniList for MAL ${malId}`);
+      console.log(`[import] Tenrai unreachable, falling back to AniList for MAL ${malId}`);
       payload = await anilistImport(malId);
     }
     const { coverUrl, ...draft } = payload;
@@ -997,23 +1310,18 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     res.json({ item, coverWarning, changes });
   });
 
-  // Refresh every entry that has a MyAnimeList id (admin bulk action).
-  app.post('/api/admin/anime/refresh-all', requireAdmin, writeLimiter, async (req, res) => {
+  // Refresh every entry that has a MyAnimeList id (admin bulk action; see the job helpers above).
+  app.post('/api/admin/anime/refresh-all', requireAdmin, writeLimiter, (req, res) => {
     cleanupTemp();
     const rows = db.prepare('SELECT * FROM anime WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
     const deferPersian = !inlinePersianEnabled();
-    const results = [];
-    for (const row of rows) {
-      try {
-        const { item, coverWarning, changes } = await refreshRowFromSource(row, { deferPersian });
-        results.push({ slug: item.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) });
-      } catch (error) {
-        results.push({ slug: row.slug, title: row.title, ok: false, error: error.message || String(error) });
-      }
-    }
-    exportData();
-    res.json({ updated: results.filter((r) => r.ok).length, failed: results.filter((r) => !r.ok).length, results });
+    startBulk('anime', rows, async (row) => {
+      const { item, coverWarning, changes } = await refreshRowFromSource(row, { deferPersian });
+      return { slug: item.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) };
+    }, () => exportData());
+    res.json(bulkView(bulkJobs.get('anime')));
   });
+  app.get('/api/admin/anime/refresh-all', requireAdmin, (req, res) => res.json(bulkView(bulkJobs.get('anime'))));
 
   // ---------- Persian backfill job ----------
   // With the local NLLB engine, bulk import inserts rows English-only and this
@@ -1151,6 +1459,118 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     });
   });
 
+  // ---------- Translation review queue ----------
+  // Auto-translated Persian synopses ({ fa, en, auto: true }) wait here until an
+  // admin approves (optionally after editing) them. Approving drops the auto flag,
+  // which also protects the text from later bulk re-translation.
+  const REVIEW_TABLES = { anime: 'anime', manga: 'manga' };
+  const pendingReviewRows = (table, q = '') => {
+    const rows = db.prepare(
+      `SELECT id, slug, title, synopsis FROM ${table} WHERE synopsis LIKE '%"auto":true%' ORDER BY id ASC`,
+    ).all();
+    const needle = q.trim().toLowerCase();
+    const list = [];
+    for (const row of rows) {
+      const obj = parseSynopsisObj(row.synopsis);
+      if (!obj || obj.auto !== true || !String(obj.fa || '').trim()) continue;
+      if (needle && !`${row.title} ${row.slug}`.toLowerCase().includes(needle)) continue;
+      list.push({ table, slug: row.slug, title: row.title, en: String(obj.en || '').trim(), fa: String(obj.fa).trim() });
+    }
+    return list;
+  };
+
+  app.get('/api/admin/translate/review', requireAdmin, (req, res) => {
+    const media = String(req.query.media || 'both').toLowerCase();
+    const tables = media === 'anime' ? ['anime'] : media === 'manga' ? ['manga'] : ['anime', 'manga'];
+    const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
+    const offset = Math.max(Number(req.query.offset) || 0, 0);
+    const q = String(req.query.q || '').slice(0, 80);
+    const all = tables.flatMap((table) => pendingReviewRows(table, q));
+    res.json({ total: all.length, items: all.slice(offset, offset + limit) });
+  });
+
+  app.post('/api/admin/translate/review/:media/:slug', requireAdmin, writeLimiter, async (req, res) => {
+    const table = REVIEW_TABLES[req.params.media];
+    if (!table) throw httpError(400, 'Unknown media type');
+    const row = db.prepare(`SELECT id, synopsis FROM ${table} WHERE slug = ?`).get(req.params.slug);
+    if (!row) throw httpError(404, 'Not found');
+    const obj = parseSynopsisObj(row.synopsis);
+    const en = getEnglishSource(row.synopsis);
+    const action = String(req.body?.action || 'approve');
+    let fa;
+    let auto = false;
+    if (action === 'retranslate') {
+      if (!en) throw httpError(400, 'No English source to translate');
+      fa = await translateSynopsis(en);
+      if (!fa) throw httpError(502, 'Translation service returned nothing');
+      auto = true;
+    } else if (action === 'approve') {
+      fa = String(req.body?.fa ?? obj?.fa ?? '').trim();
+      if (!fa) throw httpError(400, 'Persian text is empty');
+      if (fa.length > 8000) throw httpError(400, 'Persian text is too long');
+    } else {
+      throw httpError(400, 'Unknown action');
+    }
+    db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
+      .run(JSON.stringify({ fa, en, ...(auto ? { auto: true } : {}) }), row.id);
+    exportData();
+    res.json({ ok: true, fa, auto });
+  });
+
+  app.get('/api/admin/translate/status', requireAdmin, (req, res) => {
+    let missing = 0;
+    let pending = 0;
+    for (const table of ['anime', 'manga']) {
+      missing += missingPersianRows(table).length;
+      pending += pendingReviewRows(table).length;
+    }
+    res.json({ missing, pending });
+  });
+
+  // Approve many machine translations at once, exactly as they are stored
+  // (the auto flag is dropped, which also shields them from re-translation).
+  app.post('/api/admin/translate/review-bulk', requireAdmin, writeLimiter, (req, res) => {
+    const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 50) : [];
+    if (items.length === 0) throw httpError(400, 'No items given');
+    let approved = 0;
+    for (const item of items) {
+      const table = REVIEW_TABLES[item?.media];
+      if (!table) continue;
+      const row = db.prepare(`SELECT id, synopsis FROM ${table} WHERE slug = ?`).get(String(item.slug || ''));
+      const obj = row ? parseSynopsisObj(row.synopsis) : null;
+      if (!obj || obj.auto !== true || !String(obj.fa || '').trim()) continue;
+      db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
+        .run(JSON.stringify({ fa: obj.fa, en: obj.en }), row.id);
+      approved += 1;
+    }
+    if (approved > 0) exportData();
+    res.json({ ok: true, approved });
+  });
+
+  // ---------- VPN (local Xray proxy for the site's own requests) ----------
+  app.get('/api/admin/vpn', requireAdmin, (req, res) => res.json(vpnStatus()));
+  const vpnKind = (req) => (req.params?.kind || req.body?.kind || '');
+  // Save a new config (v2ray link or WireGuard .conf text) and switch to it.
+  app.post('/api/admin/vpn', requireAdmin, writeLimiter, async (req, res) => {
+    res.json(await applyVpn(String(req.body?.kind || ''), String(req.body?.config || '')));
+  });
+  // Switch to an already-saved profile.
+  app.post('/api/admin/vpn/activate', requireAdmin, writeLimiter, async (req, res) => res.json(await activateVpn(vpnKind(req))));
+  app.post('/api/admin/vpn/test', requireAdmin, writeLimiter, async (req, res) => res.json(await testVpn()));
+  app.delete('/api/admin/vpn', requireAdmin, writeLimiter, async (req, res) => res.json(await turnOffVpn()));
+  app.delete('/api/admin/vpn/:kind', requireAdmin, writeLimiter, async (req, res) => res.json(await deleteVpnProfile(vpnKind(req))));
+
+  // ---------- Auto-import of the current season ----------
+  app.get('/api/admin/auto-import', requireAdmin, (req, res) => res.json(getAutoImportState()));
+  app.post('/api/admin/auto-import', requireAdmin, writeLimiter, (req, res) => {
+    setAutoImportEnabled(req.body?.enabled === true);
+    res.json(getAutoImportState());
+  });
+  app.post('/api/admin/auto-import/run', requireAdmin, writeLimiter, async (req, res) => {
+    if (getAutoImportState().running) throw httpError(429, 'An auto-import run is already in flight');
+    res.json(await runAutoImport(bulkImportHandler));
+  });
+
   app.get('/api/admin/temp-cover/:token', requireAdmin, (req, res) => {
     if (!/^[a-f0-9]{24}\.(jpg|png|webp)$/.test(req.params.token)) throw httpError(400, 'Bad token');
     const file = path.join(TMP_DIR, req.params.token);
@@ -1159,21 +1579,27 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     res.sendFile(file);
   });
 
+  registerExtrasRoutes(app);
+  registerPeopleRoutes(app);
+  registerMissingRoutes(app, { requireAdmin, writeLimiter });
+  registerHealthRoutes(app, { requireAdmin, writeLimiter });
+
   // ---------- Static files ----------
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
-  // Blob mode: /covers paths reaching the function (i.e. files absent from the
-  // static layer) resolve from the warm-instance mirror or redirect to the
-  // durable store; every other environment keeps plain static serving.
-  app.use('/covers', (req, res, next) => {
-    if (BLOB_MODE) {
-      handleCoverRequest(req, res).catch(next);
-      return;
-    }
-    next();
-  }, express.static(COVERS_DIR));
+  app.get('/covers/:name', coverResizeHandler(COVERS_DIR));
+  app.use('/covers', express.static(COVERS_DIR, { maxAge: '1d' }));
+  registerSeoRoutes(app);
   const dist = path.join(ROOT_DIR, 'dist');
   if (fs.existsSync(path.join(dist, 'index.html'))) {
-    app.use(express.static(dist, { index: false }));
+    app.use(express.static(dist, {
+      index: false,
+      setHeaders: (res, file) => {
+        // Vite fingerprints /assets/*, so they can be cached for a year; the
+        // service worker and manifest must always be revalidated.
+        if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        else if (/sw\.js$|manifest\.webmanifest$/.test(file)) res.setHeader('Cache-Control', 'no-cache');
+      },
+    }));
     app.use((req, res, next) => (req.method === 'GET' ? res.sendFile(path.join(dist, 'index.html')) : next()));
   } else {
     app.get('/', (req, res) => res.type('text').send('API is running. For the website run "npm run build" first, or use "npm start" (dev mode, http://127.0.0.1:5173).'));

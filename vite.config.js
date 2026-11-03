@@ -52,6 +52,19 @@ export default defineConfig({
   // covers into public/covers) while the dev server runs; the watcher must not
   // full-reload the page because of those generated files, or long admin runs
   // (e.g. the bulk import) lose their live state.
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return undefined;
+          if (/[\\/]node_modules[\\/](react|react-dom|react-router|react-router-dom|scheduler)[\\/]/.test(id)) return 'vendor-react';
+          if (/[\\/]node_modules[\\/](swiper|motion|framer-motion)[\\/]/.test(id)) return 'vendor-ui';
+          if (/[\\/]node_modules[\\/]lucide-react[\\/]/.test(id)) return 'vendor-icons';
+          return undefined;
+        },
+      },
+    },
+  },
   server: {
     proxy: { '/api': api },
     watch: { ignored: ['**/public/data/**', '**/public/covers/**'] },

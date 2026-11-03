@@ -7,19 +7,10 @@ export const ROOT_DIR = path.resolve(SERVER_DIR, '..');
 export const COVERS_DIR = path.join(ROOT_DIR, 'public', 'covers');
 export const TMP_DIR = path.join(SERVER_DIR, 'tmp');
 
-// Two engines behind one handle: the Vercel deployment runs Postgres (Neon)
-// when POSTGRES_URL/DATABASE_URL is set; every other environment keeps Node's
-// built-in SQLite (>= 22.13, no native module). Both expose the same
-// prepare(...).all/get/run surface — server/pg.js performs the dialect
-// translation for the Postgres path, so repo/users/auth/app SQL is shared.
+// Node's built-in SQLite (>= 22.13, no native module).
 let db;
 export { db };
 
-if (process.env.POSTGRES_URL || process.env.DATABASE_URL) {
-  const pg = await import('./pg.js');
-  await pg.ensurePgSchema();
-  db = pg.db;
-} else {
 const originalEmitWarning = process.emitWarning;
 process.emitWarning = (warning, ...rest) => (String(warning).includes('SQLite') ? undefined : originalEmitWarning.call(process, warning, ...rest));
 const { DatabaseSync } = await import('node:sqlite');
@@ -144,6 +135,25 @@ if (!updatedAtColumn.n) {
 const progressColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('user_entries') WHERE name = 'progress'").get();
 if (!progressColumn.n) db.exec(`ALTER TABLE user_entries ADD COLUMN progress INTEGER`);
 
+// Migration: email accounts (verification + password reset by email).
+const emailColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('users') WHERE name = 'email'").get();
+if (!emailColumn.n) {
+  db.exec(`ALTER TABLE users ADD COLUMN email TEXT`);
+  db.exec(`ALTER TABLE users ADD COLUMN email_verified_at TEXT`);
+}
+db.exec(`
+CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email ON users(email COLLATE NOCASE) WHERE email IS NOT NULL;
+CREATE TABLE IF NOT EXISTS auth_tokens (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  kind TEXT NOT NULL CHECK (kind IN ('verify', 'reset')),
+  token_hash TEXT NOT NULL UNIQUE,
+  expires_at INTEGER NOT NULL,
+  created_at INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_auth_tokens_user ON auth_tokens(user_id, kind);
+`);
+
 // Migration: MyAnimeList ids + scores on manga (bulk import + /manga/{id} links).
 const mangaMalIdColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('manga') WHERE name = 'mal_id'").get();
 if (!mangaMalIdColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN mal_id INTEGER`);
@@ -192,4 +202,3 @@ if (userEntriesSql && !userEntriesSql.includes("'on_hold'")) {
     COMMIT;
   `);
 }
-} // end sqlite branch (Postgres branch returns the pg shim above)

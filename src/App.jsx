@@ -11,29 +11,37 @@ import { Input } from '@/components/ui/input';
 import { Skeleton } from '@/components/ui/skeleton';
 import NumberTicker from '@/components/tarhak/NumberTicker.jsx';
 const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
-import { loadAnimeCatalog, loadMangaCatalog, buildSchedule, mediaHref, foldTitle, currentWeekday } from './catalog.js';
-import { CatalogContext, MangaCatalogContext, useCatalog, useMangaCatalog, withMangaImages } from './catalog-context.jsx';
+import { loadAnimeCatalog, loadMangaCatalog, buildSchedule, mediaHref, foldTitle, currentWeekday, WEEKDAY_ORDER } from './catalog.js';
+import { CatalogContext, MangaCatalogContext, useCatalog, useMangaCatalog, useVisibleCatalog, useVisibleMangaCatalog, withMangaImages } from './catalog-context.jsx';
+import { getShowSensitive, isSensitive, rankKey, setShowSensitive, useShowSensitive } from './lib/catalog-rules.js';
 import { useUser, UserProvider } from './user.jsx';
-import { synopsisText, selectHomePicks } from './home-data.js';
+import { useTitleExtras, hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from './components/TitleExtras.jsx';
+import { synopsisText, selectHomePicks, getCurrentSeasonInfo, getItemSeasonInfo } from './home-data.js';
 import { ThemeProvider, useTheme } from './theme-context.jsx';
 import { AuthPage, UserDashboard, UserPublicProfile } from './userPages.jsx';
 import { DEFAULT_LANG, L, SiteLangContext, makeSiteT, useSiteLang } from './i18n.js';
 import {
-  communitySections,
-  directoryContent,
-  editorialContent,
-  homeContent,
   primaryNavigation,
   sectionPages,
   sidebarSections,
 } from './sectionData.js';
 import { useIsMobile } from '@/hooks/use-is-mobile';
+import SearchPage from './searchPage.jsx';
+import NotificationsSheet from '@/components/NotificationsSheet';
+import { useNotifications } from '@/hooks/use-notifications';
+import { useAiringAlerts } from '@/hooks/use-airing-alerts';
+import CommunitySection from '@/components/CommunitySection';
+import ImportListPage from './importListPage.jsx';
+import PeoplePage from './peoplePages.jsx';
+import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
+import { useScrollMemory } from '@/hooks/use-scroll-memory';
 import MobileShell from '@/components/mobile/MobileShell';
 import MobileHomePage from '@/components/mobile/MobileHomePage';
 import MobileCatalogPage from '@/components/mobile/MobileCatalogPage';
 import MobileRankingPage from '@/components/mobile/MobileRankingPage';
 import MobileSeasonalPage from '@/components/mobile/MobileSeasonalPage';
 import MobileDetailPage from '@/components/mobile/MobileDetailPage';
+import { coverUrl } from '@/lib/cover';
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
 
@@ -74,6 +82,28 @@ const highlightMatch = (title, query) => {
   return [text.slice(0, index), <b key="hit">{text.slice(index, index + q.length)}</b>, text.slice(index + q.length)];
 };
 
+function HeaderBell() {
+  const { t } = useSiteLang();
+  const user = useUser();
+  const alerts = useAiringAlerts();
+  const notifications = useNotifications(Boolean(user.me));
+  const [open, setOpen] = useState(false);
+  if (!user.me) return null;
+  const count = (alerts.unread || 0) + (notifications.unread || 0);
+  return (
+    <>
+      <button type="button" className="header-bell" onClick={() => setOpen(true)} aria-label={count ? t('notifAria', { n: count }) : t('notifTitle')}>
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+        </svg>
+        {count > 0 && <span className="header-bell__badge" aria-hidden="true">{count}</span>}
+      </button>
+      <NotificationsSheet open={open} onClose={() => setOpen(false)} alerts={alerts} notifications={notifications} />
+    </>
+  );
+}
+
 function SiteHeader() {
   const navigate = useNavigate();
   const { lang, setLang, t } = useSiteLang();
@@ -101,7 +131,7 @@ function SiteHeader() {
       const controller = new AbortController();
       fetchRef.current = controller;
       try {
-        const data = await fetch(`/api/search?q=${encodeURIComponent(query)}`, { signal: controller.signal }).then((res) => res.json());
+        const data = await fetch(`/api/search?q=${encodeURIComponent(query)}${getShowSensitive() ? '' : '&sfw=1'}`, { signal: controller.signal }).then((res) => res.json());
         fetchRef.current = null;
         const items = Array.isArray(data.items) ? data.items : [];
         const users = (Array.isArray(data.users) ? data.users : [])
@@ -142,10 +172,11 @@ function SiteHeader() {
   const handleSearch = (event) => {
     event.preventDefault();
     if (!search.trim()) return;
-    // Enter picks the highlighted option, or the first one otherwise.
-    const picked = activeIndex >= 0 ? suggestions[activeIndex] : suggestions[0];
-    if (picked) { go(picked); return; }
-    setSearchMessage(t('noMatch'));
+    // Enter opens a highlighted option; otherwise it shows every result.
+    if (activeIndex >= 0 && suggestions[activeIndex]) { go(suggestions[activeIndex]); return; }
+    const text = search.trim();
+    resetSearch();
+    navigate(`/search?q=${encodeURIComponent(text)}`);
   };
 
   const handleSearchKeys = (event) => {
@@ -191,6 +222,7 @@ function SiteHeader() {
             {t('langButton')}
           </Button>
           <ThemeSwitch />
+          <HeaderBell />
           <form
             className="search-box"
             onSubmit={handleSearch}
@@ -260,7 +292,7 @@ function SiteHeader() {
                         onClick={() => resetSearch()}
                       >
                         {entry.image
-                          ? <img src={entry.image} alt="" loading="lazy" />
+                          ? <img src={coverUrl(entry.image, 240)} alt="" loading="lazy" />
                           : <span className="search-opt-blank" aria-hidden="true" />}
                         <span className="search-opt-copy">
                           <span className="search-opt-title" dir="auto">{highlightMatch(entry.title, search)}</span>
@@ -273,11 +305,15 @@ function SiteHeader() {
                     )}
                   </li>
                 ))}
+                <li role="presentation" className="search-all">
+                  <Link to={`/search?q=${encodeURIComponent(search.trim())}`} onClick={() => resetSearch()}>{t('searchAllResults', { q: search.trim() })}</Link>
+                </li>
               </ul>
             )}
             {suggestOpen && search.trim() && suggestions.length === 0 && (
               <div id="search-suggest" className="search-suggest search-suggest-empty">
                 <span role="status">{t('noMatch')}</span>
+                <Link className="search-all-link" to={`/search?q=${encodeURIComponent(search.trim())}`} onClick={() => resetSearch()}>{t('searchAllResults', { q: search.trim() })}</Link>
               </div>
             )}
             {searchMessage && !suggestOpen && <span className="search-message" role="status">{searchMessage}</span>}
@@ -317,7 +353,7 @@ function AnimeCard({ item, rank }) {
     <article className="anime-card">
       {rank && <span className="card-rank">{String(rank).padStart(2, '0')}</span>}
       <Link className="anime-cover" to={href} aria-label={`${t(isManga ? 'breadcrumbManga' : 'breadcrumbAnime')}: ${title}`}>
-        <img src={item.image} alt={title} loading="lazy" />
+        <img src={coverUrl(item.image, 360)} alt={title} loading="lazy" />
       </Link>
       <div className="anime-info">
         <Link to={href} className="anime-title">{title}</Link>
@@ -447,45 +483,6 @@ function UserPanel() {
   );
 }
 
-function FriendUpdates() {
-  const { lang, t } = useSiteLang();
-  const animeCatalog = useCatalog();
-  return (
-    <div className="panel side-mini">
-      <SectionHeading title={t('friendActivity')} to="/members" action="allActivity" />
-      <ul className="friend-updates">
-        {homeContent.friendUpdates.map((update) => {
-          const anime = animeCatalog.find((item) => item.slug === update.slug);
-          return (
-            <li key={update.name}>
-              <span className="friend-avatar" aria-hidden="true">{update.name[0]}</span>
-              <span className="friend-update-copy">
-                <strong>{update.name}</strong>
-                <span>{L(update.action, lang)}</span>
-                {anime && <Link to={mediaHref(anime)}>{typeof anime.title === 'string' ? anime.title : L(anime.title, lang)}</Link>}
-              </span>
-            </li>
-          );
-        })}
-      </ul>
-      <p className="sample-data-note">{t('friendNote')}</p>
-    </div>
-  );
-}
-
-function ClubPanel() {
-  const { lang, t } = useSiteLang();
-  const clubs = directoryContent.clubs;
-  return (
-    <div className="panel side-mini">
-      <SectionHeading title={t('clubs')} to="/clubs" action="allClubs" />
-      <ul className="compact-link-list">
-        {clubs.items.slice(0, 4).map((club) => <li key={L(club, lang)}><Link to="/clubs">{L(club, lang)}</Link></li>)}
-      </ul>
-    </div>
-  );
-}
-
 function CompactRanking({ title, items, to }) {
   const { lang, t } = useSiteLang();
   return (
@@ -502,45 +499,18 @@ function CompactRanking({ title, items, to }) {
           </li>
         ))}
       </ol>
-      <p className="sample-data-note">{t('rankingNote')}</p>
-    </div>
-  );
-}
-
-function EpisodeUpdates() {
-  const { lang, t } = useSiteLang();
-  const animeCatalog = useCatalog();
-  return (
-    <div className="episode-update-list">
-      {homeContent.episodeUpdates.map((update) => {
-        const anime = animeCatalog.find((item) => item.slug === update.slug);
-        if (!anime) return null;
-        return (
-          <article className="episode-update" key={update.slug}>
-            <Link className="episode-update-cover" to={mediaHref(anime)} aria-label={anime.title}>
-              <img src={anime.image} alt={anime.title} loading="lazy" />
-            </Link>
-            <div>
-              <Link className="episode-update-title" to={mediaHref(anime)}>{anime.title}</Link>
-              <span>{L(update.label, lang)} · {L(update.note, lang)}</span>
-            </div>
-            <Link className="episode-update-action" to="/episodes">{t('open')}</Link>
-          </article>
-        );
-      })}
-      <p className="media-note">{t('mediaNote')}</p>
     </div>
   );
 }
 
 function SchedulePanel() {
   const { t } = useSiteLang();
-  const animeCatalog = useCatalog();
+  const animeCatalog = useVisibleCatalog();
   const entries = useMemo(() => buildSchedule(animeCatalog), [animeCatalog]);
   const today = useMemo(() => currentWeekday(), []);
   return (
     <div className="panel side-mini">
-      <SectionHeading title={t('airingSchedule')} to="/seasonal" action="seasonAction" />
+      <SectionHeading title={t('airingSchedule')} to="/schedule" action="seasonAction" />
       <ul className="schedule-list">
         {entries.map((entry) => {
           const anime = animeCatalog.find((item) => item.slug === entry.slug);
@@ -548,7 +518,7 @@ function SchedulePanel() {
           return (
             <li key={entry.slug} className={entry.day === today ? 'is-today' : undefined}>
               <span className="schedule-title">
-                <img className="schedule-cover" src={anime.image} alt="" loading="lazy" />
+                <img className="schedule-cover" src={coverUrl(anime.image, 240)} alt="" loading="lazy" />
                 <Link to={mediaHref(anime)}>{entry.title}</Link>
               </span>
               <span className="day-badge">
@@ -566,11 +536,40 @@ function SchedulePanel() {
   );
 }
 
+// Full week, one block per weekday, today highlighted; titles without a day go last.
+function WeeklySchedule({ items }) {
+  const { t } = useSiteLang();
+  const today = useMemo(() => currentWeekday(), []);
+  const days = useMemo(() => WEEKDAY_ORDER.map((day) => ({ day, list: items.filter((item) => item.airingDay === day) })), [items]);
+  if (days.every((d) => d.list.length === 0)) return <div className="sample-data-note">{t('scheduleEmpty')}</div>;
+  return (
+    <div className="week-schedule">
+      {days.map(({ day, list }) => (
+        <section key={day} className={`week-day${day === today ? ' is-today' : ''}`} aria-labelledby={`wd-${day}`}>
+          <h2 id={`wd-${day}`}>{t(dayMessages[day])}{day === today && <strong className="today-chip">{t('todayBadge')}</strong>}</h2>
+          {list.length === 0 ? <p className="media-note">{t('nothingToday')}</p> : (
+            <ul>
+              {list.map((item) => (
+                <li key={item.slug}>
+                  <Link className="airing-today-item" to={mediaHref(item)} dir="auto">
+                    <img src={coverUrl(item.image, 240)} alt="" loading="lazy" />
+                    <span>{item.title}</span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+      ))}
+    </div>
+  );
+}
+
 // Weekly schedule strip for the seasonal page: the titles that air on the
 // viewer's current weekday, or nothing when the day has no premieres.
 function AiringToday() {
   const { t } = useSiteLang();
-  const animeCatalog = useCatalog();
+  const animeCatalog = useVisibleCatalog();
   const today = useMemo(() => currentWeekday(), []);
   const items = useMemo(() => animeCatalog.filter((item) => item.airingDay === today), [animeCatalog, today]);
   if (items.length === 0) return null;
@@ -584,7 +583,7 @@ function AiringToday() {
         {items.map((item) => (
           <li key={item.slug}>
             <Link className="airing-today-item" to={mediaHref(item)} dir="auto">
-              <img src={item.image} alt="" loading="lazy" />
+              <img src={coverUrl(item.image, 240)} alt="" loading="lazy" />
               <span>{item.title}</span>
             </Link>
           </li>
@@ -594,44 +593,11 @@ function AiringToday() {
   );
 }
 
-function QuickLinks() {
-  const { t } = useSiteLang();
-  return (
-    <div className="panel side-mini">
-      <SectionHeading title={t('quickLinks')} to="/community" action="explore" />
-      <ul className="quick-list">
-        <li><Link to="/seasonal"><span>{t('quickSeasonalCharts')}</span><span className="quick-arrow" aria-hidden="true">←</span></Link></li>
-        <li><Link to="/recommendations"><span>{t('quickRecommendations')}</span><span className="quick-arrow" aria-hidden="true">←</span></Link></li>
-        <li><Link to="/forums"><span>{t('quickDiscussions')}</span><span className="quick-arrow" aria-hidden="true">←</span></Link></li>
-        <li><Link to="/top/manga"><span>{t('quickTopManga')}</span><span className="quick-arrow" aria-hidden="true">←</span></Link></li>
-      </ul>
-    </div>
-  );
-}
-
-function StoryRows({ items, destination }) {
-  const { lang, t } = useSiteLang();
-  return (
-    <div className="story-list">
-      {items.map((item) => (
-        <article className="story-row" key={item.to ?? L(item.title, lang)}>
-          <div>
-            <span className="story-category">{L(item.category, lang)}</span>
-            <h3>{L(item.title, lang)}</h3>
-            <p>{L(item.body || item.description, lang)}</p>
-          </div>
-          {destination && <Link to={destination}>{t('read')}</Link>}
-        </article>
-      ))}
-    </div>
-  );
-}
-
 function HomePage() {
   const { lang, t } = useSiteLang();
   const isMobile = useIsMobile();
-  const animeCatalog = useCatalog();
-  const mangaCatalog = useMangaCatalog();
+  const animeCatalog = useVisibleCatalog();
+  const mangaCatalog = useVisibleMangaCatalog();
   const picks = selectHomePicks({ animeCatalog, mangaCatalog });
   const { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga } = picks;
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
@@ -680,7 +646,7 @@ function HomePage() {
             {featured && (
               <section className="hero panel" style={{ '--hero-image': `url("${featured.image}")` }}>
                 <div className="hero-poster" aria-hidden="true">
-                  <img src={featured.image} alt="" loading="lazy" />
+                  <img src={coverUrl(featured.image, 480)} alt="" loading="lazy" />
                 </div>
                 <div className="hero-content">
                   <Badge variant="secondary" className="hero-eyebrow">{t('featuredLabel')}</Badge>
@@ -705,7 +671,7 @@ function HomePage() {
                 {topAnime.slice(0, 3).map((item) => (
                   <div key={item.slug} className="featured-series-card">
                     <Link to={mediaHref(item)} aria-label={item.title}>
-                      <img src={item.image} alt={item.title} loading="lazy" />
+                      <img src={coverUrl(item.image, 360)} alt={item.title} loading="lazy" />
                     </Link>
                     <div className="featured-series-info">
                       <h3><Link to={mediaHref(item)}>{item.title}</Link></h3>
@@ -731,34 +697,9 @@ function HomePage() {
               <SectionHeading title={t('trendingNow')} to="/anime" action="explore" />
               <AnimeShelf items={trendingAnime} />
             </section>
-            <section>
-              <SectionHeading title={t('homeDiscussions')} to="/forums" action="openForums" />
-              <StoryRows items={homeContent.discussions} destination="/forums" />
-            </section>
-            <section>
-              <SectionHeading title={t('latestReviews')} to="/reviews" action="allReviews" />
-              <StoryRows items={editorialContent.reviews.items} destination="/reviews" />
-            </section>
-            <section>
-              <SectionHeading title={t('latestRecs')} to="/recommendations" action="findAWatch" />
-              <StoryRows items={editorialContent.recommendations.items} destination="/recommendations" />
-            </section>
             <section id="seasonalLineup">
               <SectionHeading title={t('seasonalLineup')} to="/seasonal" action="calendar" />
               <AnimeShelf items={currentSeason} />
-            </section>
-            <section>
-              <SectionHeading title={t('episodeUpdates')} to="/episodes" action="episodeHub" />
-              <EpisodeUpdates />
-            </section>
-            <section>
-              <SectionHeading title={t('popularTrailers')} to="/videos" action="browseVideos" />
-              <AnimeShelf items={sortBy(animeCatalog, (anime) => -anime.sampleScore).slice(0, 6)} />
-              <p className="media-note">{t('trailerNote')}</p>
-            </section>
-            <section>
-              <SectionHeading title={t('animeMangaNews')} to="/news" action="allNews" />
-              <StoryRows items={editorialContent.news.items} destination="/news" />
             </section>
             <section>
               <SectionHeading title={t('topAiring')} to="/top/anime" action="fullRanking" />
@@ -770,11 +711,7 @@ function HomePage() {
             </section>
             <section>
               <SectionHeading title={t('mostPopular')} to="/top/anime" action="fullRanking" />
-              <AnimeShelf items={sortBy(animeCatalog, (anime) => -anime.sampleScore).slice(0, 6)} />
-            </section>
-            <section>
-              <SectionHeading title={t('mangaStoreShelf')} to="/store" action="readingShelf" />
-              <AnimeShelf items={mangaItems.slice(0, 5)} />
+              <AnimeShelf items={sortBy(animeCatalog, rankKey).slice(0, 6)} />
             </section>
             {freshManga.length > 0 && (
               <section id="freshManga">
@@ -782,79 +719,18 @@ function HomePage() {
                 <AnimeShelf items={freshManga} />
               </section>
             )}
-            <section>
-              <SectionHeading title={t('animeSuggestions')} to="/recommendations" action="browseRecs" />
-              <AnimeShelf items={trendingAnime.slice(0, 4)} />
-            </section>
-            <section>
-              <SectionHeading title={t('mangaSuggestions')} to="/recommendations" action="browseRecs" />
-              <AnimeShelf items={mangaItems.slice(1, 5)} />
-            </section>
-            <section>
-              <SectionHeading title={t('editorialDesk')} to="/news" action="allStories" />
-              <StoryRows items={editorialContent.news.items.slice(0, 2)} destination="/articles" />
-            </section>
           </main>
           <SiteSidebar />
           <aside className="right-column">
             <UserPanel />
-            <FriendUpdates />
-            <ClubPanel />
             <SchedulePanel />
             <CompactRanking title={t('topAiring')} items={airingAnime} to="/top/anime" />
             <CompactRanking title={t('upcomingRanking')} items={currentSeason} to="/seasonal" />
-            <CompactRanking title={t('popularRanking')} items={sortBy(animeCatalog, (anime) => -anime.sampleScore)} to="/top/anime" />
-            <QuickLinks />
+            <CompactRanking title={t('popularRanking')} items={sortBy(animeCatalog, rankKey)} to="/top/anime" />
           </aside>
         </div>
-        <section className="home-directory">
-          <SectionHeading title={t('exploreCommunity')} to="/community" action="communityHub" />
-          <div className="directory-grid">
-            {communitySections.map((section) => (
-              <Link className="directory-item" to={section.to} key={section.to}>
-                <h3>{L(section.title, lang)}</h3>
-                <p>{L(section.description, lang)}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
       </div>
     </>
-  );
-}
-
-function EditorialSection({ section }) {
-  return <StoryRows items={section.items} destination="/community" />;
-}
-
-function DirectorySection({ directory }) {
-  const { lang, t } = useSiteLang();
-  const genericDirectoryNote = lang === 'fa'
-    ? 'مدخل‌های مرتبط، فعالیت تازه و انتخاب‌های اجتماع را ببینید.'
-    : 'Explore related entries, recent activity, and community picks.';
-  return (
-    <div className="directory-grid">
-      {directory.items.map((item) => (
-        <article className="directory-item" key={L(item, lang)}>
-          <h3>{L(item, lang)}</h3>
-          <p>{genericDirectoryNote}</p>
-        </article>
-      ))}
-    </div>
-  );
-}
-
-function CommunityHub() {
-  const { lang } = useSiteLang();
-  return (
-    <div className="directory-grid">
-      {communitySections.map((section) => (
-        <Link className="directory-item" to={section.to} key={section.to}>
-          <h3>{L(section.title, lang)}</h3>
-          <p>{L(section.description, lang)}</p>
-        </Link>
-      ))}
-    </div>
   );
 }
 
@@ -867,7 +743,7 @@ function RankedList({ items, toPrefix }) {
         <li className="rank-row" key={item.slug}>
           <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
           <Link className="rank-cover" to={mediaHref(item, mediaType)} aria-label={item.title}>
-            <img src={item.image} alt={item.title} loading="lazy" />
+            <img src={coverUrl(item.image, 360)} alt={item.title} loading="lazy" />
           </Link>
           <div className="rank-copy">
             <Link className="rank-title" to={mediaHref(item, mediaType)}>{item.title}</Link>
@@ -876,7 +752,7 @@ function RankedList({ items, toPrefix }) {
           {item.sampleScore && (
             <span className="rank-score">
               <NumberTicker value={item.sampleScore} decimalPlaces={1} />
-              <small>{item.malId ? t('sourceScoreSuffix') : t('sampleSuffix')}</small>
+              <small>{item.malId ? t('sourceScoreSuffix') : t('scoreLabel')}</small>
             </span>
           )}
         </li>
@@ -972,8 +848,8 @@ function SectionPage({ theme, onThemeChange }) {
   const { lang, t } = useSiteLang();
   const { pathname } = useLocation();
   const isMobile = useIsMobile();
-  const animeCatalog = useCatalog();
-  const mangaCatalog = useMangaCatalog();
+  const animeCatalog = useVisibleCatalog();
+  const mangaCatalog = useVisibleMangaCatalog();
   const page = sectionPages[pathname];  const [query, setQuery] = useState('');
   const [genre, setGenre] = useState('All');
   const [format, setFormat] = useState('All');
@@ -990,7 +866,7 @@ function SectionPage({ theme, onThemeChange }) {
 
   useEffect(() => {
     document.title = page
-      ? `${L(page.title || editorialContent[page.storySet]?.title || directoryContent[page.directory]?.title, lang)} ${t('pageTitles').suffix}`
+      ? `${L(page.title, lang)} ${t('pageTitles').suffix}`
       : t('pageTitles').notFoundTitle;
   }, [page, lang, t]);
 
@@ -1008,15 +884,23 @@ function SectionPage({ theme, onThemeChange }) {
   }
 
   const mangaItems = withMangaImages(mangaCatalog, animeCatalog);
+  const { season: nowSeason, year: nowYear } = getCurrentSeasonInfo();
+  const seasonItems = animeCatalog.filter((item) => {
+    const info = getItemSeasonInfo(item);
+    const itemYear = info.year || parseInt(item.year, 10);
+    return info.season === nowSeason && itemYear === nowYear;
+  });
   let items = [];
   if (['anime', 'anime-ranking', 'seasonal', 'adapted'].includes(page.kind)) {
     items = page.kind === 'anime-ranking'
-      ? sortBy(animeCatalog, (anime) => -anime.sampleScore)
+      ? sortBy(animeCatalog, rankKey)
       : page.kind === 'adapted'
         ? animeCatalog.filter((anime) => mangaCatalog.some((manga) => manga.slug === anime.slug))
-        : animeCatalog;
+        : page.kind === 'seasonal'
+          ? (seasonItems.length ? seasonItems : animeCatalog)
+          : animeCatalog;
   } else if (['manga', 'manga-ranking'].includes(page.kind)) {
-    items = page.kind === 'manga-ranking' ? sortBy(mangaItems, 'title') : mangaItems;
+    items = page.kind === 'manga-ranking' ? sortBy(mangaItems, rankKey) : mangaItems;
   }
 
   const isCatalogPage = ['anime', 'manga', 'adapted'].includes(page.kind);
@@ -1042,13 +926,11 @@ function SectionPage({ theme, onThemeChange }) {
           const secondTitle = lang === 'fa' && second.titleFa ? second.titleFa : second.title;
           return firstTitle.localeCompare(secondTitle, 'fa', { sensitivity: 'base' });
         }
-        return (second.sampleScore ?? 0) - (first.sampleScore ?? 0);
+        return (second.weightedScore ?? second.sampleScore ?? 0) - (first.weightedScore ?? first.sampleScore ?? 0);
       })
     : filteredItems;
-  const editorial = editorialContent[page.storySet];
-  const directory = directoryContent[page.directory];
-  const title = page.title || editorial?.title || directory?.title;
-  const description = page.description || editorial?.description || directory?.description;
+  const title = page.title;
+  const description = page.description;
 
   if (isCatalogPage && isMobile) {
     return (
@@ -1078,7 +960,7 @@ function SectionPage({ theme, onThemeChange }) {
 
   if (isMobile && page.kind === 'seasonal') {
     return (
-      <MobileSeasonalPage title={title} items={filteredItems}>
+      <MobileSeasonalPage title={title} items={seasonItems.length ? seasonItems : filteredItems}>
         <AiringToday />
       </MobileSeasonalPage>
     );
@@ -1097,12 +979,14 @@ function SectionPage({ theme, onThemeChange }) {
           <h1>{L(title, lang)}</h1>
           <p>{L(description, lang)}</p>
         </header>
-        <div className="section-page-layout">
+        <div className={`section-page-layout${page.kind === 'schedule' ? ' is-wide' : ''}`}>
           <main className="section-main">
             {isCatalogPage && (
               <CatalogControls query={query} onQueryChange={setQuery} genre={genre} onGenreChange={setGenre} genres={genres} count={displayedItems.length} format={format} onFormatChange={setFormat} formats={formats} year={year} onYearChange={setYear} years={years} sort={sort} onSortChange={setSort} />
             )}
+            {page.kind === 'seasonal' && seasonItems.length === 0 && <div className="sample-data-note">{t('seasonEmpty')}</div>}
             {page.kind === 'seasonal' && <AiringToday />}
+            {page.kind === 'schedule' && <WeeklySchedule items={animeCatalog} />}
             {page.kind === 'anime-ranking' && <div className="sample-data-note">{t('animeRankingNote')}</div>}
             {page.kind === 'manga-ranking' && <div className="sample-data-note">{t('mangaRankingNote')}</div>}
             {['anime', 'anime-ranking', 'manga', 'manga-ranking', 'seasonal', 'adapted'].includes(page.kind) && (
@@ -1110,11 +994,8 @@ function SectionPage({ theme, onThemeChange }) {
                 ? <RankedList items={filteredItems} toPrefix={page.kind === 'manga-ranking' ? '/manga' : '/anime'} />
                 : <AnimeGrid items={displayedItems} />
             )}
-            {page.kind === 'community' && <CommunityHub />}
-            {page.kind === 'directory' && directory && <DirectorySection directory={directory} />}
-            {page.kind === 'editorial' && editorial && <EditorialSection section={editorial} />}
           </main>
-          <aside className="section-rail panel">
+          {page.kind !== 'schedule' && <aside className="section-rail panel">
             <h2>{t('exploreSections')}</h2>
             {sidebarSections.map((section) => (
               <div className="rail-group" key={L(section.title, lang)}>
@@ -1122,7 +1003,7 @@ function SectionPage({ theme, onThemeChange }) {
                 {section.links.map((item) => <Link to={item.to} key={item.to}>{L(item.label, lang)}</Link>)}
               </div>
             ))}
-          </aside>
+          </aside>}
         </div>
       </div>
     </>
@@ -1154,7 +1035,7 @@ function SidebarDataList({ rows }) {
 function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const { lang, t } = useSiteLang();
   const isMobile = useIsMobile();
-  const animeCatalog = useCatalog();
+  const animeCatalog = useVisibleCatalog();
   const user = useUser();
   const me = user.me;
   const isSaved = user.entries[mediaType].some((entry) => entry.slug === item.slug);
@@ -1162,6 +1043,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const related = animeCatalog
     .filter((entry) => entry.slug !== item.slug && entry.genres.some((entryGenre) => item.genres.includes(entryGenre)))
     .slice(0, 5);
+  const extras = useTitleExtras(mediaType, item.malId);
   const alternativeTitles = item.alternativeTitles || {};
   const romajiTitle = alternativeTitles.romaji || '';
   // Share / copy link for this title (Web Share API when available, clipboard
@@ -1207,14 +1089,14 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     ? [
         { label: t('scoreLabel'), value: item.statistics.score },
         { label: t('scoredBy'), value: item.statistics.scoredBy },
-        { label: t('rankedLabel'), value: item.statistics.ranked },
+        { label: t('rankedLabel'), value: item.rank ? `#${item.rank}` : item.statistics.ranked },
         { label: t('popularity'), value: item.statistics.popularity },
         { label: t('membersLabel'), value: item.statistics.members },
         { label: t('favoritesLabel'), value: item.statistics.favorites || t('notListed') },
       ]
     : [
-        { label: t('scoreLabel'), value: item.sampleScore ? `${item.sampleScore.toFixed(1)}${item.malId ? ` (${t('sourceScoreSuffix')})` : ` (${t('sampleSuffix')})`}` : null },
-        { label: t('rankedLabel'), value: t('notListed') },
+        { label: t('scoreLabel'), value: item.sampleScore ? `${item.sampleScore.toFixed(1)}${item.malId ? ` (${t('sourceScoreSuffix')})` : ` (${t('scoreLabel')})`}` : null },
+        { label: t('rankedLabel'), value: item.rank ? `#${item.rank}` : t('notListed') },
         { label: t('membersLabel'), value: t('notListed') },
       ];
 
@@ -1235,9 +1117,6 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     { id: 'planned', label: t('status_planned') },
   ];
 
-  const reviews = editorialContent.reviews.items.slice(0, 2);
-  const homeDiscussions = homeContent.discussions;
-  const newsItems = editorialContent.news.items;
 
   if (isMobile) {
     return (
@@ -1245,6 +1124,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         item={item}
         mediaType={mediaType}
         related={related}
+        extras={extras}
         informationRows={informationRows}
         statisticsRows={statisticsRows}
         alternativeTitles={alternativeTitles}
@@ -1256,9 +1136,6 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         onSetStatus={(statusId) => user.setStatus(mediaType, item.slug, statusId)}
         onShare={shareTitle}
         shareNote={shareNote}
-        reviews={reviews}
-        newsItems={newsItems}
-        discussions={homeDiscussions}
       />
     );
   }
@@ -1275,7 +1152,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         <main className="anime-detail-shell">
           <div className="anime-detail-layout">
             <aside className="detail-sidebar panel">
-              <figure className="detail-cover"><img src={item.image} alt={item.title} /></figure>
+              <figure className="detail-cover"><img src={coverUrl(item.image, 720)} alt={item.title} /></figure>
               <Button
                 className={`detail-list-button${isSaved ? ' is-saved' : ''}`}
                 type="button"
@@ -1325,7 +1202,6 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 </DetailSection>
                 <DetailSection id="detailStatistics" title={t('statistics')} className="detail-sidebar-section">
                   <SidebarDataList rows={statisticsRows} />
-                  {!item.statistics && <p>{t('prototypeNote')}</p>}
                 </DetailSection>
                 <DetailSection id="detailAvailableAt" title={t('availableAt')} className="detail-sidebar-section">
                   {item.availableAt?.length ? (
@@ -1382,60 +1258,33 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
               <div className="detail-section-grid">
                 <DetailSection id="detailSynopsis" title={t('synopsis')}>
                   <p className="detail-synopsis" dir="auto">{item.synopsis}</p>
+                  {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
                 </DetailSection>
-                <DetailSection id="detailBackground" title={t('background')}>
-                  <p>{t('detailSynopsisNote')}</p>
+                {hasAny(extras, 'trailer') && (
+                  <DetailSection id="detailTrailer" title={t('trailerTitle')}><Trailer data={extras.data} /></DetailSection>
+                )}
+                {extras.status === 'loading' && <p className="extras-muted" role="status">{t('extrasLoading')}</p>}
+                {hasAny(extras, 'relations') && (
+                  <DetailSection id="detailRelatedEntries" title={t('relatedEntries')}><Relations data={extras.data} /></DetailSection>
+                )}
+                {hasAny(extras, 'characters') && (
+                  <DetailSection id="detailCharacters" title={t('charactersVA')}><Characters data={extras.data} /></DetailSection>
+                )}
+                {hasAny(extras, 'staff') && (
+                  <DetailSection id="detailStaff" title={t('staffSection')}><Staff data={extras.data} /></DetailSection>
+                )}
+                {mediaType === 'anime' && hasAny(extras, 'openings') && (
+                  <DetailSection id="detailOpening" title={t('openingTheme')}><Themes data={extras.data} kind="op" /></DetailSection>
+                )}
+                {mediaType === 'anime' && hasAny(extras, 'endings') && (
+                  <DetailSection id="detailEnding" title={t('endingTheme')}><Themes data={extras.data} kind="ed" /></DetailSection>
+                )}
+                <DetailSection id="detailReviews" title={t('reviewsTitle')} className="detail-content-section detail-community">
+                  <CommunitySection mediaType={mediaType} slug={item.slug} />
                 </DetailSection>
-                <DetailSection id="detailRelatedEntries" title={t('relatedEntries')}>
-                  <p>{t('detailRelatedNote')}</p>
-                  <div className="detail-link-row"><Link to="/adapted">{t('mangaAdaptations')}</Link><Link to="/anime">{t('relatedTitles')}</Link></div>
-                </DetailSection>
-                <DetailSection id="detailCharacters" title={t('charactersVA')}>
-                  <p>{t('detailCastNote')}</p>
-                  <Link to="/characters" className="section-link">{t('characterDirectoryLink')}</Link>
-                </DetailSection>
-                <DetailSection id="detailStaff" title={t('staffSection')}>
-                  <p>{t('detailStaffNote')}</p>
-                  <Link to="/staff" className="section-link">{t('productionCredits')}</Link>
-                </DetailSection>
-                <DetailSection id="detailOpening" title={t('openingTheme')}>
-                  <p>{t('detailThemeNote')}</p>
-                </DetailSection>
-                <DetailSection id="detailEnding" title={t('endingTheme')}>
-                  <p>{t('detailEndingNote')}</p>
-                </DetailSection>
-                <DetailSection id="detailReviews" title={t('reviewsTitle')}>
-                  {reviews.map((review) => (
-                    <p className="detail-quote" key={L(review.title, lang)}>
-                      <strong>{L(review.title, lang)}</strong> {L(review.body, lang)}
-                    </p>
-                  ))}
-                  <Link to="/reviews" className="section-link">{t('readMoreReviews')}</Link>
-                </DetailSection>
-                <DetailSection id="detailStacks" title={t('interestStacks')}>
-                  <p>{t('detailStacksNote')}</p>
-                  <Link to="/stacks" className="section-link">{t('browseStacks')}</Link>
-                </DetailSection>
-                <DetailSection id="detailRecommendations" title={t('recommendationsTitle')}>
-                  <p>{t('detailRecsNote')}</p>
-                  <Link to="/recommendations" className="section-link">{t('browseRecs')}</Link>
-                </DetailSection>
-                <DetailSection id="detailNews" title={t('recentNews')}>
-                  {newsItems.slice(0, 2).map((news) => (
-                    <p className="detail-quote" key={L(news.title, lang)}>
-                      <strong>{L(news.title, lang)}</strong> {L(news.body, lang)}
-                    </p>
-                  ))}
-                  <Link to="/news" className="section-link">{t('moreNews')}</Link>
-                </DetailSection>
-                <DetailSection id="detailForums" title={t('forumTalk')}>
-                  {homeDiscussions.slice(0, 2).map((discussion) => (
-                    <p className="detail-quote" key={L(discussion.title, lang)}>
-                      <strong>{L(discussion.title, lang)}</strong> {L(discussion.body, lang)}
-                    </p>
-                  ))}
-                  <Link to="/forums" className="section-link">{t('openDiscussions')}</Link>
-                </DetailSection>
+                {hasAny(extras, 'recommendations') && (
+                  <DetailSection id="detailRecommendations" title={t('recommendationsTitle')}><Recommendations data={extras.data} mediaType={mediaType} /></DetailSection>
+                )}
               </div>
             </div>
           </div>
@@ -1450,6 +1299,27 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   );
 }
 
+// Shown in place of a sensitive title while the filter is on.
+function SensitiveGate({ mediaType, theme, onThemeChange }) {
+  const isMobile = useIsMobile();
+  const { t } = useSiteLang();
+  return (
+    <>
+      {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
+      <NotFoundPanel>
+        <h1>{t('sensitiveGateTitle')}</h1>
+        <p>{t('sensitiveGateText')}</p>
+        <div className="sensitive-gate__actions">
+          <button type="button" className="detail-back-link" onClick={() => setShowSensitive(true)}>{t('sensitiveGateShow')}</button>
+          <Link className="detail-back-link" to={mediaType === 'manga' ? '/manga' : '/anime'}>
+            {mediaType === 'manga' ? t('backToMangaCatalog') : t('backToAnimeCatalog')}
+          </Link>
+        </div>
+      </NotFoundPanel>
+    </>
+  );
+}
+
 function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   const isMobile = useIsMobile();
   const { lang, t } = useSiteLang();
@@ -1457,6 +1327,9 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   const animeCatalog = useCatalog();
   const mangaCatalog = useMangaCatalog();
   const catalog = mediaType === 'manga' ? mangaCatalog : animeCatalog;
+  const visibleAnime = useVisibleCatalog();
+  const visibleManga = useVisibleMangaCatalog();
+  const showSensitive = useShowSensitive();
   // MAL-style /anime/136/Hunter_x_Hunter resolves by MyAnimeList id; plain /anime/{slug}
   // (legacy links and entries without an id) resolves by slug.
   const idMatch = /^(\d+)$/.exec(idOrSlug || '');
@@ -1464,18 +1337,27 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   if (idMatch) item = catalog.find((entry) => String(entry.malId) === idMatch[1]) || null;
   if (!item) item = catalog.find((entry) => entry.slug === idOrSlug) || null;
   const resolved = item;
+  // Rank among the titles the visitor can see (weighted score, see lib/catalog-rules.js).
+  const ranked = resolved ? (mediaType === 'manga' ? visibleManga : visibleAnime).find((entry) => entry.slug === resolved.slug) : null;
   item = {
     ...item,
+    ...(ranked ? { rank: ranked.rank, weightedScore: ranked.weightedScore } : {}),
     // Both media types share the same synopsis contract: a legacy plain string
     // or bilingual { fa, en } — resolve it to the viewer's language (manga's
     // seeded rows carry both; anime shows Persian once one is stored).
     synopsis: synopsisText(item, lang),
+    // Persian text that is still an unreviewed machine translation gets a small note.
+    synopsisAuto: lang === 'fa' && Boolean(resolved?.synopsis?.auto && resolved.synopsis.fa),
     ...(mediaType === 'manga'
       ? { image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item }
       : {}),
   };
   // Queue 19: the fa storefront shows the Persian title when manga rows carry one.
   if (mediaType === 'manga' && item && lang === 'fa' && item.titleFa) item = { ...item, title: item.titleFa };
+
+  if (resolved && isSensitive(resolved) && !showSensitive) {
+    return <SensitiveGate mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} />;
+  }
 
   return resolved ? <DetailPage key={`${mediaType}-${resolved.slug}`} item={item} mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} /> : (
     <>
@@ -1505,14 +1387,23 @@ function WithHeader({ theme, onThemeChange, children }) {
 function AppRoutes({ theme, onThemeChange }) {
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
+  useScrollMemory(pathname, { skip: pathname.startsWith('/admin') });
   const routes = (
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/admin/*" element={<Suspense fallback={<CatalogLoadingFallback />}><AdminApp theme={theme} onThemeChange={onThemeChange} /></Suspense>} />
       <Route path="/anime/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} />} />
       <Route path="/manga/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} mediaType="manga" />} />
+      <Route path="/search" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><SearchPage /></WithHeader>} />
       <Route path="/login" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="login" /></WithHeader>} />
       <Route path="/register" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="register" /></WithHeader>} />
+      <Route path="/forgot" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ForgotPasswordPage /></WithHeader>} />
+      <Route path="/reset-password" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ResetPasswordPage /></WithHeader>} />
+      <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
+      <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
+      <Route path="/character/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="character" /></WithHeader>} />
+      <Route path="/person/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="person" /></WithHeader>} />
+      <Route path="/import-list" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ImportListPage /></WithHeader>} />
       <Route path="/dashboard" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><UserDashboard /></WithHeader>} />
       <Route path="/user/:username" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><UserPublicProfile /></WithHeader>} />
       <Route path="*" element={<SectionPage theme={theme} onThemeChange={onThemeChange} />} />

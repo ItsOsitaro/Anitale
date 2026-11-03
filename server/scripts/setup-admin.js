@@ -32,7 +32,7 @@ fs.writeFileSync(envFile, [
   `ADMIN_PASSWORD_HASH='${bcrypt.hashSync(password, 12)}'`,
   `SESSION_SECRET=${crypto.randomBytes(32).toString('hex')}`,
   'PORT=3000',
-  '# Needed if Jikan / MyAnimeList are blocked without a VPN, e.g. PROXY_URL=http://127.0.0.1:10809',
+  '# Needed if Tenrai / AniList / MyAnimeList are blocked without a VPN, e.g. PROXY_URL=http://127.0.0.1:10809',
   'PROXY_URL=',
   '',
 ].join('\n'));

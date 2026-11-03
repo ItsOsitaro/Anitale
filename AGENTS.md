@@ -19,33 +19,29 @@ Anitale — a MyAnimeList-style anime/manga site: React 19 + Vite 7 SPA (`src/`)
 ## Environment files
 
 - `server/config.js` loads `server/.env` at the top of every server entrypoint — any new server-side env var must be read after that import.
-- `server/.env` (gitignored): `ADMIN_USER`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`, `PORT`, provider tuning (`PROXY_URL`, `PROVIDER`, `JIKAN_DISABLED`, `GEMINI_API_KEY`, …). See `server/.env.example`.
-- `.env.local` (repo root, gitignored): `POSTGRES_URL` for Neon — read by `scripts/pg-migrate.mjs` and supplied by Vercel as a linked integration.
+- `server/.env` (gitignored): `ADMIN_USER`, `ADMIN_PASSWORD_HASH`, `SESSION_SECRET`, `PORT`, provider tuning (`PROXY_URL`, `PROVIDER`, `TENRAI_DISABLED`, `GEMINI_API_KEY`, …). See `server/.env.example`.
 
-## Data layer — the dual-engine constraint
+## Data layer
 
-- `server/db.js` exposes **one synchronous db handle shared by two engines**: Node built-in SQLite (`server/data.db`, WAL journal) locally; Neon Postgres on Vercel when `POSTGRES_URL`/`DATABASE_URL` is set. `server/pg.js` bridges Postgres into `node:sqlite`'s `prepare().all/get/run` API in a worker thread, translating the dialect.
-- All SQL in `repo.js` / `users.js` / `auth.js` / `app.js` must stay in the subset that works on **both engines** — never raw sqlite-only or Postgres-only syntax.
+- `server/db.js` exposes one synchronous handle to Node's built-in SQLite (`server/data.db`, WAL journal).
 - Arrays/stored objects are `TEXT` columns holding JSON (`genres`, `alt_synonyms`, …), round-tripped in `shape.js` / `repo.js`.
-- First server start auto-seeds `data.db` from `public/data/*.json` (`server/seed.js`). Deployments seed the same way (`api/index.js`).
+- First server start auto-seeds `data.db` from `public/data/*.json` (`server/seed.js`).
 - `public/data/*.json` (tracked) is **generated**, never hand-edit: it is rewritten by `export-data.js` after every admin create/update/delete, and is also the offline fallback + seed source.
 
 ## Covers
 
 - Locally: `public/covers/` (untracked — files exist on your machine, not in git).
-- On Vercel the bundle is read-only: `server/images.js` stages covers into `/tmp/anitale-covers` and mirrors writes into Vercel Blob (store `anitale-covers`, `BLOB_READ_WRITE_TOKEN`). `/covers/:name` serves the warm-instance copy first, else redirects to the Blob CDN. Temp uploads go through `server/tmp/`.
 - Slug changes rename cover files (copy, not move — the old file may still be referenced by static fallback data).
 
-## Deployment (Vercel)
+## Deployment (own Linux server)
 
-- `vercel.json`: `npm run build` → `dist`, `/api/*` and `/covers/*` → the `api/index.js` function, everything else → `/index.html` (SPA). `includeFiles` bundles `server/*.js`, `server/data.db*`, `public/data/**`, `public/covers/**`.
-- **`.vercelignore` overrides `.gitignore` for what gets uploaded** — that's how the gitignored `data.db` snapshot and covers ride along; secrets (`server/.env`, `.env*`, `models/`) still stay out.
-- Without Neon attached (`VERCEL=1`, no `POSTGRES_URL`): `api/index.js` copies `data.db` to a writable `/tmp` before `db.js` evaluates (it reads `DB_FILE` at import time) — SQLite writes live only for one warm instance.
-- `node scripts/pg-migrate.mjs` — idempotent one-off DB migration SQLite → Neon (reads `.env.local`).
+- Runs as the systemd unit `anitale.service` (`node server/index.js`, serves `dist/` + API). Update: `git pull`, `npm install`, `npm run build`, `sudo systemctl restart anitale`.
+- Behind nginx/Caddy set `TRUST_PROXY=1` and `SITE_URL=https://<domain>` in `server/.env`.
+- `server/seo.js` injects link-preview meta into `/anime/*` and `/manga/*` and serves `/sitemap.xml`; `server/app.js` compresses responses and caches `/assets/*` for a year.
 
 ## Local server / Vite gotchas
 
-- Vite dev proxies `/api` → 127.0.0.1:3000 and forwards the browser's `x-forwarded-host`; the API's CSRF guard (`sameOriginOnly`) and rate limiting require it (plus `TRUST_PROXY=1` behind Vercel's proxy).
+- Vite dev proxies `/api` → 127.0.0.1:3000 and forwards the browser's `x-forwarded-host`; the API's CSRF guard (`sameOriginOnly`) and rate limiting require it (plus `TRUST_PROXY=1` behind a reverse proxy).
 - `auth.js` writes are cookie-session based; any script hitting the API must send a same-origin `Origin` header with state-changing requests.
 - The Vite watcher ignores `public/data/**` and `public/covers/**` on purpose (export rewrites + uploads happen mid-dev-server; a reload would kill long-running admin sessions). A custom middleware (`live-public-covers` in `vite.config.js`) serves `/covers` straight from disk so freshly imported covers appear without restart.
 - Server binds 127.0.0.1 by default; `HOST=0.0.0.0` in `server/.env` shares it on the LAN.

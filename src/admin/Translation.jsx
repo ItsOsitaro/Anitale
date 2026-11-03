@@ -1,4 +1,4 @@
-import React, { useContext, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { api } from './api.js';
 import { AdminContext } from './context.js';
 
@@ -19,6 +19,8 @@ export default function Translation() {
   const [mode, setMode] = useState('missing'); // missing | forceAuto
   const [media, setMedia] = useState('both'); // both | anime | manga
   const [last, setLast] = useState(null);
+  const [status, setStatus] = useState(null);
+  useEffect(() => { api.translateStatus().then(setStatus).catch(() => {}); }, [last]);
 
   const run = async (runMode = mode) => {
     if (running) return;
@@ -54,11 +56,17 @@ export default function Translation() {
         </div>
       </header>
       <div className="adm-card-body">
+        {status && (
+          <div className="adm-stats" style={{ marginBottom: 16 }}>
+            <div className="adm-stat"><strong>{status.missing}</strong><span>{t('translateStatusMissing')}</span></div>
+            <div className="adm-stat"><strong>{status.pending}</strong><span>{t('translateStatusPending')}</span></div>
+          </div>
+        )}
         <div className="adm-grid">
           <section className="adm-panel">
             <h3 className="adm-panel-title">{t('translateFillMissing')}</h3>
             <p className="adm-panel-sub">{t('translateFillMissingDesc')}</p>
-            <button className="adm-btn adm-btn-primary" type="button" disabled={running} onClick={() => run('missing')}>
+            <button className="adm-btn adm-primary" type="button" disabled={running} onClick={() => run('missing')}>
               {running && mode === 'missing' ? t('translateRunning') : t('translateRun')}
             </button>
           </section>

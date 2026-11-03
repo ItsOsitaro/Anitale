@@ -6,7 +6,7 @@ import { useUser } from '@/user';
 import { cn } from 'cn';
 
 export default function MoreSheet({ open, onClose }) {
-  const { t, lang } = useSiteLang();
+  const { t, lang, setLang } = useSiteLang();
   const dialogRef = useRef(null);
   const user = useUser();
 
@@ -58,7 +58,17 @@ export default function MoreSheet({ open, onClose }) {
           ))}
         </div>
         <div className="more-sheet__footer">
-          <button type="button" className="more-sheet__footer-btn">{t('langButton')}</button>
+          <button
+            type="button"
+            className="more-sheet__footer-btn"
+            onClick={() => setLang(lang === 'fa' ? 'en' : 'fa')}
+            aria-label={lang === 'fa' ? 'Switch to English' : 'تغییر به فارسی'}
+          >
+            {t('langButton')}
+          </button>
+          {user?.me && (
+            <Link to="/account" className="more-sheet__footer-btn more-sheet__footer-link" onClick={onClose}>{t('accountTitle')}</Link>
+          )}
           {user?.me && (
             <button
               type="button"

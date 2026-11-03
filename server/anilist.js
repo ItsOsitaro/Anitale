@@ -1,15 +1,15 @@
 import './config.js';
-import { fetch, ProxyAgent } from 'undici';
+import { fetch } from 'undici';
+import { getDispatcher, viaProxy } from './proxy.js';
 
 const BASE = 'https://graphql.anilist.co';
-const dispatcher = process.env.PROXY_URL ? new ProxyAgent(process.env.PROXY_URL) : undefined;
 const MIN_GAP_MS = 700; // AniList allows ~90 requests/minute
-const TIMEOUT_MS = 10_000;
+const timeoutMs = () => (viaProxy() ? 25_000 : 10_000);
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fail = (message, status = 502, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 
-// Serialises every AniList call with a minimum gap (mirrors jikan.js queueing).
+// Serialises every AniList call with a minimum gap (mirrors tenrai.js queueing).
 let chain = Promise.resolve();
 let lastCall = 0;
 const enqueue = (task) => {
@@ -30,11 +30,11 @@ const gql = async (query, variables, retried = false) => {
       method: 'POST',
       headers: { 'content-type': 'application/json', accept: 'application/json' },
       body: JSON.stringify({ query, variables }),
-      dispatcher,
-      signal: AbortSignal.timeout(TIMEOUT_MS),
+      dispatcher: getDispatcher(),
+      signal: AbortSignal.timeout(timeoutMs()),
     });
   } catch {
-    // Mirror the Jikan failure path's tone (network flag, 502 — client i18n keys off `network`).
+    // Mirror the Tenrai failure path's tone (network flag, 502 — client i18n keys off `network`).
     throw fail('Cannot reach data provider (AniList). Check your internet/VPN, or set PROXY_URL in server/.env.', 502, { network: true });
   }
   if ((response.status === 429 || response.status >= 500) && !retried) {
@@ -74,15 +74,16 @@ const SOURCE_LABELS = {
 };
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
-// Fallback search used when Jikan is unreachable (see app.js). Returns the same shape as jikan.searchAnime.
-export const anilistSearch = async (query) => {
-  const data = await enqueue(() => gql(`query ($s: String) {
+// Fallback search used when Tenrai is unreachable (see app.js). Returns the same shape as tenrai.searchAnime.
+export const anilistSearch = async (query, mediaType = 'anime') => {
+  const type = String(mediaType).toLowerCase() === 'manga' ? 'MANGA' : 'ANIME';
+  const data = await enqueue(() => gql(`query ($s: String, $type: MediaType) {
     Page(perPage: 10) {
-      media(search: $s, type: ANIME, sort: SEARCH_MATCH) {
+      media(search: $s, type: $type, sort: SEARCH_MATCH, isAdult: false) {
         idMal title { english romaji } format seasonYear startDate { year } coverImage { large }
       }
     }
-  }`, { s: query }));
+  }`, { s: query, type }));
   return (data?.Page?.media || []).filter((m) => m.idMal).map((m) => ({
     malId: m.idMal,
     title: m.title?.english || m.title?.romaji || '',
@@ -92,7 +93,26 @@ export const anilistSearch = async (query) => {
   }));
 };
 
-// Queue 26: discovery by facet (AniList Page query — Jikan has no filterable
+// Titles of the current season (anime) or recently started series (manga),
+// used by the daily auto-import. Only rows with a MAL id come back.
+export const anilistSeasonal = async ({ mediaType = 'anime', perPage = 40 } = {}) => {
+  const now = new Date();
+  const season = ['WINTER', 'SPRING', 'SUMMER', 'FALL'][Math.floor(now.getUTCMonth() / 3)];
+  if (String(mediaType).toLowerCase() === 'manga') {
+    const since = new Date(now.getTime() - 45 * 86400000);
+    const fuzzy = since.getUTCFullYear() * 10000 + (since.getUTCMonth() + 1) * 100 + since.getUTCDate();
+    const data = await enqueue(() => gql(`query ($since: FuzzyDateInt, $perPage: Int) {
+      Page(perPage: $perPage) { media(type: MANGA, startDate_greater: $since, sort: POPULARITY_DESC, isAdult: false, countryOfOrigin: JP) { idMal } }
+    }`, { since: fuzzy, perPage }));
+    return (data?.Page?.media || []).map((m) => m.idMal).filter(Boolean);
+  }
+  const data = await enqueue(() => gql(`query ($season: MediaSeason, $year: Int, $perPage: Int) {
+    Page(perPage: $perPage) { media(type: ANIME, season: $season, seasonYear: $year, sort: POPULARITY_DESC, isAdult: false, format_in: [TV, MOVIE, ONA, OVA]) { idMal } }
+  }`, { season, year: now.getUTCFullYear(), perPage }));
+  return (data?.Page?.media || []).map((m) => m.idMal).filter(Boolean);
+};
+
+// Queue 26: discovery by facet (AniList Page query — the MAL-based API has no filterable
 // search). Returns light preview rows; no MAL id => skipped.
 export const anilistFacetSearch = async ({ mediaType = 'MANGA', genre, year, minScore, perPage = 30 }) => {
   if (genre && !/^[a-z0-9 -]{2,40}$/i.test(genre)) throw fail('Invalid genre filter', 400);
@@ -127,8 +147,8 @@ export const anilistFacetSearch = async ({ mediaType = 'MANGA', genre, year, min
     }));
 };
 
-// Fallback import used when Jikan is unreachable. Maps AniList data straight to the
-// admin draft shape (same keys as mapJikanToDraft => { coverUrl, ...draft }).
+// Fallback import used when Tenrai is unreachable. Maps AniList data straight to the
+// admin draft shape (same keys as mapTenraiToDraft => { coverUrl, ...draft }).
 const ANIME_FIELDS = `
   idMal
   title { english romaji native }
@@ -175,7 +195,7 @@ const mapAniListAnime = (m) => {
   const japanese = m.title?.native || '';
   const romaji = m.title?.romaji || '';
 
-  // Weekly broadcast day, same semantics as the Jikan draft:
+  // Weekly broadcast day, same semantics as the Tenrai draft:
   // airing (with a schedule) -> 'Mon'...'Sun' (JST), airing but unknown ->
   // undefined (keep stored day), anything else -> null (clear stored day).
   let airingDay;
@@ -257,7 +277,7 @@ const mapAniListAnime = (m) => {
   };
 };
 
-// Fallback manga import (Jikan unreachable). Same draft keys as mapJikanMangaToDraft.
+// Fallback manga import (Tenrai unreachable). Same draft keys as mapTenraiMangaToDraft.
 const MANGA_FIELDS = `
   idMal
   title { english romaji native }

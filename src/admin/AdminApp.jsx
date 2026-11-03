@@ -10,7 +10,14 @@ import SiteUsers from './SiteUsers.jsx';
 import Schedule from './Schedule.jsx';
 import MangaList from './MangaList.jsx';
 import BulkImport from './BulkImport.jsx';
+import QuickAdd from './QuickAdd.jsx';
+import MissingTitles from './MissingTitles.jsx';
+import AutoImport from './AutoImport.jsx';
+import HealthPage from './HealthPage.jsx';
+import VpnPage from './VpnPage.jsx';
 import Translation from './Translation.jsx';
+import ReviewQueue from './ReviewQueue.jsx';
+import UserReviews from './UserReviews.jsx';
 import './admin.css';
 
 const readLang = () => {
@@ -53,6 +60,7 @@ const IconExternal = makeIcon([
 ]);
 const IconMenu = makeIcon(['M4 6h16', 'M4 12h16', 'M4 18h16']);
 const IconX = makeIcon(['M18 6 6 18', 'M6 6l12 12']);
+const IconPulse = makeIcon(['M3 12h4l3-8 4 16 3-8h4']);
 const IconBox = makeIcon([
   'M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z',
   'M3.3 7l8.7 5 8.7-5', 'M12 22V12',
@@ -69,6 +77,7 @@ const IconTranslate = makeIcon([
   'M22 22l-5-10-5 10',
   'M14 18h6',
 ]);
+const IconCheckList = makeIcon(['M9 11l3 3L22 4', 'M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11']);
 const IconUser = makeIcon(['M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2'], [[12, 7, 4]]);
 
 /* Sidebar sections: group key = i18n key, items share the route title keys. */
@@ -84,8 +93,14 @@ const NAV = [
     group: 'navOps',
     items: [
       { to: '/admin/new', icon: IconPlus, key: 'newAnime' },
+      { to: '/admin/quick-add', icon: IconPlus, key: 'quickNav' },
       { to: '/admin/bulk-import', icon: IconImport, key: 'bulkNav' },
-      { to: '/admin/translate', icon: IconTranslate, key: 'translateNav' },
+      { to: '/admin/auto-import', icon: IconCalendar, key: 'autoNav' },
+      { to: '/admin/missing', icon: IconImport, key: 'missNav' },
+      { to: '/admin/vpn', icon: IconBox, key: 'vpnNav' },
+      { to: '/admin/health', icon: IconPulse, key: 'hlNav' },
+      { to: '/admin/translate', end: true, icon: IconTranslate, key: 'translateNav' },
+      { to: '/admin/translate/review', icon: IconCheckList, key: 'reviewNav' },
       { to: '/admin/schedule', icon: IconCalendar, key: 'scheduleNav' },
     ],
   },
@@ -93,6 +108,7 @@ const NAV = [
     group: 'navPeople',
     items: [
       { to: '/admin/users', icon: IconUsers, key: 'siteUsers' },
+      { to: '/admin/reviews', icon: IconCheckList, key: 'rvNav' },
     ],
   },
 ];
@@ -100,8 +116,15 @@ const NAV = [
 /* Topbar heading: derive the section label from the active route prefix. */
 const titleFor = (pathname) => {
   if (pathname.startsWith('/admin/users')) return 'siteUsers';
+  if (pathname.startsWith('/admin/reviews')) return 'rvNav';
   if (pathname.startsWith('/admin/schedule')) return 'scheduleNav';
   if (pathname.startsWith('/admin/bulk-import')) return 'bulkNav';
+  if (pathname.startsWith('/admin/quick-add')) return 'quickNav';
+  if (pathname.startsWith('/admin/auto-import')) return 'autoNav';
+  if (pathname.startsWith('/admin/missing')) return 'missNav';
+  if (pathname.startsWith('/admin/vpn')) return 'vpnNav';
+  if (pathname.startsWith('/admin/health')) return 'hlNav';
+  if (pathname.startsWith('/admin/translate/review')) return 'reviewNav';
   if (pathname.startsWith('/admin/translate')) return 'translateNav';
   if (pathname.startsWith('/admin/manga')) return 'mangaNav';
   if (pathname.startsWith('/admin/new') || pathname.startsWith('/admin/edit')) return 'newAnime';
@@ -253,9 +276,16 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="new" element={<AnimeForm key="new" />} />
                 <Route path="edit/:slug" element={<AnimeForm key="edit" />} />
                 <Route path="users" element={<SiteUsers />} />
+                <Route path="reviews" element={<UserReviews />} />
                 <Route path="schedule" element={<Schedule />} />
+                <Route path="quick-add" element={<QuickAdd />} />
                 <Route path="bulk-import" element={<BulkImport />} />
+                <Route path="auto-import" element={<AutoImport />} />
+                <Route path="missing" element={<MissingTitles />} />
+                <Route path="health" element={<HealthPage />} />
+                <Route path="vpn" element={<VpnPage />} />
                 <Route path="translate" element={<Translation />} />
+                <Route path="translate/review" element={<ReviewQueue />} />
                 <Route path="manga" element={<MangaList />} />
                 <Route path="*" element={<Navigate to="/admin" replace />} />
               </Routes>

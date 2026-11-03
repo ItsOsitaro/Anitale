@@ -20,15 +20,70 @@ export const publicUser = (row) => row && ({
   joinedAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
 });
 
+// The account owner's own view: the only place the email is exposed.
+export const ownUser = (row) => row && ({ ...publicUser(row), email: row.email || '', emailVerified: Boolean(row.email_verified_at) });
+
 export const getUserByUsername = (username) => db
   .prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE')
   .get(String(username || '').trim());
 
-export const createUser = async ({ username, password, bio = '' }) => {
+// ---------- Email accounts ----------
+export const normalizeEmail = (value) => String(value || '').trim().toLowerCase();
+
+export const getUserByEmail = (email) => db
+  .prepare('SELECT * FROM users WHERE email = ? COLLATE NOCASE')
+  .get(normalizeEmail(email));
+
+export const setUserEmail = (userId, email) => {
+  // A changed address is unverified until its link is opened.
+  db.prepare('UPDATE users SET email = ?, email_verified_at = NULL WHERE id = ?').run(normalizeEmail(email), userId);
+  db.prepare("DELETE FROM auth_tokens WHERE user_id = ? AND kind = 'verify'").run(userId);
+};
+
+export const markEmailVerified = (userId) => {
+  db.prepare("UPDATE users SET email_verified_at = datetime('now') WHERE id = ? AND email IS NOT NULL").run(userId);
+};
+
+export const setUserPassword = async (userId, password) => {
+  const password_hash = await bcrypt.hash(password, 10);
+  // Bumping the token version revokes every session cookie already issued;
+  // pending reset links die with the old password.
+  db.prepare('UPDATE users SET password_hash = ?, token_version = token_version + 1 WHERE id = ?').run(password_hash, userId);
+  db.prepare("DELETE FROM auth_tokens WHERE user_id = ? AND kind = 'reset'").run(userId);
+};
+
+// One-time tokens for email links. Only a SHA-256 of the token is stored.
+const TOKEN_TTL = { verify: 24 * 60 * 60, reset: 60 * 60 };
+const hashToken = (raw) => crypto.createHash('sha256').update(String(raw)).digest('hex');
+const nowSeconds = () => Math.floor(Date.now() / 1000);
+
+export const issueToken = (userId, kind) => {
+  const raw = crypto.randomBytes(32).toString('base64url');
+  db.prepare('DELETE FROM auth_tokens WHERE user_id = ? AND kind = ?').run(userId, kind);
+  db.prepare('INSERT INTO auth_tokens (user_id, kind, token_hash, expires_at, created_at) VALUES (?, ?, ?, ?, ?)')
+    .run(userId, kind, hashToken(raw), nowSeconds() + TOKEN_TTL[kind], nowSeconds());
+  return raw;
+};
+
+// True when a token of this kind was issued less than `seconds` ago (resend throttle).
+export const tokenIssuedRecently = (userId, kind, seconds = 60) => Boolean(db
+  .prepare('SELECT 1 AS hit FROM auth_tokens WHERE user_id = ? AND kind = ? AND created_at > ?')
+  .get(userId, kind, nowSeconds() - seconds));
+
+// Returns the user row for a valid, unexpired token and burns it (single use).
+export const consumeToken = (raw, kind) => {
+  const row = db.prepare('SELECT * FROM auth_tokens WHERE token_hash = ? AND kind = ?').get(hashToken(raw), kind);
+  if (!row) return null;
+  db.prepare('DELETE FROM auth_tokens WHERE id = ?').run(row.id);
+  if (row.expires_at < nowSeconds()) return null;
+  return db.prepare('SELECT * FROM users WHERE id = ?').get(row.user_id) || null;
+};
+
+export const createUser = async ({ username, password, bio = '', email = null }) => {
   const password_hash = await bcrypt.hash(password, 10);
   const info = db.prepare(
-    "INSERT INTO users (username, password_hash, bio, avatar_color) VALUES (@username, @password_hash, @bio, '')",
-  ).run({ username, password_hash, bio });
+    "INSERT INTO users (username, password_hash, bio, avatar_color, email) VALUES (@username, @password_hash, @bio, '', @email)",
+  ).run({ username, password_hash, bio, email: email ? normalizeEmail(email) : null });
   const row = db.prepare('SELECT * FROM users WHERE id = ?').get(info.lastInsertRowid);
   db.prepare('UPDATE users SET avatar_color = ? WHERE id = ?').run(String(bloomFor(row.username)), row.id);
   row.avatar_color = String(bloomFor(row.username));
@@ -43,10 +98,10 @@ export const verifySiteCredentials = async (username, password) => {
 
 // ---------- Personal list entries ----------
 export const listEntries = (userId) => db
-  .prepare('SELECT media_type, slug, status, note, rating, progress, created_at FROM user_entries WHERE user_id = ? ORDER BY created_at DESC, rowid DESC')
+  .prepare('SELECT media_type, slug, status, note, rating, progress, created_at, updated_at FROM user_entries WHERE user_id = ? ORDER BY created_at DESC, rowid DESC')
   .all(userId)
   .reduce((acc, entry) => {
-    acc[entry.media_type].push({ slug: entry.slug, status: entry.status, note: entry.note || '', rating: entry.rating ?? null, progress: entry.progress ?? null, added: entry.created_at });
+    acc[entry.media_type].push({ slug: entry.slug, status: entry.status, note: entry.note || '', rating: entry.rating ?? null, progress: entry.progress ?? null, added: entry.created_at, updated: entry.updated_at || entry.created_at });
     return acc;
   }, { anime: [], manga: [] });
 
@@ -83,9 +138,10 @@ export const deleteEntry = (userId, mediaType, slug) => db
   .run(userId, mediaType, slug);
 
 // ---------- Follow graph (queue 15) ----------
-export const followUser = (followerId, followingId) => {
-  db.prepare('INSERT INTO follows (follower_id, following_id) VALUES (?, ?) ON CONFLICT DO NOTHING').run(followerId, followingId);
-};
+// True only when this call created the follow (so a repeat tap does not notify twice).
+export const followUser = (followerId, followingId) => db
+  .prepare('INSERT INTO follows (follower_id, following_id) VALUES (?, ?) ON CONFLICT DO NOTHING')
+  .run(followerId, followingId).changes > 0;
 
 export const unfollowUser = (followerId, followingId) => {
   db.prepare('DELETE FROM follows WHERE follower_id = ? AND following_id = ?').run(followerId, followingId);
@@ -153,6 +209,8 @@ const userWithCounts = (row) => ({
   joinedAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
   animeCount: row.anime_count ?? 0,
   mangaCount: row.manga_count ?? 0,
+  email: row.email || '',
+  emailVerified: Boolean(row.email_verified_at),
 });
 
 const USER_COUNTS = `

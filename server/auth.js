@@ -66,6 +66,7 @@ export const verifyCredentials = async (username, password) => {
 // NODE_ENV=development, otherwise cookies are marked Secure and browsers on
 // http:// will drop them.
 const secureFlag = (req) => {
+  if (process.env.ALLOW_INSECURE_HTTP === '1') return '';
   if (process.env.NODE_ENV === 'production') return '; Secure';
   const host = String(req?.host || '');
   const local = ['127.0.0.1', '::1', 'localhost'].includes(host.replace(/:\d+$/, ''));

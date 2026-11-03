@@ -5,6 +5,7 @@ import { mediaHref } from '@/catalog';
 import { displayTitle, synopsisText } from '@/home-data';
 import { useSiteLang } from '@/i18n';
 import { cn } from 'cn';
+import { coverUrl } from '@/lib/cover';
 
 export default function HeroCarousel({ items }) {
   const { lang } = useSiteLang();
@@ -55,7 +56,7 @@ export default function HeroCarousel({ items }) {
               <div className="mobile-hero-card__media">
                 <img
                   className="mobile-hero-card__image"
-                  src={item.image}
+                  src={coverUrl(item.image, 720)}
                   alt={title}
                   loading={index === 0 ? 'eager' : 'lazy'}
                   decoding="async"

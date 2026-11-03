@@ -1,0 +1,92 @@
+# HANDOFF — انی‌تیل (Anitale)
+
+این سند برای نشست جدید Claude Code نوشته شده تا بدون دیدن چت‌های قبلی، پروژه و تصمیم‌ها را کامل بفهمد.
+AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل **تاریخچه، تصمیم‌ها، معماری قابلیت‌های اخیر، تست و چک‌لیست** را دارد.
+
+## 1. پروژه و مالک
+- سایت: **anitale.itsositaro.ir** — کاتالوگ انیمه/مانگا به فارسی (RTL) با لیست شخصی، شبیه MAL.
+- Stack: React 19، Vite 7، Express 5، `node:sqlite` (بدون ORM). فرانت در `src/`، سرور در `server/`.
+- مالک: مهرداد، ایران، فارسی‌زبان. سرور را تازه یاد می‌گیرد؛ دستورها باید کپی‌پیست و مرحله‌ای باشند.
+- منبع داده اصلی: **Tenrai API** (`api.tenrai.org/v1`، حدود 4 درخواست در ثانیه، circuit breaker). جایگزین: AniList. ترجمه فارسی عنوان/خلاصه دستی/نیمه‌خودکار از پنل ادمین (`server/translate.js`، `translate-glossary.mjs`).
+- از سندباکس/شبکه ایران نمی‌توان به Tenrai واقعی وصل شد؛ تست با mock انجام می‌شود (بخش 6).
+
+## 2. نقشه کد
+**سرور (`server/`)**: `index` (راه‌اندازی)، `app` (همه routeهای Express، `requireAdmin`، `writeLimiter`، jobهای bulk)، `auth`، `users`، `db` (schema + migrate)، `repo` (کوئری‌ها)، `shape` (تبدیل ردیف→آیتم، `foldTitle`)، `schemas` (zod)، `settings`، `search` (ایندکس حافظه‌ای + `addWeighted` برای رتبه)، `sensitive`، `seo` (sitemap/meta، noindex)، `tenrai`، `anilist`، `extras` (شخصیت/عوامل/روابط/پیشنهاد/ویدیو/تم)، `people` (صفحه شخصیت و فرد)، `images`/`cover-resize`/`/api/ximg` (پروکسی و کش تصویر در `server/xcache/`)، `auto-import`، `missing-titles`، `reviews`، `notifications`، `mailer`، `health`، `export-data`، `seed`، `vpn`/`proxy`/`xray-config`، `pool`.
+**جدول‌های DB**: settings، anime، manga، users، user_entries (user_id, media_type, slug, status ∈ watching/completed/on_hold/dropped/planned, note, rating, progress, created_at, updated_at)، follows، auth_tokens، title_extras، people_cache، missing_titles، missing_requests، notifications، notification_state، reviews (یکی برای هر کاربر در هر عنوان؛ body، spoiler).
+**فرانت (`src/`)**: `App.jsx` (routeها: `/`، `/search`، `/anime/:idOrSlug`، `/manga/:idOrSlug`، `/character/:id`، `/person/:id`، `/dashboard`، `/user/:username`، `/import-list`، `/account`، صفحات auth، `/admin/*`)، `catalog-context.jsx`، `lib/catalog-rules.js` (قوانین رتبه/فیلتر کلاینت)، `lib/mal-xml.js`، `components/` (و `components/mobile/` برای MobileShell ≤820px)، `admin/*` (AnimeList، MangaList، AutoImport، BulkImport، HealthPage، MissingTitles، ReviewQueue، Schedule، SiteUsers، Translation، UserReviews، VpnPage، TitleImport، QuickAdd …)، `i18n.js` (fa/en) و `admin/i18n.js` (بلوک‌های جفتی en/fa). متن جدید UI را همیشه در هر دو زبان اضافه کن.
+**مستندات دیگر**: `AGENTS.md`، `README.md`، `FEATURE-QUEUES.md` (صف 1–28 همه ✅)، `docs/mobile-ui-spec.md`.
+
+## 3. تاریخچه کار (به ترتیب)
+1. صف‌های 1–28 (جستجو، داشبورد، برنامه پخش، ایمپورت گروهی، مانگا، کش کلاینت …) — در `FEATURE-QUEUES.md`.
+2. **صفحات کشف** (discovery) و **برنامه پخش** (schedule) + رفع باگ schedule.
+3. **title extras**: شخصیت‌ها، عوامل، روابط، پیشنهادها، ویدیو/تم در صفحه جزئیات؛ کش در `title_extras` با `EXTRAS_VERSION=3`؛ تصویرها از `/api/ximg`.
+4. **سخت‌سازی سرور**: `deploy/real-ip.sh` (IP واقعی از X-Forwarded-For آروان در nginx)، `deploy/harden.sh` (ufw، fail2ban، محدودیت systemd، swap).
+5. **ایمپورت MAL XML** (`/api/user/import-mal`) و **اکسپورت** (`/api/user/export`: XML سازگار با MAL، CSV، JSON). عنوان‌هایی که در سایت نیستند در `missing_titles` ثبت و در ادمین («عنوان‌های درخواستی») دیده می‌شوند.
+6. **پاک‌سازی + صفحه شخصیت/فرد + پنل سلامت ادمین** (`server/health.js`, `HealthPage.jsx`: حافظه/swap/دیسک/لود، سرویس‌های بیرونی با probe، خطاهای اخیر، هر 15 ثانیه).
+7. بررسی PDF کاتالوگ ویژگی‌های MAL که مالک ساخت → چک‌لیست (بخش 8).
+8. **Refresh-all ادمین به job پس‌زمینه** تبدیل شد (قبلاً بعد از چند ثانیه «Error !» می‌داد چون CDN درخواست طولانی را قطع می‌کرد).
+9. **فیلتر محتوای حساس** + **رتبه‌بندی بیزی** (A5, A1).
+
+## 4. معماری قابلیت‌های اخیر (باید هماهنگ بمانند)
+### فیلتر حساس
+- عنوان حساس است اگر ژانرش Ecchi/Erotica/Hentai باشد یا رده سنی Rx داشته باشد.
+- **دو پیاده‌سازی که باید sync بمانند**: `server/sensitive.js` و `src/lib/catalog-rules.js`.
+- پیش‌فرض: **روشن** (حساس‌ها پنهان). انتخاب کاربر در `localStorage` با کلید `anitale.showSensitive` (هر دستگاه جدا) با کامپوننت `SensitiveToggle`.
+- جستجوی سرور با `sfw=1`؛ حساس‌ها از sitemap بیرون و با هدر `X-Robots-Tag: noindex`.
+- صفحات کشف از `useVisibleCatalog()` / `useVisibleMangaCatalog()` استفاده می‌کنند؛ **لیست شخصی کاربر از کاتالوگ کامل** (چیزی که کاربر خودش اضافه کرده پنهان نشود).
+- `publicNames` در `server/tenrai.js` باید ژانرهای Ecchi/Erotica/Hentai را نگه دارد (قبلاً حذف می‌شدند و فیلتر کور بود). عنوان‌های قدیمی برای گرفتن ژانر نیاز به «بروزرسانی همه» در ادمین دارند. `seasonalAnimeIds` در auto-import هنوز hentai/erotica را رد می‌کند.
+### رتبه‌بندی بیزی
+`WR = v/(v+m)·S + m/(v+m)·C` با `MIN_VOTES = m = 1000`. v = تعداد رأی‌دهنده (scored-by)، وگرنه تعداد اعضا، وگرنه m؛ S = امتیاز منبع؛ C = میانگین کاتالوگ. در `rankCatalog`/`rankKey` (کلاینت) و `addWeighted` در `server/search.js` (سرور). **فقط روی امتیاز منبع** است (تصمیم مالک)، نه امتیاز کاربران خودمان. اعداد PDF (m=50، C=6.87، «قانون 20%») تأییدنشده‌اند.
+### Bulk refresh
+`startBulk(kind, rows, runRow, onFinish)` در `server/app.js`، Map درون‌حافظه‌ای `bulkJobs` (با ریستارت از بین می‌رود). `POST /api/admin/{anime|manga}/refresh-all` شروع/پیوستن؛ `GET` وضعیت. کلاینت: `runBulkJob(start,status,onProgress)` در `src/admin/api.js` (poll هر 2 ثانیه، تحمل 8 شکست پیاپی). بعد از پایان انیمه `exportData()` اجرا می‌شود. مسیر مانگا با تست جدا تأیید نشده (همان کد).
+### extras و people
+`server/extras.js` + `people.js`: اولین بازدید از Tenrai می‌گیرد و در SQLite کش می‌کند؛ با بالا بردن `EXTRAS_VERSION` همه کش‌ها باطل می‌شوند. UI: `components/TitleExtras.jsx`، `peoplePages.jsx`.
+
+## 5. دیپلوی و تله‌ها
+- **Syncthing**: پوشه پروژه روی سرور همگام می‌شود (فایل‌ها `syncthing:www-data`). یک بار exec bit فایل‌های `node_modules/.bin/*` از بین رفت → `vite: Permission denied`. راه‌حل ماندگار: `.stignore` با `node_modules` و `dist` در **هر دو دستگاه**، بعد `rm -rf node_modules && npm ci`. قبل از ثبت ignore هیچ پوشه همگام‌شده‌ای را حذف نکن (حذف به PC مالک هم می‌رسد). مالک این را اجرا کرده؛ هنوز تأیید نشده `.stignore` روی PC هم درست است.
+- `chmod -R u+rwX` به فایل‌ها x نمی‌دهد؛ `chmod +x node_modules/.bin/*`.
+- ایران بعضی mirrorهای apt را می‌بندد؛ نصب بسته ممکن است شکست بخورد.
+- `git pull` → «Already up to date» یعنی هنوز push نشده.
+- بعد از هر دیپلوی: پاک‌کردن کش آروان.
+
+## 6. تست (چطور من تست می‌کردم)
+سندباکس به Tenrai/AniList دسترسی ندارد، پس:
+1. `node scripts/dev/mocktenrai.mjs` (پورت 4010؛ `PORT=` قابل تغییر؛ `/__mode?v={json}` برای شبیه‌سازی خطا مثل 429/403/garbage؛ `/__hits` شمارنده).
+2. سرور تست روی DB کپی‌شده:
+   `DB_FILE=/tmp/t.db TENRAI_BASE_URL=http://127.0.0.1:4010/v1 EXTRAS_IMG_PREFIX=http://127.0.0.1:4010/img/ NODE_ENV=production PORT=3055 node server/index.js`
+3. برای ورود ادمین: `ADMIN_USER=admin`، `ADMIN_PASSWORD_HASH` (هش bcryptjs از `testpw123`)، `SESSION_SECRET`.
+4. اسکریپت‌های Playwright (chromium از قبل نصب) روی `http://127.0.0.1:3055`؛ هر اجرا DB تازه کپی کن (کاربر تستی `expa` فقط یک بار ساخته می‌شود؛ عنوان 9301 باید وجود داشته باشد).
+5. همیشه `npx vite build` و `node -e "import('./server/app.js')"`.
+6. `exportData()` در تست `public/data/*.json` را بازنویسی می‌کند — آن‌ها را **کامیت نکن** (`git checkout public/data`).
+7. پورت: `fuser -k PORT/tcp`، نه `pkill -f`.
+
+## 7. تصمیم‌های مالک (باز نکن)
+- فیلتر حساس: پیش‌فرض روشن + سوئیچ کاربر. ✔
+- رتبه: فقط امتیاز منبع با فرمول بیزی. ✔
+- **فعلاً نه**: فروم، کلاب‌ها، پیام خصوصی (C3–C5)، CSS دلخواه خام (به‌جایش چند تم رنگی آماده)، OAuth API.
+- تم پروفایل = چند تم رنگی از پیش‌تعریف‌شده.
+
+## 8. چک‌لیست بهبود (از PDF کاتالوگ MAL)
+**انجام‌شده**: A1 رتبه بیزی، A5 فیلتر حساس.
+**فاز 1**
+- A2 آمار هر عنوان از کاربران خودمان (توزیع امتیاز، شمارش وضعیت‌ها، تعداد اعضا)
+- A3 فیلدهای لیست: تاریخ شروع/پایان، rewatch، اولویت، تگ‌ها + وضعیت/تاریخ خودکار + خروجی XML **← پیشنهاد بعدی**
+- A4 پروفایل: «روزهای تماشا» و تاریخ عضویت (بقیه آمار پروفایل موجود است)
+- A6 جستجوی پیشرفته کامل (وضعیت، استودیو، رده سنی، بازه تاریخ، حذف ژانر، A–Z، مرتب‌سازی بیشتر)
+- A7 تفکیک ژانر / تم / مخاطب
+- A8 نرمال‌سازی جستجوی فارسی (ی/ي، ک/ك، نیم‌فاصله) + جستجوی شخصیت/فرد/کاربر — **بخشی از آن قبلاً هست** (`foldTitle` در `shape.js`، صف 5 و 16؛ کاربران در `/api/search`)؛ قبل از شروع بررسی کن چه چیزی کم است.
+**فاز 2**: B1 واکنش/مرتب‌سازی/حداقل طول نقد · B2 پیشنهاد کاربری (جفت + دلیل) · B3 علاقه‌مندی‌ها (انیمه، مانگا، شخصیت، فرد) · B4 حریم لیست (عمومی/دوستان/خصوصی) · B5 درصد شباهت (حداقل حدود 8 عنوان مشترک) · B6 «درباره من» با قالب‌بندی امن · B7 ترتیب تماشا/گراف فرنچایز · B8 برترین شخصیت‌ها · B9 خانه: محبوب‌ترین، به‌زودی، آپدیت سریع +1 قسمت.
+**فاز 3 (وابسته به داده/تصمیم)**: C1 تب قسمت‌ها/ویدیو/تصاویر · C2 صفحه استودیو/تهیه‌کننده/مجله · C6 interest stacks · C7 پیشنهاد ویرایش کاربران + صف ادمین · C8 API عمومی با انتخاب فیلد و ETag.
+
+## 9. کارهای باز / یادآوری
+- از مالک بپرس: «بروزرسانی همه» انیمه و مانگا را (برای ذخیره ژانر Ecchi) زده؟ build و restart سرور تمام شد؟
+- پیشنهاد امنیتی اختیاری: SSH فقط با کلید؛ بررسی unattended-upgrades.
+- تمیزکاری: واژه‌های قدیمی `PROVIDER`/Jikan در مستندات.
+- تست مسیر refresh-all مانگا.
+
+## 10. قراردادهای کدنویسی
+- زبان UI: فارسی اولویت؛ هر رشته در `i18n.js` (fa/en)، ادمین در `admin/i18n.js`.
+- routeهای نوشتن: `requireAdmin` (در صورت ادمین)، `writeLimiter`، اعتبارسنجی zod در `schemas`.
+- تغییرات DB: migrate در `server/db.js`؛ بدون ORM.
+- موبایل: هر صفحه جدید باید در ≤820px (MobileShell) بررسی شود (`docs/mobile-ui-spec.md`).
+- فایل‌های ایجادشده در `server/xcache/`, `server/*.db*`, `.env*` را کامیت نکن.

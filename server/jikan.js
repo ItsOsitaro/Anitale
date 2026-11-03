@@ -1,10 +1,10 @@
 import './config.js';
-import { fetch, ProxyAgent } from 'undici';
+import { fetch } from 'undici';
+import { getDispatcher, viaProxy } from './proxy.js';
 
 const BASE = (process.env.JIKAN_BASE_URL || 'https://api.jikan.moe/v4').replace(/\/$/, '');
-const dispatcher = process.env.PROXY_URL ? new ProxyAgent(process.env.PROXY_URL) : undefined;
 const MIN_GAP_MS = 400; // Jikan allows 3 requests/second and 60/minute
-const TIMEOUT_MS = Number(process.env.JIKAN_TIMEOUT_MS) || 7_000;
+const timeoutMs = () => Number(process.env.JIKAN_TIMEOUT_MS) || (viaProxy() ? 25_000 : 7_000);
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 
 // Circuit breaker: when Jikan is unreachable (blocked/VPN off), every import
@@ -47,7 +47,7 @@ const enqueue = (task) => {
 const request = async (url, retried = false) => {
   let response;
   try {
-    response = await fetch(url, { dispatcher, signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: 'application/json' } });
+    response = await fetch(url, { dispatcher: getDispatcher(), signal: AbortSignal.timeout(timeoutMs()), headers: { accept: 'application/json' } });
   } catch {
     noteJikanDown();
     throw fail('Cannot reach Jikan. Check your internet/VPN, or set PROXY_URL in server/.env.', 502, { network: true });
@@ -82,6 +82,17 @@ export const searchAnime = async (query) => {
   }));
 };
 
+export const searchManga = async (query) => {
+  const body = await jikanGet(`/manga?q=${encodeURIComponent(query)}&limit=10`);
+  return (body.data || []).map((item) => ({
+    malId: item.mal_id,
+    title: item.title_english || item.title,
+    year: item.published?.prop?.from?.year || null,
+    type: item.type || '',
+    imageUrl: item.images?.jpg?.image_url || '',
+  }));
+};
+
 export const fetchAnimeFull = async (malId) => (await jikanGet(`/anime/${Number(malId)}/full`)).data;
 export const fetchMangaFull = async (malId) => (await jikanGet(`/manga/${Number(malId)}/full`)).data;
 // Exposed for the bulk-import fast path: when the breaker is open (or disabled via JIKAN_DISABLED),
@@ -91,7 +102,7 @@ export const jikanCircuitOpen = isJikanDown;
 export const downloadImage = async (url) => {
   let response;
   try {
-    response = await fetch(url, { dispatcher, signal: AbortSignal.timeout(TIMEOUT_MS) });
+    response = await fetch(url, { dispatcher: getDispatcher(), signal: AbortSignal.timeout(timeoutMs()) });
   } catch {
     throw new Error('Could not download the cover image (network/VPN?)');
   }

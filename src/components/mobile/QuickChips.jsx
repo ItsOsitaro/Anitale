@@ -3,11 +3,10 @@ import { useSiteLang } from '@/i18n';
 import { cn } from 'cn';
 
 const CHIPS = [
-  { labelKey: 'airingToday', to: '/episodes' },
+  { labelKey: 'chipSchedule', to: '/schedule' },
   { labelKey: 'chipSeason', to: '/seasonal' },
   { labelKey: 'chipTop', to: '/top/anime' },
   { labelKey: 'chipLatest', to: '/anime' },
-  { labelKey: 'chipNews', to: '/news' },
 ];
 
 export default function QuickChips() {

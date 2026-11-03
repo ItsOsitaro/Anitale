@@ -1,6 +1,6 @@
 export const errText = (error, t) => {
   if (error?.message === 'NETWORK') return t('network');
-  if (/Cannot reach Jikan/i.test(error?.message || '')) return t('jikanNetwork');
+  if (/Cannot reach Tenrai/i.test(error?.message || '')) return t('sourceNetwork');
   if (error?.status === 429 && /Too many login/i.test(error.message)) return t('tooMany');
   return error?.message || String(error);
 };
@@ -18,7 +18,7 @@ export const emptyForm = () => ({
   synopsisAuto: false,
 });
 
-// API item / Jikan draft -> form state. The synopsis may be a legacy plain
+// API item / import draft -> form state. The synopsis may be a legacy plain
 // string or bilingual { fa, en } — split it into the two form fields.
 export const toForm = (item) => {
   const form = emptyForm();

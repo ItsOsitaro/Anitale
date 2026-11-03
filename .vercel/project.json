@@ -1,0 +1,16 @@
+{
+  "projectId": "prj_I5IoI7agP16T1inbLKYvj4wBfkmJ",
+  "orgId": "team_h75JzAh4JQkcdDARsi90RXLU",
+  "projectName": "anitale",
+  "settings": {
+    "createdAt": 1792586144626,
+    "framework": "vite",
+    "devCommand": null,
+    "installCommand": null,
+    "buildCommand": "npm run build",
+    "outputDirectory": "dist",
+    "rootDirectory": null,
+    "directoryListing": false,
+    "nodeVersion": "24.x"
+  }
+}

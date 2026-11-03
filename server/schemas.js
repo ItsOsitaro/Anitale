@@ -60,9 +60,17 @@ export const mangaAdminPatch = z.object({
 export const USERNAME_PATTERN = /^[a-zA-Z0-9_-]{3,24}$/;
 export const siteRegisterInput = z.object({
   username: z.string().trim().max(24).regex(USERNAME_PATTERN, 'Username may contain only letters, digits, _ and - (3–24 chars)'),
+  email: z.string().trim().toLowerCase().max(254).email('Enter a valid email address'),
   password: z.string().min(8, 'Password must be at least 8 characters').max(100),
   bio: text(300).optional(),
 });
+const emailField = z.string().trim().toLowerCase().max(254).email('Enter a valid email address');
+const newPasswordField = z.string().min(8, 'Password must be at least 8 characters').max(100);
+export const siteForgotInput = z.object({ email: emailField });
+export const siteResetInput = z.object({ token: z.string().trim().min(20).max(100), newPassword: newPasswordField });
+export const siteVerifyInput = z.object({ token: z.string().trim().min(20).max(100) });
+export const siteEmailChangeInput = z.object({ email: emailField, password: z.string().max(200) });
+export const siteChangePasswordInput = z.object({ currentPassword: z.string().max(200), newPassword: newPasswordField });
 export const siteUserEntryInput = z.object({
   mediaType: z.enum(['anime', 'manga']),
   slug: z.string().trim().min(1).max(120),
@@ -71,6 +79,12 @@ export const siteUserEntryInput = z.object({
   rating: z.coerce.number().int().min(1).max(10).nullable().optional(),
   // Queue 21: episodes watched / chapters read (0..5000). Absent = keep stored.
   progress: z.coerce.number().int().min(0).max(5000).nullable().optional(),
+});
+export const siteReviewInput = z.object({
+  mediaType: z.enum(['anime', 'manga']),
+  slug: z.string().trim().min(1).max(120),
+  body: z.string().trim().min(10, 'Review must be at least 10 characters').max(2000),
+  spoiler: z.boolean().optional(),
 });
 export const siteProfileInput = z.object({
   bio: text(300),
@@ -88,4 +102,17 @@ export const siteAdminUserPatch = z.object({
   password: z.string().min(8, 'Password must be at least 8 characters').max(100).optional(),
   // No default here: an absent bio field must stay "not provided", not ''.
   bio: z.string().trim().max(300).optional(),
+});
+
+// MyAnimeList list import: one chunk of the user's exported list (matched by MAL id on the server).
+export const malImportInput = z.object({
+  overwrite: z.boolean().optional(),
+  items: z.array(z.object({
+    type: z.enum(['anime', 'manga']),
+    malId: z.number().int().positive(),
+    status: z.enum(['watching', 'completed', 'on_hold', 'dropped', 'planned']),
+    score: z.number().int().min(0).max(10).optional(),
+    progress: z.number().int().min(0).max(5000).optional(),
+    title: z.string().max(200).optional(),
+  })).max(1500),
 });

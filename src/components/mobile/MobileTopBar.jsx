@@ -1,6 +1,7 @@
-import { ChevronRight, LogIn, Menu, Search, User } from 'lucide-react';
+import { Bell, ChevronRight, LogIn, Menu, Moon, Search, Sun } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useSiteLang } from '@/i18n';
+import { useTheme } from '@/theme-context.jsx';
 import { cn } from 'cn';
 
 export default function MobileTopBar({
@@ -11,9 +12,14 @@ export default function MobileTopBar({
   onAvatar,
   onBack,
   onMore,
+  alerts,
+  notifications,
+  onAlerts,
   className,
 }) {
   const { t } = useSiteLang();
+  const { isDark, toggle } = useTheme();
+  const bellCount = (alerts?.unread || 0) + (notifications?.unread || 0);
 
   return (
     <header className={cn('mobile-topbar', className)} aria-label="نوار بالای صفحه">
@@ -28,12 +34,24 @@ export default function MobileTopBar({
         </button>
       ) : (
         <NavLink to="/" end className="mobile-topbar__brand" aria-label={t('brandAria')}>
-          <div className="mobile-topbar__logo" aria-hidden="true" />
+          <img className="mobile-topbar__logo" src="/logo-mark.svg" alt="" aria-hidden="true" width={26} height={36} decoding="async" />
           <span className="mobile-topbar__title">{title ?? t('siteName')}</span>
         </NavLink>
       )}
 
       <div className="mobile-topbar__spacer" />
+
+      <button
+        type="button"
+        className="mobile-topbar__search mobile-topbar__theme"
+        onClick={toggle}
+        aria-label={isDark ? t('themeOn') : t('themeOff')}
+        aria-pressed={isDark}
+      >
+        {isDark
+          ? <Sun width={20} height={20} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          : <Moon width={20} height={20} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />}
+      </button>
 
       <button
         type="button"
@@ -43,6 +61,18 @@ export default function MobileTopBar({
       >
         <Search width={20} height={20} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
       </button>
+
+      {user ? (
+        <button
+          type="button"
+          className="mobile-topbar__search mobile-topbar__bell"
+          onClick={onAlerts}
+          aria-label={bellCount ? t('notifAria', { n: bellCount }) : t('notifTitle')}
+        >
+          <Bell width={20} height={20} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          {bellCount > 0 && <span className="mobile-topbar__badge" aria-hidden="true">{bellCount}</span>}
+        </button>
+      ) : null}
 
       {user ? (
         <button type="button" className="mobile-topbar__avatar" onClick={onAvatar} aria-label={t('userKind')}>
@@ -64,7 +94,8 @@ export default function MobileTopBar({
         </button>
       ) : (
         <button type="button" className="mobile-topbar__login" onClick={onLogin} aria-label={t('authSubmitLogin')}>
-          {t('authSubmitLogin')}
+          <LogIn width={16} height={16} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" />
+          <span>{t('authSubmitLogin')}</span>
         </button>
       )}
 

@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from './api.js';
+import { api, runBulkJob } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 
@@ -17,6 +17,7 @@ export default function MangaList() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [busyAll, setBusyAll] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(null);
   // inline editor state: { slug, draft }
   const [editing, setEditing] = useState(null);
 
@@ -89,7 +90,7 @@ export default function MangaList() {
     if (!window.confirm(t('mangaConfirmUpdateAll', { n: count }))) return;
     setBusyAll(true);
     try {
-      const { updated, failed, results } = await api.mangaRefreshAll();
+      const { updated, failed, results } = await runBulkJob(api.mangaRefreshAll, api.mangaRefreshAllStatus, setBulkProgress);
       for (const result of results.filter((entry) => !entry.ok)) toast(t('refreshOneFailed', { title: result.title, msg: result.error }), 'error');
       for (const result of results.filter((entry) => entry.ok && (entry.changes || []).length > 0)) {
         const report = result.changes.map(changeText).filter(Boolean);
@@ -102,6 +103,7 @@ export default function MangaList() {
       toast(errText(err, t), 'error');
     } finally {
       setBusyAll(false);
+      setBulkProgress(null);
     }
   };
 
@@ -155,7 +157,7 @@ export default function MangaList() {
         <input className="adm-search" type="search" dir="auto" placeholder={t('mangaSearch')} aria-label={t('mangaSearch')} value={query} onChange={(e) => setQuery(e.target.value)} />
         {rows && <span className="adm-muted">{t('mangaTotal', { n: shown.length })}</span>}
         <button className="adm-btn" type="button" disabled={busyAll || !rows?.some((x) => x.malId)} title={t('mangaUpdateAllHint')} onClick={refreshAllRows}>
-          {busyAll ? t('refreshing') : t('mangaUpdateAll')}
+          {busyAll ? `${t('refreshing')}${bulkProgress ? ` ${bulkProgress.done}/${bulkProgress.total}` : ''}` : t('mangaUpdateAll')}
         </button>
         <Link className="adm-btn adm-primary adm-push" to="/admin/bulk-import?type=manga">+ {t('mangaNew')}</Link>
       </div>

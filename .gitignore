@@ -5,10 +5,13 @@ models/
 server/.env
 server/*.db*
 server/tmp/
+server/cache/
 public/covers/
 .claude/
 .opencode/
 *.log
-.vercel/
-.vercel
 .env*
+
+# Local VPN proxy config (contains secrets)
+server/xray/
+server/xcache/

@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
-import JikanImport from './JikanImport.jsx';
+import TitleImport from './TitleImport.jsx';
 import TagInput from './TagInput.jsx';
 import { emptyForm, errText, INFO_FIELDS, STAT_FIELDS, toForm, toPayload } from './util.js';
 
@@ -119,7 +119,7 @@ export default function AnimeForm() {
   return (
     <>
       <h1 className="adm-h1">{isEdit ? t('editTitle') : t('createTitle')}</h1>
-      <JikanImport
+      <TitleImport
         mode={isEdit ? 'edit' : 'create'}
         currentSlug={slug}
         initialQuery={isEdit && form.malId ? `https://myanimelist.net/anime/${form.malId}` : ''}

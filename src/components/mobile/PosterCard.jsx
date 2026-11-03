@@ -3,6 +3,7 @@ import { Star } from 'lucide-react';
 import { mediaHref } from '@/catalog';
 import { displayTitle } from '@/home-data';
 import { useSiteLang } from '@/i18n';
+import { coverUrl } from '@/lib/cover';
 
 export default function PosterCard({ item, mediaType = 'anime' }) {
   const { lang } = useSiteLang();
@@ -14,7 +15,7 @@ export default function PosterCard({ item, mediaType = 'anime' }) {
       <Link className="mobile-poster-card__link" to={href} aria-label={title}>
         <img
           className="mobile-poster-card__image"
-          src={item.image}
+          src={coverUrl(item.image, 360)}
           alt={title}
           loading="lazy"
           decoding="async"

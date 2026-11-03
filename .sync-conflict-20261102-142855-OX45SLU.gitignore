@@ -1,0 +1,14 @@
+node_modules/
+dist/
+models/
+.venv/
+server/.env
+server/*.db*
+server/tmp/
+public/covers/
+.claude/
+.opencode/
+*.log
+.vercel/
+.vercel
+.env*

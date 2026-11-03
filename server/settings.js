@@ -1,5 +1,4 @@
-// Tiny key/value settings store, shared across both DB engines (SQLite locally,
-// Neon Postgres on Vercel — the SQL kept in the common dialect subset). The
+// Tiny key/value settings store, stored in SQLite. The
 // admin Settings page persists runtime choices here, e.g. the desired synopsis
 // translation provider; unlike env vars these changes apply instantly without
 // a redeploy.

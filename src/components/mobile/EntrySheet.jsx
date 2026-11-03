@@ -8,6 +8,7 @@ import { useSiteLang } from '@/i18n';
 import { useSheet } from '@/hooks/use-sheet';
 import { entryTotal } from './entry-utils';
 import { cn } from 'cn';
+import { coverUrl } from '@/lib/cover';
 
 const STATUSES = ['watching', 'completed', 'on_hold', 'dropped', 'planned'];
 
@@ -49,7 +50,7 @@ export default function EntrySheet({ open, onClose, entry, item, mediaType, user
       >
         <div className="filter-sheet__grab"><div className="more-sheet__handle" aria-hidden="true" /></div>
         <div className="filter-sheet__head entry-sheet__head">
-          {item?.image && <img className="entry-sheet__cover" src={item.image} alt="" width="40" height="56" />}
+          {item?.image && <img className="entry-sheet__cover" src={coverUrl(item.image, 120)} alt="" width="40" height="56" />}
           <div className="entry-sheet__title">
             <h2 dir="auto">{title}</h2>
             {item && <Link to={mediaHref(item, mediaType)} onClick={onClose}>{t('dbOpenTitle')}</Link>}

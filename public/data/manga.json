@@ -1,139 +1,758 @@
 [
   {
-    "slug": "one-piece",
-    "malId": null,
-    "title": "One Piece",
+    "slug": "yuusha-party-ni-kawaii-ko-ga-ita-node-kokuhaku-shitemita",
+    "malId": 137779,
+    "title": "Yuusha Party ni Kawaii Ko ga Ita node, Kokuhaku shitemita.",
     "titleFa": "",
     "category": "Adventure",
-    "year": "1997",
+    "year": "2021",
     "format": "Manga",
-    "sampleScore": null,
-    "publicationStatus": "",
+    "sampleScore": 6.82,
+    "publicationStatus": "Publishing",
     "chapters": null,
     "genres": [
       "Adventure",
+      "Comedy",
+      "Fantasy",
+      "Romance",
+      "Isekai",
+      "Reincarnation"
+    ],
+    "synopsis": {
+      "fa": "یوکی در یک سانحه رانندگی درگذشت و در دنیایی فانتزی دوباره متولد شد! با این حال، به جای اینکه قهرمان افسانه ها باشد، در نهایت به یک دیو غلبه یافته تناسخ یافت. او که تمایلی به تبدیل شدن به ارباب شیطان ندارد، در قلعه شیطان لرد به عنوان یک نگهبان تصادفی درجه پایین می نشیند. یک روز گروه Hero's برای حمله می آید و به یک هوی و هوس کل گروه قهرمان را ناک اوت می کند. او که گروه قهرمان را شفا می دهد و سپس آماده می شود تا آنها را به شهر بازگرداند، متوجه کشیش زن می شود و در همان نگاه اول عاشق می شود!",
+      "en": "Youki died in a traffic accident and was reborn in a fantasy world! However, instead of being the hero of legends, he ended up reincarnating into an overpowered demon. Having no desires to become the Demon Lord, he sits around in the Demon Lord's castle as a random low rank guardian. One day, the Hero's party comes to attack and on a whim he knocks out the entire hero party. Healing up the Hero party and then preparing to send them back to town, he notices the female priest and falls in love at first sight!\n\n(Source: MU)",
+      "auto": true
+    },
+    "cover": "yuusha-party-ni-kawaii-ko-ga-ita-node-kokuhaku-shitemita.jpg",
+    "image": "/covers/yuusha-party-ni-kawaii-ko-ga-ita-node-kokuhaku-shitemita.jpg",
+    "updatedAt": "2026-11-01 14:16:13"
+  },
+  {
+    "slug": "cant-stop-thinking-about-your-hair",
+    "malId": 196977,
+    "title": "Can't Stop Thinking About Your Hair",
+    "titleFa": "",
+    "category": "Romance",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": 7.11,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Romance",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "درست پس از ترک باشگاه بیسبال، سوزوهارا به طور ناگهانی توسط دوست دخترش رها می شود - و کل ماجرا توسط میاشیتا مشاهده می شود که در کلاس کنار او می نشیند. سوزوهارا در تابستان سال سوم دبیرستان، با نزدیک شدن به فارغ التحصیلی، شروع به رشد موهایش می کند. او به زودی به طرز عجیبی جذب میاشیتا می شود که هر روز مدل موهای خود را تغییر می دهد.",
+      "en": "Just after quitting the baseball club, Suzuhara is suddenly dumped by his girlfriend—and the whole thing is witnessed by Miyashita, who sits next to him in class. In the summer of their third year of high school, with graduation drawing near, Suzuhara starts growing out his hair. He soon finds himself strangely drawn to Miyashita, who changes her hairstyle everyday.\n\n(Source: Kodansha, translated)",
+      "auto": true
+    },
+    "cover": "cant-stop-thinking-about-your-hair.jpg",
+    "image": "/covers/cant-stop-thinking-about-your-hair.jpg",
+    "updatedAt": "2026-11-01 14:16:15"
+  },
+  {
+    "slug": "hoshikita-kirara-wa-kiramekitai",
+    "malId": 197034,
+    "title": "Hoshikita Kirara wa Kiramekitai!",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": 6.87,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "Supernatural",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
+    "cover": "hoshikita-kirara-wa-kiramekitai.jpg",
+    "image": "/covers/hoshikita-kirara-wa-kiramekitai.jpg",
+    "updatedAt": "2026-11-01 14:22:03"
+  },
+  {
+    "slug": "slap-shot-girls",
+    "malId": 196788,
+    "title": "Slap Shot Girls",
+    "titleFa": "",
+    "category": "Sports",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Sports",
+      "School",
+      "Team Sports"
+    ],
+    "synopsis": {
+      "fa": "کورومی کوباشیری پس از فارغ التحصیلی از مدرسه راهنمایی، به دلیل شرایط خانوادگی خود مجبور است به هوکایدو نقل مکان کند. وقتی به دوست پسرش می گوید که آنها باید در یک رابطه از راه دور باشند، او اعلام می کند که دیگر نمی خواهد به رابطه آنها ادامه دهد. کورومی که پس از جدایی آسیب‌زا قلبش شکسته است، بی‌هدف بیرون پرسه می‌زند و خود را در یک پیست اسکیت روی یخ می‌بیند، جایی که با فردی خوش‌تیپ ملاقات می‌کند و دنیای هاکی روی یخ را کشف می‌کند.",
+      "en": "After graduating from middle school, Kurumi Kobashiri has to move to Hokkaido because of her family situation. When she tells her boyfriend that they will have to be in a long-distance relationship, he declares he doesn’t want to continue their relationship anymore. Heartbroken after the traumatic breakup, Kurumi wanders aimlessly outside and finds herself at an ice skating rink, where she meets someone good looking and discovers the world of ice hockey.\n\n(Source: MANGA Plus, edited)",
+      "auto": true
+    },
+    "cover": "slap-shot-girls.jpg",
+    "image": "/covers/slap-shot-girls.jpg",
+    "updatedAt": "2026-11-01 14:16:18"
+  },
+  {
+    "slug": "cool-na-eikoku-bishoujo-wa-orenchi-ni-homestay-shitai-rashii",
+    "malId": 196667,
+    "title": "Cool na Eikoku Bishoujo wa Orenchi ni Homestay shitai Rashii",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
+    "cover": "cool-na-eikoku-bishoujo-wa-orenchi-ni-homestay-shitai-rashii.jpg",
+    "image": "/covers/cool-na-eikoku-bishoujo-wa-orenchi-ni-homestay-shitai-rashii.jpg",
+    "updatedAt": "2026-11-01 14:22:03"
+  },
+  {
+    "slug": "guilty-library",
+    "malId": 192618,
+    "title": "Guilty Library",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Girls Love",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
+    "cover": "guilty-library.jpg",
+    "image": "/covers/guilty-library.jpg",
+    "updatedAt": "2026-11-01 14:22:03"
+  },
+  {
+    "slug": "ore-wa-benkyou-ga-shitai-dake-nanoni",
+    "malId": 196909,
+    "title": "Ore wa Benkyou ga Shitai dake nanoni!",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "یوتارو هاروکاوا، دانش آموز سال سوم دبیرستان، به مگومی، معلم خصوصی خود که در حال حاضر در دانشگاه توکیو تحصیل می کند، اعتراف می کند. یوتارو فکر می کرد صرفاً به دلیل اختلاف سنی بین آنها رد می شود، اما معلوم شد که Megumi تنها به افرادی علاقه مند است که بتوانند به استانداردهای UTokyo برسند. یوتارو، با فکر، \"در این صورت، من یک فرصت دارم!\" تصمیم خود را برای ورود به UTokyo تعیین می کند. متأسفانه یوتارو به دور از درخشان بودن، یک احمق کامل است. با این وجود، یوتارو تصمیم می گیرد کاملاً خود را وقف تحصیل کند، اما برعکس، آنچه در انتظار است سرنوشتی کاملاً بعید است.",
+      "en": "Youtarou Harukawa, a 3rd year Junior high school student, confesses to Megumi, his private tutor who is currently studying at the University of Tokyo. Youtarou thought he'd be rejected simply due to the age difference between them, but it turns out that Megumi's only interested in people who can reach UTokyo's standards. Youtarou, thinking, \"In that case, I've got a chance!\" sets his sights on getting into UTokyo. Unfortunately, far from being brilliant, Youtarou is a complete idiot. Nevertheless, Youtarou decides to dedicate himself completely to his studies, but, to the contrary, what's in store is a completely unlikely destiny.\n\n(Source: Shogakukan, translated)",
+      "auto": true
+    },
+    "cover": "ore-wa-benkyou-ga-shitai-dake-nanoni.jpg",
+    "image": "/covers/ore-wa-benkyou-ga-shitai-dake-nanoni.jpg",
+    "updatedAt": "2026-11-01 14:16:25"
+  },
+  {
+    "slug": "oneesan-ha-no-ore-ga-naze-chicchai-kimi-wo-suki-ni-natta-no-ka",
+    "malId": 197297,
+    "title": "Oneesan-ha no Ore ga Naze Chicchai Kimi wo Suki ni Natta no ka?",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "در طول تعطیلات بهاری پس از مدرسه راهنمایی، سوکای توچیکا یک دختر کوچک را که در قطاری شلوغ له شده بود نجات می دهد. او فرض می کند که او فقط یک دانش آموز ابتدایی است، تا اینکه وارد دبیرستان می شود و او را در کلاس درس می بیند؟! او که تنها 140 سانتی متر قد دارد و از نوشیدنی های انرژی زا تغذیه می کند، ممکن است کوچک باشد، اما او یک زیبایی مطلق است. نام او چیتو ناروسه است. سوکای خود را عاشق زنان قد بلند و مسن‌تر می‌داند، بنابراین دختر نازنینی مانند چیتو نباید هدف عاشقانه‌ای باشد. با این حال، چیتو با یک بیانیه جسورانه حمله شدیدی را آغاز می کند: \"من آن فتیش شما را می گیرم و کاملاً زیر و رو می کنم!\" یک کشمکش رام-کام بر سر سلیقه بین پسری که عاشق زنان مسن تر است و یک دختر کوچک آغاز می شود!",
+      "en": "During the spring break after middle school, Sukai Toochika rescues a tiny girl getting crushed on a crowded train. He assumes she's just an elementary schooler, until he enters high school and finds her in his classroom?! Standing only 140 centimeters tall and fueled by energy drinks, she may be tiny, but she's an absolute beauty.\n\nHer name is Chito Naruse. Sukai considers himself an inveterate lover of tall, older women, so a tiny cutie like Chito shouldn't pose much of a romantic target. However, Chito kicks off a fierce assault with a bold declaration: \"I'm gonna take that fetish of yours and turn it completely upside down!\"\n\nA rom-com tug-of-war over tastes between a guy who loves older women and a tiny girl begins!\n\n(Source: Kadokawa, translated)",
+      "auto": true
+    },
+    "cover": "oneesan-ha-no-ore-ga-naze-chicchai-kimi-wo-suki-ni-natta-no-ka.jpg",
+    "image": "/covers/oneesan-ha-no-ore-ga-naze-chicchai-kimi-wo-suki-ni-natta-no-ka.jpg",
+    "updatedAt": "2026-11-01 14:16:28"
+  },
+  {
+    "slug": "digimon-eggs",
+    "malId": 196864,
+    "title": "Digimon Eggs",
+    "titleFa": "",
+    "category": "Action",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Action",
+      "Sci-Fi"
+    ],
+    "synopsis": {
+      "fa": "وقتی ایزومو، دانش‌آموز دبستانی، تخم‌مرغ عجیبی را پیدا می‌کند که از یک کامپیوتر قدیمی بیرون زده، همه چیز تغییر می‌کند...!",
+      "en": "When Elementary schooler Izumo finds a strange egg that popped out of an old PC, everything changes...!\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "digimon-eggs.jpg",
+    "image": "/covers/digimon-eggs.jpg",
+    "updatedAt": "2026-11-01 14:16:31"
+  },
+  {
+    "slug": "osananajimi-wa-sasoeba-itsudemo-dekiru-kankei",
+    "malId": 196761,
+    "title": "Osananajimi wa Sasoeba Itsudemo Dekiru Kankei",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "Harem",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "\"آیا از جایی که متوقف شدیم... در جای شونتا؟\" ماریا واتاسه دختر زیبایی است که بین پسرها بسیار محبوب است، در حالی که شونتا آریما یک دانش آموز گیکی دبیرستانی است. این دو دوست دوران کودکی هستند که تا زمانی که یادشان می آید هر روز با هم بازی می کردند. اگرچه آنها به دلیل یک \"حادثه\" در سال دوم راهنمایی از هم دور شده بودند، اما پس از تغییر صندلی در دبیرستان خود را در کنار یکدیگر می بینند. یک روز، ماریا ناگهان از شونتا می پرسد: \"اگر می خواهی سینه های من را ببینی، باید آنها را به تو نشان دهم؟\" بعد از مدرسه، در اتاق شونتا، ماریا می‌گوید: «شونتا فقط بدنم را به تو نشان می‌دهم» و شروع به درآوردن یونیفورم می‌کند و قفسه سینه‌اش را درست در مقابل او نشان می‌دهد...",
+      "en": "\"Shall we pick up where we left off... at Shunta's place?\"\n\nMaria Watase is a beautiful girl who is immensely popular with the boys, while Shunta Arima is a geeky high school freshman. The two are childhood friends who used to play together every day for as long as they can remember. Though they had grown distant due to an \"incident\" back in their second year of middle school, they find themselves sitting next to each other after a seat reshuffle in high school.\n\nOne day, Maria suddenly asks Shunta, \"If you want to see my breasts, should I show them to you?\"\n\nAfter school, in Shunta's room, Maria says, \"I'll only show my body to you, Shunta,\" and begins to take off her uniform, revealing her developed chest right in front of him...\n\n(Source: Kadokawa, translated)",
+      "auto": true
+    },
+    "cover": "osananajimi-wa-sasoeba-itsudemo-dekiru-kankei.jpg",
+    "image": "/covers/osananajimi-wa-sasoeba-itsudemo-dekiru-kankei.jpg",
+    "updatedAt": "2026-11-01 14:16:34"
+  },
+  {
+    "slug": "evershifting-girlfriends",
+    "malId": 197596,
+    "title": "Evershifting Girlfriends",
+    "titleFa": "",
+    "category": "Romance",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Romance",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "توکیماسا کوروسو یک دانش آموز دبیرستانی است به قدری با خودش سختگیر که می بیند به هوس اعداد متوسل می شود. اما همانطور که او عشق را به عنوان اتلاف وقت رد می کند، دختری در مقابل او ظاهر می شود که سه نامه عاشقانه در دست دارد...؟!",
+      "en": "Tokimasa Kurusu is a high schooler so strict with himself that he finds himself resorting to lusting after numbers. But just as he's dismissing love as a waste of time, a girl shows up before him holding three love letters...?!\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "evershifting-girlfriends.jpg",
+    "image": "/covers/evershifting-girlfriends.jpg",
+    "updatedAt": "2026-11-01 14:16:36"
+  },
+  {
+    "slug": "aztec-turning-of-heaven",
+    "malId": 196847,
+    "title": "Aztec Turning of Heaven",
+    "titleFa": "",
+    "category": "Suspense",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Suspense",
+      "Gore",
+      "Organized Crime",
+      "Time Travel"
+    ],
+    "synopsis": {
+      "fa": "سرنوشت بی رحمانه ای برای خواهر و برادرها رقم می خورد، لحظه ای که پا به خاک بیگانه می گذارند. اما... واقعا فکر می کنی من پایانی مثل این را بپذیرم...؟",
+      "en": "A cruel fate befalls the siblings the moment they set foot on foreign soil. But... you really think I'd accept an ending like this...?\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "aztec-turning-of-heaven.jpg",
+    "image": "/covers/aztec-turning-of-heaven.jpg",
+    "updatedAt": "2026-11-01 14:16:39"
+  },
+  {
+    "slug": "watashi-de-doutei-suteta-kuse-ni",
+    "malId": 196802,
+    "title": "Watashi de Doutei Suteta Kuse ni",
+    "titleFa": "",
+    "category": "Romance",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Romance",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
+    "cover": "watashi-de-doutei-suteta-kuse-ni.jpg",
+    "image": "/covers/watashi-de-doutei-suteta-kuse-ni.jpg",
+    "updatedAt": "2026-11-01 14:22:03"
+  },
+  {
+    "slug": "asobi-no-kankei",
+    "malId": 196717,
+    "title": "Asobi no Kankei",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "Love Polygon",
+      "Workplace"
+    ],
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
+    "cover": "asobi-no-kankei.jpg",
+    "image": "/covers/asobi-no-kankei.jpg",
+    "updatedAt": "2026-11-01 14:22:04"
+  },
+  {
+    "slug": "hito-osu-in-the-land-of-succubus",
+    "malId": 196747,
+    "title": "Hito Osu in the Land of Succubus",
+    "titleFa": "",
+    "category": "Fantasy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Fantasy",
+      "Harem",
+      "Urban Fantasy"
+    ],
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
+    "cover": "hito-osu-in-the-land-of-succubus.jpg",
+    "image": "/covers/hito-osu-in-the-land-of-succubus.jpg",
+    "updatedAt": "2026-11-01 14:22:04"
+  },
+  {
+    "slug": "noro-noro-puku-puku",
+    "malId": 196925,
+    "title": "Noro-Noro Puku-Puku",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Supernatural",
+      "Gag Humor",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "دوشیزه ای استثنایی نفرین شده، سوزو، روزی به عذاب الهی خدایان مبتلا می شود... و نفرین او؟ برای از بین بردن 108 نفرین با کمک پوکو، گربه سیاهی که سر او را تسخیر کرده است!",
+      "en": "An exceptionally cursed shrine maiden, Suzu, incurs the divine punishment of the gods one day... And her curse? To exorcise 108 curses with the help of Puku, the black cat possessing her head!\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "noro-noro-puku-puku.jpg",
+    "image": "/covers/noro-noro-puku-puku.jpg",
+    "updatedAt": "2026-11-01 14:20:27"
+  },
+  {
+    "slug": "puella-magi-madoka-magica-the-movie-walpurgisnacht-rising",
+    "malId": 196631,
+    "title": "Puella Magi Madoka Magica the Movie - Walpurgisnacht: Rising",
+    "titleFa": "",
+    "category": "Drama",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Drama",
+      "Suspense",
+      "Mahou Shoujo",
+      "Psychological"
+    ],
+    "synopsis": {
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
+    },
+    "cover": "puella-magi-madoka-magica-the-movie-walpurgisnacht-rising.jpg",
+    "image": "/covers/puella-magi-madoka-magica-the-movie-walpurgisnacht-rising.jpg",
+    "updatedAt": "2026-11-01 14:22:04"
+  },
+  {
+    "slug": "ouji-wa-sakete-toorenai",
+    "malId": 197424,
+    "title": "Ouji wa Sakete Toorenai!",
+    "titleFa": "",
+    "category": "Girls Love",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Girls Love",
+      "Harem",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "برای کانام، که هرگز در کنار پسران خوب نبود، یک مدرسه تمام دخترانه عملاً بهشت ​​است. او بدش نمی آید که ساده و درونگرا باشد. تا زمانی که بتواند از روزهایش در آرامش لذت ببرد، همین برایش کافی است... اگرچه در اعماق وجودش، او دوست دارد کمی بیشتر نوجوانی را تجربه کند! اما یک روز، کانام به طور تصادفی یک طرف پنهان خصوصی Ritsuka Ouji، یکی از \"چهار شاهزاده\" افسانه ای را که بر مدرسه سلطنت می کند، کشف می کند. کانام که از اینکه ممکن است Ritsuka او را ساکت کند تا راز را حفظ کند، وحشت زده می شود... فقط اوجی پیشنهادی غیرمنتظره ارائه می دهد...",
+      "en": "For Kaname, who's never been good around boys, an all-girls school is practically paradise. She doesn't mind being plain and an introvert. As long as she can enjoy her days in peace, that's enough for her... Though deep down, she'd love to experience a little more typically teenage!\n\nBut one day, Kaname accidentally discovers a private hidden side of Ritsuka Ouji, one of the legendary \"Four Princes\" who reign over the school. Terrified that Ritsuka might silence her to keep the secret, Kaname braces herself... only for Ouji to make a rather unexpected proposal...\n\n(Source: Kadokawa, translated)",
+      "auto": true
+    },
+    "cover": "ouji-wa-sakete-toorenai.jpg",
+    "image": "/covers/ouji-wa-sakete-toorenai.jpg",
+    "updatedAt": "2026-11-01 14:20:30"
+  },
+  {
+    "slug": "does-machi-chuka-count-as-a-date",
+    "malId": 196718,
+    "title": "Does Machi-Chuka Count as a Date?",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Gourmet",
+      "Romance",
+      "Adult Cast"
+    ],
+    "synopsis": {
+      "fa": "سوهی ماشیتا، که در برنامه ریزی و فروش در یک تولید کننده مواد غذایی کار می کند، یکی از طرفداران پر و پا قرص هیمه هوسوی است، پخش کننده ای که غذاهای رستوران های کثیف و ترسناک را در حالی که شخصیت یک خانم جوان باصفا را پذیرفته است، مرور می کند. سوهی یک لذت ساده در زندگی دارد: به اشتراک گذاشتن شام بعد از کار با همسایه خود هیناکو فوتوی. هیناکو در سوراخی در رستوران چینی دیوار که تنها رفتن به آن کمی دشوار است، با منوی عجیب و غریب اما فراوان، هیناکو با ذوق غذا می خورد. سوهی نمی داند همین هیناکو رازی دارد.",
+      "en": "Souhei Mashita, who works in planning and sales at a food manufacturer, is a big fan of Hime Hosoi, a streamer who reviews food from dirty and scary restaurants while adopting the persona of a refined young lady. Souhei has a simple pleasure in life: sharing dinner after work with his neighbor, Hinako Futoi. At a hole in the wall Chinese restaurant that's a little difficult to go to alone, with a quirky but plentiful menu, Hinako eats with such gusto. Souhei doesn't know this same Hinako has a secret.\n\n(Source: Shogakukan, translated)",
+      "auto": true
+    },
+    "cover": "does-machi-chuka-count-as-a-date.jpg",
+    "image": "/covers/does-machi-chuka-count-as-a-date.jpg",
+    "updatedAt": "2026-11-01 14:20:35"
+  },
+  {
+    "slug": "afterschool-aquarium",
+    "malId": 196765,
+    "title": "Afterschool Aquarium",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": 6.68,
+    "publicationStatus": "Finished",
+    "chapters": 1,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "یک برخورد تصادفی در گوشه کلاس بعد از مدرسه...؟! گال × آکواریوم؟!",
+      "en": "A chance encounter in the corner of the classroom after school...?! Gal × Aquarium?!\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "afterschool-aquarium.jpg",
+    "image": "/covers/afterschool-aquarium.jpg",
+    "updatedAt": "2026-11-01 14:20:37"
+  },
+  {
+    "slug": "the-pit-of-darkness",
+    "malId": 197362,
+    "title": "The Pit of Darkness",
+    "titleFa": "",
+    "category": "Supernatural",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Supernatural",
+      "Suspense",
+      "School"
+    ],
+    "synopsis": {
+      "fa": "\"گودال تاریکی\" - یک فضای خالی که هر چیزی را که در آن پرتاب می شود از روی زمین پاک می کند. کاسوگا، پسری که اغلب توسط همسالانش به خاطر طبیعت سخت‌کوشش مورد سوء استفاده قرار می‌گیرد، در حین یک سفر صحرایی که با کلاسش تمیز می‌کند، روی یک گودال عظیم و بدون ته اتفاق می‌افتد. پس از انداختن تصادفی \"چیزی\" در داخل، متوجه می شود که گودال دارای قدرت عجیبی برای... تحریف واقعیت است؟!",
+      "en": "\"The Pit of Darkness\"—an empty void that wipes anything thrown into it off the face of the Earth. Kasuga, a boy often taken advantage of by his peers for his diligent nature, happens upon a huge, bottomless pit during a field trip cleaning with his class. After accidentally dropping \"something\" inside, he realizes the pit possesses a strange power to... distort reality?!\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "the-pit-of-darkness.jpg",
+    "image": "/covers/the-pit-of-darkness.jpg",
+    "updatedAt": "2026-11-01 14:20:39"
+  },
+  {
+    "slug": "a-necromancer-betrayed-by-his-comrades-and-executed-revives-10-000-heroes-who-ha",
+    "malId": 197155,
+    "title": "A Necromancer Betrayed by His Comrades and Executed Revives 10,000 Heroes Who Had Become Undead, Builds the Most powerful Kingdom, and Begins His Quest for Revenge. Heroic Spirits Gather at the Throne of Darkness",
+    "titleFa": "",
+    "category": "Action",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
       "Action",
       "Fantasy"
     ],
     "synopsis": {
-      "fa": "دزد دریایی جوانی با خدمه‌ی رو به رشدش میان جزیره‌های عجیب سفر می‌کند تا رویایی ناممکن و گنجی را بجوید که گفته می‌شود جهان را تغییر می‌دهد.",
-      "en": "A young pirate and his growing crew sail between strange islands in pursuit of an impossible dream and the treasure said to change the world."
+      "fa": "کلاغ، یک نکرومانسر، توسط رفقای خود مورد خیانت قرار می گیرد و به پرتگاه پرتاب می شود. اما، با مصرف میاسما، دوباره برمی خیزد، 10000 روح قهرمان را که زمانی نابود شده بودند، به طور کامل زنده می کند و قدرتمندترین پادشاهی را تأسیس می کند. کرو با لژیونی از جنگجویان باستانی به فرماندهی خود، انتقامی وحشتناک و بی امان از رفقای قبلی که به او خیانت کردند و خدایی که پشت همه چیز بود، می گیرد...!",
+      "en": "Crow, a necromancer, gets betrayed by his comrades and cast into the Abyss. But, consuming the miasma, he rises again, fully resurrects 10,000 heroic spirits who had once been destroyed, and founds the mightiest of kingdoms.\n\nWith a legion of ancient warriors at his command, Crow exacts a gruesome and relentless revenge against the former comrades who betrayed him and the god who was behind it all...!\n\n(Source: Kodansha, translated)",
+      "auto": true
     },
-    "cover": "",
-    "updatedAt": "2026-10-20 09:38:43"
+    "cover": "a-necromancer-betrayed-by-his-comrades-and-executed-revives-10-000-heroes-who-ha.jpg",
+    "image": "/covers/a-necromancer-betrayed-by-his-comrades-and-executed-revives-10-000-heroes-who-ha.jpg",
+    "updatedAt": "2026-11-01 14:20:41"
   },
   {
-    "slug": "fullmetal-alchemist",
-    "malId": null,
-    "title": "Fullmetal Alchemist",
+    "slug": "just-go-save-the-world-already",
+    "malId": 197041,
+    "title": "Just Go Save the World Already",
     "titleFa": "",
-    "category": "Adventure",
-    "year": "2001",
+    "category": "Action",
+    "year": "2026",
     "format": "Manga",
-    "sampleScore": null,
-    "publicationStatus": "",
-    "chapters": null,
+    "sampleScore": 7.36,
+    "publicationStatus": "Finished",
+    "chapters": 1,
     "genres": [
-      "Adventure",
+      "Action",
+      "Comedy",
       "Fantasy",
-      "Drama"
+      "Parody"
     ],
     "synopsis": {
-      "fa": "دو برادر برای ترمیم پیامدهای کیمیای ممنوعه می‌گردند و توطئه‌ای را کشف می‌کنند که از سالن‌های نظامی تا مرزهای کشورشان کشیده شده است.",
-      "en": "Two brothers search for a way to repair the consequences of forbidden alchemy, uncovering a conspiracy that reaches from military halls to the borders of their country."
+      "fa": "در دنیای یک بازی RPG، \"قاتل تازه کار\" از صرف هر روز صرف انجام نقشی که به عنوان یک NPC به او محول شده است خسته شده است. اما \"قهرمان\" که در مقابل او ظاهر می شود یک گیمر هاردکور است که همه چیز را به سمت افراط های دیوانه کننده می کشد...؟ یک متا فانتزی در مورد فراتر رفتن از ماموریت شما شروع می شود!",
+      "en": "In the world of an RPG, \"Newbie Killer Grad\" has grown tired of spending every day simply carrying out the role assigned to him as an NPC. But the \"Hero\" who appears before him is a hardcore gamer who takes things to insane extremes...? A meta-fantasy about going beyond your mission begins!\n\n(Source: MANGA Plus)",
+      "auto": true
     },
-    "cover": "",
-    "updatedAt": "2026-10-19 10:44:36"
+    "cover": "just-go-save-the-world-already.jpg",
+    "image": "/covers/just-go-save-the-world-already.jpg",
+    "updatedAt": "2026-11-01 14:20:43"
   },
   {
-    "slug": "frieren",
-    "malId": null,
-    "title": "Frieren: Beyond Journey’s End",
+    "slug": "dekkai-gal-to-chicchai-gal-ga-shitsuren-shita-ore-no-shinkyo-ni-iribitatteiru",
+    "malId": 197053,
+    "title": "Dekkai Gal to Chicchai Gal ga Shitsuren shita Ore no Shinkyo ni Iribitatteiru",
     "titleFa": "",
-    "category": "Fantasy",
-    "year": "2020",
+    "category": "Comedy",
+    "year": "2026",
     "format": "Manga",
     "sampleScore": null,
-    "publicationStatus": "",
+    "publicationStatus": "Publishing",
     "chapters": null,
     "genres": [
-      "Adventure",
-      "Fantasy",
-      "Drama"
+      "Comedy",
+      "Romance",
+      "Harem"
     ],
     "synopsis": {
-      "fa": "پس از پایان سفرِ افسانه‌ای، جادوگری یکه‌سا دوباره سفر می‌کند و می‌آموزد انسان‌ها و لحظه‌های گذرایی را که روزی بدیهی می‌پنداشت بفهمد.",
-      "en": "After a legendary quest is over, an elf mage travels again and learns to understand the people and passing moments she once took for granted."
+      "fa": "\"\"",
+      "en": "\"\"",
+      "auto": true
     },
-    "cover": "",
-    "updatedAt": "2026-10-19 10:44:36"
+    "cover": "dekkai-gal-to-chicchai-gal-ga-shitsuren-shita-ore-no-shinkyo-ni-iribitatteiru.jpg",
+    "image": "/covers/dekkai-gal-to-chicchai-gal-ga-shitsuren-shita-ore-no-shinkyo-ni-iribitatteiru.jpg",
+    "updatedAt": "2026-11-01 14:22:04"
   },
   {
-    "slug": "vinland-saga",
-    "malId": null,
-    "title": "Vinland Saga",
+    "slug": "ibara",
+    "malId": 197061,
+    "title": "Ibara",
     "titleFa": "",
-    "category": "Historical",
-    "year": "2005",
+    "category": "Action",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": 6.53,
+    "publicationStatus": "Finished",
+    "chapters": 1,
+    "genres": [
+      "Action",
+      "Fantasy",
+      "Childcare"
+    ],
+    "synopsis": {
+      "fa": "ایبارا، بزرگترین شمشیر زن پادشاهی، پادشاه شیطان را شکست داد. اما بدون اینکه همه بدانند، او در حال بزرگ کردن نوزادی است که از آن پادشاه شیطان به دنیا آمده است...",
+      "en": "Ibara, the greatest swordswoman in the kingdom, defeated the demon king. But unbeknownst to everyone, she's raising a baby born from that demon king...\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "ibara.jpg",
+    "image": "/covers/ibara.jpg",
+    "updatedAt": "2026-11-01 14:20:46"
+  },
+  {
+    "slug": "pacopaco-in-the-hell",
+    "malId": 196803,
+    "title": "Pacopaco in the Hell",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
     "format": "Manga",
     "sampleScore": null,
-    "publicationStatus": "",
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Fantasy",
+      "Urban Fantasy"
+    ],
+    "synopsis": {
+      "fa": "جهان توسط یک خدای خودخوانده به سه سرور تقسیم شده است. هوجی در «جهنم» زندگی می‌کند، پست‌ترین و خطرناک‌ترین مکان، مکانی بی‌قانون که ناامیدانه تلاش می‌کند تا با فروش گوشت خود از آن فرار کند. روزی فرشته ای زخمی پیش او ظاهر می شود...",
+      "en": "The world has been split into three servers by a self-proclaimed god. Hoji lives in \"HELL,\" the lowest and most dangerous, a lawless place that he desperately works to escape by selling his own flesh. One day, a wounded angel appears before him...\n\n(Source: Hakusensha, translated)",
+      "auto": true
+    },
+    "cover": "pacopaco-in-the-hell.jpg",
+    "image": "/covers/pacopaco-in-the-hell.jpg",
+    "updatedAt": "2026-11-01 14:20:48"
+  },
+  {
+    "slug": "suki-datta-ko-wo-maid-ni-shitara-ore-no-heya-de-kossori-nanika-shiteiru",
+    "malId": 196922,
+    "title": "Suki Datta Ko wo Maid ni Shitara, Ore no Heya de Kossori Nanika shiteiru",
+    "titleFa": "",
+    "category": "Comedy",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Comedy",
+      "Romance",
+      "School"
+    ],
+    "synopsis": "",
+    "cover": "suki-datta-ko-wo-maid-ni-shitara-ore-no-heya-de-kossori-nanika-shiteiru.jpg",
+    "image": "/covers/suki-datta-ko-wo-maid-ni-shitara-ore-no-heya-de-kossori-nanika-shiteiru.jpg",
+    "updatedAt": "2026-11-02 07:49:16"
+  },
+  {
+    "slug": "nightmare-of-oveja-negra",
+    "malId": 197558,
+    "title": "Nightmare of Oveja Negra",
+    "titleFa": "",
+    "category": "Horror",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
+    "chapters": null,
+    "genres": [
+      "Horror",
+      "Sci-Fi",
+      "Space"
+    ],
+    "synopsis": {
+      "fa": "فضاپیمای Oveja Negra که زباله های فضایی را جمع آوری و می فروشد، امروز دوباره در حالت قرمز فعالیت می کرد. و کاپیتان هنک تا حد چشمانش بدهکار بود. سپس، یکی از اعضای خدمه یوکی یک سیگنال مرموز را دریافت می کند و آنها یک کارخانه معدن قدیمی و متروک را کشف می کنند. هنک و خدمه اش که مشتاق نجات منابع هستند، به داخل کارخانه قدم می گذارند، اما به زودی متوجه می شوند که اتفاقی غیرعادی در آنجا رخ می دهد...",
+      "en": "The spacecraft Oveja Negra, which collects and sells space junk, was operating in the red again today. And Captain Hank was up to his eyeballs in debt. Then, one of the crew members Yuki picks up a mysterious distress signal and they discover an old, abandoned mining plant. Keen to salvage resources, Hank and his crew step inside the plant, but soon realize that something abnormal is happening there...\n\n(Source: MANGA Plus)",
+      "auto": true
+    },
+    "cover": "nightmare-of-oveja-negra.jpg",
+    "image": "/covers/nightmare-of-oveja-negra.jpg",
+    "updatedAt": "2026-11-02 07:49:18"
+  },
+  {
+    "slug": "bartlet-fairy-basslet",
+    "malId": 197697,
+    "title": "Bartlet Fairy Basslet",
+    "titleFa": "",
+    "category": "Action",
+    "year": "2026",
+    "format": "Manga",
+    "sampleScore": null,
+    "publicationStatus": "Publishing",
     "chapters": null,
     "genres": [
       "Action",
       "Adventure",
-      "Historical"
+      "Fantasy",
+      "Time Travel"
     ],
     "synopsis": {
-      "fa": "جنگجوی جوانی در میان حملات وایکینگ‌ها بزرگ می‌شود و از چرخه‌ی خشونتی که زندگی‌اش را شکل داده می‌پرسد.",
-      "en": "A young warrior grows up among Viking expeditions and begins to question the cycle of violence that has shaped his life."
+      "fa": "شوالیه-کاپیتان و پرنسس برونهیلد پس از شکست دشمن خود، یک ماهی درخشان مرموز را می بیند که از آسمان سقوط می کند... حماسه فانتزی هک اند اسلش!",
+      "en": "After defeating her nemesis, Knight-Captain and Princess Brunhilde sees a mysterious shining fish fall from the sky... A hack and slash fantasy epic!\n\n(Source: MANGA Plus)",
+      "auto": true
     },
-    "cover": "",
-    "updatedAt": "2026-10-19 10:44:36"
+    "cover": "bartlet-fairy-basslet.jpg",
+    "image": "/covers/bartlet-fairy-basslet.jpg",
+    "updatedAt": "2026-11-03 05:51:19"
   },
   {
-    "slug": "demon-slayer",
-    "malId": null,
-    "title": "Demon Slayer",
+    "slug": "ore-no-tsuihou-saretai-ganbou-zenin-ni-sukarete-kanawanai",
+    "malId": 197271,
+    "title": "Ore no Tsuihou saretai Ganbou, Zenin ni Sukarete Kanawanai",
     "titleFa": "",
     "category": "Fantasy",
-    "year": "2016",
+    "year": "2026",
     "format": "Manga",
     "sampleScore": null,
-    "publicationStatus": "",
+    "publicationStatus": "Publishing",
     "chapters": null,
     "genres": [
-      "Action",
       "Fantasy",
-      "Historical"
+      "Romance",
+      "Ecchi",
+      "Harem",
+      "Isekai",
+      "Reincarnation"
     ],
     "synopsis": {
-      "fa": "پسری مصمم به شمشیرزنانی محرمانه می‌پیوندد و در نسخه‌ای فراواقعی از اوایل قرن بیستم ژاپن سفر می‌کند.",
-      "en": "A determined boy joins a secret corps of swordspeople and journeys through a supernatural version of early twentieth-century Japan."
+      "fa": "روکوتو آزوما پس از مرگ یک روز پس از مراسم ورود به دبیرستان، در دنیایی دیگر با مهارت ظاهراً غیرقابل توجه \"ذخیره سازی\" تناسخ می یابد. الهه ای به او می گوید که قدرت پنهانی دارد، اما این قدرت تنها پس از تجربه یک رویداد اساسی ایسِکای می تواند بیدار شود. به روکوتو، پاسخ واضح است: او باید از گروه خود اخراج شود! هم‌تیمی‌های او هونوکا آرد (یک ورزشکار دوگانه)، مارون مانسی (یک جادوگر) و شیون گلانتز (یک شمشیرزن جادویی) هستند - دو زن زیبا و یک جوان خوش‌تیپ، همه فوق‌العاده قدرتمند. مجبور کردن آنها برای تبعید او باید آسان باشد، یا اینطور فکر می کرد...",
+      "en": "After dying the day after his high school entrance ceremony, Rokuto Azuma is reincarnated in another world with the seemingly unremarkable skill \"Storage.\" A goddess tells him he has a hidden power, but it can only awaken after he experiences a quintessential isekai event. To Rokuto, the answer is obvious: he needs to be banished from his party! His teammates are Honoka Ared (a dual-wielder), Marun Mancy (a mage), and Shion Glantz (a magic swordsman)—two beautiful women and a handsome youth, all exceptionally powerful. Getting them to banish him should be easy, or so he thought...\n\n(Source: Kadokawa, translated)",
+      "auto": true
     },
-    "cover": "",
-    "updatedAt": "2026-10-19 10:44:36"
-  },
-  {
-    "slug": "blue-lock",
-    "malId": null,
-    "title": "Blue Lock",
-    "titleFa": "",
-    "category": "Sports",
-    "year": "2018",
-    "format": "Manga",
-    "sampleScore": null,
-    "publicationStatus": "",
-    "chapters": null,
-    "genres": [
-      "Sports",
-      "Drama"
-    ],
-    "synopsis": {
-      "fa": "آزمایش آموزشی ملی مهاجمان جوان را در رقابت مستقیم می‌نشاند تا بلندپروازی و توانشان در لحظه‌ی سرنوشت‌ساز آزموده شود.",
-      "en": "A national training experiment places young forwards in direct competition, testing their ambition and ability to seize the decisive moment."
-    },
-    "cover": "",
-    "updatedAt": "2026-10-19 10:44:36"
+    "cover": "ore-no-tsuihou-saretai-ganbou-zenin-ni-sukarete-kanawanai.jpg",
+    "image": "/covers/ore-no-tsuihou-saretai-ganbou-zenin-ni-sukarete-kanawanai.jpg",
+    "updatedAt": "2026-11-03 05:51:21"
   }
 ]

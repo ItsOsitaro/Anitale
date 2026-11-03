@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { api } from './api.js';
+import { api, runBulkJob } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 import { mediaHref } from '../catalog.js';
@@ -14,6 +14,7 @@ export default function AnimeList() {
   const [error, setError] = useState('');
   const [busyRow, setBusyRow] = useState('');
   const [busyAll, setBusyAll] = useState(false);
+  const [bulkProgress, setBulkProgress] = useState(null);
 
   useEffect(() => {
     const timer = setTimeout(() => { setDebounced(query.trim()); setPage(1); }, 300);
@@ -47,7 +48,7 @@ export default function AnimeList() {
     return change.field === 'synopsis' ? label : `${label}: ${change.from || '—'} → ${change.to || '—'}`;
   };
 
-  // Re-fetch one entry from MyAnimeList (Jikan, or AniList when unreachable).
+  // Re-fetch one entry from MyAnimeList (Tenrai, or AniList when unreachable).
   const refreshItem = async (item) => {
     if (!item.malId) { toast(t('refreshNoId', { title: item.title }), 'error'); return; }
     setBusyRow(item.slug);
@@ -72,7 +73,7 @@ export default function AnimeList() {
     if (!window.confirm(t('confirmRefreshAll', { n: count }))) return;
     setBusyAll(true);
     try {
-      const { updated, failed, results } = await api.refreshAll();
+      const { updated, failed, results } = await runBulkJob(api.refreshAll, api.refreshAllStatus, setBulkProgress);
       for (const result of results.filter((entry) => !entry.ok)) toast(t('refreshOneFailed', { title: result.title, msg: result.error }), 'error');
       for (const result of results.filter((entry) => entry.ok && (entry.changes || []).length > 0)) {
         const report = result.changes.map(changeText).filter(Boolean);
@@ -85,6 +86,7 @@ export default function AnimeList() {
       toast(errText(err, t), 'error');
     } finally {
       setBusyAll(false);
+      setBulkProgress(null);
     }
   };
 
@@ -96,7 +98,7 @@ export default function AnimeList() {
         <input className="adm-search" type="search" dir="auto" placeholder={t('searchTitles')} aria-label={t('searchTitles')} value={query} onChange={(e) => setQuery(e.target.value)} />
         {data && <span className="adm-muted">{t('total', { n: data.total })}</span>}
         <button className="adm-btn" type="button" disabled={busyAll || !data?.items.some((item) => item.malId)} title={t('refreshAllHint')} onClick={refreshAllItems}>
-          {busyAll ? t('refreshing') : t('refreshAll')}
+          {busyAll ? `${t('refreshing')}${bulkProgress ? ` ${bulkProgress.done}/${bulkProgress.total}` : ''}` : t('refreshAll')}
         </button>
         <Link className="adm-btn adm-primary adm-push" to="/admin/new">+ {t('newAnime')}</Link>
       </div>

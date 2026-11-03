@@ -7,9 +7,12 @@ import PosterCard from './PosterCard';
 import SectionHeader from './SectionHeader';
 import Rail from './Rail';
 import { cn } from 'cn';
+import { coverUrl } from '@/lib/cover';
+import CommunitySection from '../CommunitySection';
+import { hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
 
-const TAB_IDS = ['summary', 'info', 'team', 'related'];
-const TAB_KEYS = { summary: 'mdSummary', info: 'information', team: 'staffSection', related: 'mdRelated' };
+const TAB_IDS = ['summary', 'reviews', 'info', 'team', 'related'];
+const TAB_KEYS = { summary: 'mdSummary', reviews: 'mdReviews', info: 'information', team: 'staffSection', related: 'mdRelated' };
 
 function FactGrid({ rows }) {
   const visible = rows.filter((row) => row.value);
@@ -96,9 +99,8 @@ function StatusSheet({ open, onClose, statuses, current, onPick, onRemove }) {
 }
 
 export default function MobileDetailPage({
-  item, mediaType, related, informationRows, statisticsRows, alternativeTitles, romajiTitle,
+  item, mediaType, related, extras, informationRows, statisticsRows, alternativeTitles, romajiTitle,
   isSaved, currentStatus, listStatuses, onToggleSaved, onSetStatus, onShare, shareNote,
-  reviews, newsItems, discussions,
 }) {
   const { t, lang } = useSiteLang();
   const navigate = useNavigate();
@@ -125,7 +127,7 @@ export default function MobileDetailPage({
   const score = item.statistics?.score ?? (item.sampleScore ? item.sampleScore.toFixed(1) : null);
   const stats = [
     { label: t('scoreLabel'), value: score },
-    { label: t('rankedLabel'), value: item.statistics?.ranked },
+    { label: t('rankedLabel'), value: item.rank ? `#${item.rank}` : item.statistics?.ranked },
     { label: t('popularity'), value: item.statistics?.popularity },
   ];
   const synonyms = alternativeTitles.synonyms?.join(lang === 'fa' ? '، ' : ', ');
@@ -136,7 +138,7 @@ export default function MobileDetailPage({
     <div className="mobile-detail">
       <header className="mobile-detail__hero">
         <div className="mobile-detail__backdrop" aria-hidden="true">
-          <img src={item.image} alt="" />
+          <img src={coverUrl(item.image, 480)} alt="" />
         </div>
         <div className="mobile-detail__actions">
           <button type="button" className="mobile-detail__glass" onClick={() => navigate(-1)} aria-label={t('mdBack')}>
@@ -147,7 +149,7 @@ export default function MobileDetailPage({
           </button>
         </div>
         <div className="mobile-detail__head">
-          <img className="mobile-detail__cover" src={item.image} alt={item.title} />
+          <img className="mobile-detail__cover" src={coverUrl(item.image, 480)} alt={item.title} />
           <div className="mobile-detail__titles">
             <h1 dir="auto">{item.title}</h1>
             {romajiTitle && romajiTitle !== item.title && (
@@ -197,6 +199,7 @@ export default function MobileDetailPage({
             <section>
               <h2 className="mobile-detail__h">{t('synopsis')}</h2>
               <p className={cn('mobile-detail__synopsis', !expanded && longSynopsis && 'is-clamped')} dir="auto">{item.synopsis}</p>
+              {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
               {longSynopsis && (
                 <button type="button" className="mobile-detail__more" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
                   {expanded ? t('mdLess') : t('more')}
@@ -211,42 +214,14 @@ export default function MobileDetailPage({
                 </div>
               </section>
             )}
-            {reviews.length > 0 && (
-              <section>
-                <h2 className="mobile-detail__h">{t('reviewsTitle')}</h2>
-                {reviews.map((review) => (
-                  <p className="mobile-detail__quote" key={L(review.title, lang)}>
-                    <strong>{L(review.title, lang)}</strong> {L(review.body, lang)}
-                  </p>
-                ))}
-                <Link to="/reviews" className="mobile-detail__link">{t('readMoreReviews')}</Link>
-              </section>
-            )}
-            {newsItems.length > 0 && (
-              <section>
-                <h2 className="mobile-detail__h">{t('recentNews')}</h2>
-                {newsItems.slice(0, 2).map((news) => (
-                  <p className="mobile-detail__quote" key={L(news.title, lang)}>
-                    <strong>{L(news.title, lang)}</strong> {L(news.body, lang)}
-                  </p>
-                ))}
-                <Link to="/news" className="mobile-detail__link">{t('moreNews')}</Link>
-              </section>
-            )}
-            {discussions.length > 0 && (
-              <section>
-                <h2 className="mobile-detail__h">{t('forumTalk')}</h2>
-                {discussions.slice(0, 2).map((d) => (
-                  <p className="mobile-detail__quote" key={L(d.title, lang)}>
-                    <strong>{L(d.title, lang)}</strong> {L(d.body, lang)}
-                  </p>
-                ))}
-                <Link to="/forums" className="mobile-detail__link">{t('openDiscussions')}</Link>
-              </section>
-            )}
           </>
         )}
 
+        {tab === 'reviews' && (
+          <section>
+            <CommunitySection mediaType={mediaType} slug={item.slug} />
+          </section>
+        )}
         {tab === 'info' && (
           <>
             <section>
@@ -256,7 +231,6 @@ export default function MobileDetailPage({
             <section>
               <h2 className="mobile-detail__h">{t('statistics')}</h2>
               <FactGrid rows={statisticsRows} />
-              {!item.statistics && <p className="mobile-detail__muted">{t('prototypeNote')}</p>}
             </section>
             {hasAlt && (
               <section>
@@ -304,37 +278,49 @@ export default function MobileDetailPage({
 
         {tab === 'team' && (
           <>
-            <section>
-              <h2 className="mobile-detail__h">{t('charactersVA')}</h2>
-              <p className="mobile-detail__muted">{t('detailCastNote')}</p>
-              <Link to="/characters" className="mobile-detail__link">{t('characterDirectoryLink')}</Link>
-            </section>
-            <section>
-              <h2 className="mobile-detail__h">{t('staffSection')}</h2>
-              <p className="mobile-detail__muted">{t('detailStaffNote')}</p>
-              <Link to="/staff" className="mobile-detail__link">{t('productionCredits')}</Link>
-            </section>
-            <section>
-              <h2 className="mobile-detail__h">{t('openingTheme')}</h2>
-              <p className="mobile-detail__muted">{t('detailThemeNote')}</p>
-            </section>
-            <section>
-              <h2 className="mobile-detail__h">{t('endingTheme')}</h2>
-              <p className="mobile-detail__muted">{t('detailEndingNote')}</p>
-            </section>
+            {extras.status === 'loading' && <ExtrasSkeleton />}
+            {hasAny(extras, 'trailer') && (
+              <section>
+                <h2 className="mobile-detail__h">{t('trailerTitle')}</h2>
+                <Trailer data={extras.data} />
+              </section>
+            )}
+            {hasAny(extras, 'characters') && (
+              <section>
+                <h2 className="mobile-detail__h">{t('charactersVA')}</h2>
+                <Characters data={extras.data} />
+              </section>
+            )}
+            {hasAny(extras, 'staff') && (
+              <section>
+                <h2 className="mobile-detail__h">{t('staffSection')}</h2>
+                <Staff data={extras.data} />
+              </section>
+            )}
+            {mediaType === 'anime' && hasAny(extras, 'openings') && (
+              <section>
+                <h2 className="mobile-detail__h">{t('openingTheme')}</h2>
+                <Themes data={extras.data} kind="op" />
+              </section>
+            )}
+            {mediaType === 'anime' && hasAny(extras, 'endings') && (
+              <section>
+                <h2 className="mobile-detail__h">{t('endingTheme')}</h2>
+                <Themes data={extras.data} kind="ed" />
+              </section>
+            )}
+            {extras.status === 'none' && <p className="mobile-detail__muted">{t('extrasNone')}</p>}
           </>
         )}
 
         {tab === 'related' && (
           <>
-            <section>
-              <h2 className="mobile-detail__h">{t('relatedEntries')}</h2>
-              <p className="mobile-detail__muted">{t('detailRelatedNote')}</p>
-              <div className="mobile-detail__links">
-                <Link to="/adapted" className="mobile-detail__link">{t('mangaAdaptations')}</Link>
-                <Link to="/anime" className="mobile-detail__link">{t('relatedTitles')}</Link>
-              </div>
-            </section>
+            {hasAny(extras, 'relations') && (
+              <section>
+                <h2 className="mobile-detail__h">{t('relatedEntries')}</h2>
+                <Relations data={extras.data} />
+              </section>
+            )}
             {related.length > 0 && (
               <section className="mobile-detail__rail">
                 <SectionHeader title={t('relatedAnime')} />
@@ -343,16 +329,12 @@ export default function MobileDetailPage({
                 </Rail>
               </section>
             )}
-            <section>
-              <h2 className="mobile-detail__h">{t('recommendationsTitle')}</h2>
-              <p className="mobile-detail__muted">{t('detailRecsNote')}</p>
-              <Link to="/recommendations" className="mobile-detail__link">{t('browseRecs')}</Link>
-            </section>
-            <section>
-              <h2 className="mobile-detail__h">{t('interestStacks')}</h2>
-              <p className="mobile-detail__muted">{t('detailStacksNote')}</p>
-              <Link to="/stacks" className="mobile-detail__link">{t('browseStacks')}</Link>
-            </section>
+            {hasAny(extras, 'recommendations') && (
+              <section>
+                <h2 className="mobile-detail__h">{t('recommendationsTitle')}</h2>
+                <Recommendations data={extras.data} mediaType={mediaType} />
+              </section>
+            )}
           </>
         )}
       </div>
