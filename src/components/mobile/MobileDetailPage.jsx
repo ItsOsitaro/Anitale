@@ -1,4 +1,5 @@
 import { splitGenres } from '@/lib/genre-kinds';
+import { QuickEpisode } from '@/components/QuickEpisode';
 import { FavoriteButton } from '../Favorites';
 import WatchOrder from '../WatchOrder';
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -353,6 +354,7 @@ export default function MobileDetailPage({
           {isSaved ? <Check width={20} height={20} aria-hidden="true" /> : <Plus width={20} height={20} aria-hidden="true" />}
           <span>{isSaved ? t('inList') : t('addToList')}</span>
         </button>
+        <QuickEpisode mediaType={mediaType} item={item} compact className="mobile-actionbar__quick" />
         <FavoriteButton kind={mediaType} refId={item.slug} compact className="mobile-actionbar__fav" />
         {isSaved && (
           <button

@@ -36,6 +36,7 @@ import { useAiringAlerts } from '@/hooks/use-airing-alerts';
 import CommunitySection from '@/components/CommunitySection';
 import ImportListPage from './importListPage.jsx';
 import PeoplePage from './peoplePages.jsx';
+import { ContinueWatching, QuickEpisode } from './components/QuickEpisode.jsx';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
@@ -603,7 +604,7 @@ function HomePage() {
   const animeCatalog = useVisibleCatalog();
   const mangaCatalog = useVisibleMangaCatalog();
   const picks = selectHomePicks({ animeCatalog, mangaCatalog });
-  const { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga } = picks;
+  const { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga, popularAnime, upcomingAnime } = picks;
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
   // visit, and manually re-rollable with the dice action in the hero.
   // Seen picks this session never repeat (when the catalog is exhausted, the
@@ -647,6 +648,7 @@ function HomePage() {
       <div className="page-shell">
         <div className="layout">
           <main className="main-column">
+            <ContinueWatching />
             {featured && (
               <section className="hero panel" style={{ '--hero-image': `url("${featured.image}")` }}>
                 <div className="hero-poster" aria-hidden="true">
@@ -709,13 +711,15 @@ function HomePage() {
               <SectionHeading title={t('topAiring')} to="/top/anime" action="fullRanking" />
               <RankedList items={airingAnime} toPrefix="/anime" />
             </section>
-            <section>
-              <SectionHeading title={t('topUpcoming')} to="/seasonal" action="calendar" />
-              <AnimeShelf items={currentSeason.slice(0, 4)} />
-            </section>
-            <section>
-              <SectionHeading title={t('mostPopular')} to="/top/anime" action="fullRanking" />
-              <AnimeShelf items={sortBy(animeCatalog, rankKey).slice(0, 6)} />
+            {upcomingAnime.length > 0 && (
+              <section id="upcomingSoon">
+                <SectionHeading title={t('topUpcoming')} to="/seasonal" action="calendar" />
+                <AnimeShelf items={upcomingAnime} />
+              </section>
+            )}
+            <section id="mostPopular">
+              <SectionHeading title={t('mostPopular')} to="/anime" action="browseAll" />
+              <AnimeShelf items={popularAnime} />
             </section>
             {freshManga.length > 0 && (
               <section id="freshManga">
@@ -729,8 +733,8 @@ function HomePage() {
             <UserPanel />
             <SchedulePanel />
             <CompactRanking title={t('topAiring')} items={airingAnime} to="/top/anime" />
-            <CompactRanking title={t('upcomingRanking')} items={currentSeason} to="/seasonal" />
-            <CompactRanking title={t('popularRanking')} items={sortBy(animeCatalog, rankKey)} to="/top/anime" />
+            {upcomingAnime.length > 0 && <CompactRanking title={t('upcomingRanking')} items={upcomingAnime} to="/seasonal" />}
+            <CompactRanking title={t('popularRanking')} items={popularAnime} to="/anime" />
           </aside>
         </div>
       </div>
@@ -1176,6 +1180,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 {isSaved ? t('inList') : t('addToList')}
               </Button>
               <FavoriteButton kind={mediaType} refId={item.slug} className="detail-fav" />
+              <QuickEpisode mediaType={mediaType} item={item} className="detail-quick-ep" />
               {isSaved && (
                 <div className="detail-status-picker" role="radiogroup" aria-label={t('listStatusAria')}>
                   {listStatuses.map((status) => (

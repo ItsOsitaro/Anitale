@@ -65,3 +65,6 @@ export const rankCatalog = (items) => {
 
 // Sort key used by every "top" list: weighted score first, plain score as a fallback.
 export const rankKey = (item) => -(item.weightedScore ?? item.sampleScore ?? 0);
+
+// MAL member count (how many people keep the title on a list) — the "most popular" key.
+export const membersOf = (item) => Number(String(item?.statistics?.members ?? '').replace(/[^\d]/g, '')) || 0;

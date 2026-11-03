@@ -5,6 +5,7 @@ import { L } from '@/i18n.js';
 import sortBy from 'lodash/sortBy.js';
 import { buildSchedule } from './catalog.js';
 import { withMangaImages } from './catalog-context.jsx';
+import { membersOf } from './lib/catalog-rules.js';
 
 // Synopsis value: the catalog stores a legacy plain string OR bilingual JSON
 // { fa, en }. L() resolves the object to the current language with a
@@ -160,6 +161,26 @@ export const selectCurrentSeasonPicks = ({ animeCatalog }) => {
   return result;
 };
 
+const SEASON_ORDER = ['winter', 'spring', 'summer', 'fall'];
+export const getNextSeasonInfo = () => {
+  const { season, year } = getCurrentSeasonInfo();
+  const i = SEASON_ORDER.indexOf(season);
+  return i === 3 ? { season: 'winter', year: year + 1 } : { season: SEASON_ORDER[i + 1], year };
+};
+
+// «به‌زودی»: next season's titles (or anything still "Not yet aired"), most popular first.
+export const selectUpcoming = (animeCatalog, limit = 6) => {
+  const next = getNextSeasonInfo();
+  const notAired = (item) => (item.information || []).some((row) => String(row?.label).toLowerCase() === 'status' && /not yet aired/i.test(String(row.value)));
+  return animeCatalog
+    .filter((item) => {
+      const info = getItemSeasonInfo(item);
+      return (info.season === next.season && info.year === next.year) || notAired(item);
+    })
+    .sort((a, b) => membersOf(b) - membersOf(a))
+    .slice(0, limit);
+};
+
 export const selectHomePicks = ({ animeCatalog, mangaCatalog }) => {
   const topAnime = sortBy(animeCatalog, (anime) => -(anime.weightedScore ?? anime.sampleScore ?? 0)).slice(0, 5);
   const trendingAnime = animeCatalog.slice(5, 10);
@@ -173,6 +194,8 @@ export const selectHomePicks = ({ animeCatalog, mangaCatalog }) => {
     mangaItems.filter((manga) => manga.publicationStatus === 'Publishing'),
     (manga) => (manga.chapters ?? 0),
   ).reverse().slice(0, 5);
-  return { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga };
+  const popularAnime = [...animeCatalog].sort((a, b) => membersOf(b) - membersOf(a)).slice(0, 6);
+  const upcomingAnime = selectUpcoming(animeCatalog);
+  return { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga, popularAnime, upcomingAnime };
 };
 

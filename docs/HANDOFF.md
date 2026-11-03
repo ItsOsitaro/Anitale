@@ -98,3 +98,5 @@ AGENTS.md دستورها/env/لایه داده را دارد؛ این فایل *
 
 
 - ~~B8 برترین شخصیت‌ها~~ انجام شد: `server/topchars.js` (`GET /api/top/characters?page=1|2`, کش ۲۴ ساعته در جدول `top_cache`، در خطا نسخه‌ی قدیمی), صفحه‌ی `src/topCharactersPage.jsx` در `/top/characters` (۵۰ تا، ۲۵ تا در هر صفحه), لینک در `sidebarSections` و تب سوم در `MobileRankingPage`, ورودی SEO.
+
+- ~~B9 خانه~~ انجام شد: «محبوب‌ترین» با تعداد members (`membersOf` در `catalog-rules.js`)، «به‌زودی» = انیمه‌های فصل بعد یا Not yet aired مرتب با members (`selectUpcoming` در `home-data.js`، بخش خالی مخفی می‌شود)، دکمه‌ی +۱ قسمت (`components/QuickEpisode.jsx`) روی «ادامه‌ی تماشا» در خانه و صفحه‌ی هر انیمه (دسکتاپ و نوار پایین موبایل)؛ رسیدن به قسمت آخر خودکار «کامل‌شده» می‌کند.
