@@ -1,3 +1,4 @@
+import AboutEditor from '../AboutEditor';
 import { Link } from 'react-router-dom';
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -94,6 +95,7 @@ export default function EditProfileSheet({ open, onClose, user }) {
             />
             <p className="edit-hint">{t('dashBioHint')}</p>
           </section>
+          <section className="filter-sheet__group"><AboutEditor /></section>
           <Link className="edit-account-link" to="/account" onClick={onClose}>{t('accountTitle')}</Link>
         </div>
         <div className="filter-sheet__footer">

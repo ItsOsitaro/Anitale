@@ -26,6 +26,7 @@ export const ownUser = (row) => row && ({
   email: row.email || '',
   emailVerified: Boolean(row.email_verified_at),
   privacy: { anime: row.privacy_anime || 'public', manga: row.privacy_manga || 'public' },
+  about: row.about || '',
 });
 
 export const PRIVACY_LEVELS = ['public', 'friends', 'private'];
@@ -279,6 +280,13 @@ export const friendFeed = (userId, limit = 30) => db.prepare(`
 
 export const setBio = (userId, bio) => {
   db.prepare('UPDATE users SET bio = ? WHERE id = ?').run(String(bio || '').slice(0, 300), userId);
+};
+
+export const ABOUT_MAX = 2000;
+// Stored as typed (limited markup); control characters other than newline are dropped.
+export const setAbout = (userId, about) => {
+  const clean = String(about || '').replace(/\r\n?/g, '\n').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, '').trim().slice(0, ABOUT_MAX);
+  db.prepare('UPDATE users SET about = ? WHERE id = ?').run(clean, userId);
 };
 
 export const setAvatarColor = (userId, hue) => {

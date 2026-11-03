@@ -1,5 +1,6 @@
 import { ProfileFavorites } from '../Favorites';
 import TasteMatch from '../TasteMatch';
+import { AboutRich } from '@/lib/safe-markup.jsx';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { displayTitle } from '@/home-data';
@@ -159,6 +160,7 @@ export default function MobileProfile({ onOpenFollows, followSheet, profile, ent
       {tab === 'about' && (
         <section className="mprofile__panel mprofile__about">
           <p className="mprofile__bio" dir="auto">{profile.bio || t('dbNoBio')}</p>
+          {profile.about && <AboutRich text={profile.about} />}
           <p className="mprofile__joined"><time dateTime={profile.joinedAt}>{t('dashJoined', { date: joined })}</time></p>
           <ProfileFavorites favorites={favorites} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
           <StatusBreakdown insights={insights} />

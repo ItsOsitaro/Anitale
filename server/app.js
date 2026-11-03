@@ -15,7 +15,7 @@ import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
-import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, setAbout, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
@@ -218,6 +218,7 @@ export const createApp = () => {
     if (!row) throw httpError(401, 'Not logged in');
     if (input.bio !== undefined) setBio(row.id, input.bio);
     if (input.avatarColor !== undefined) setAvatarColor(row.id, input.avatarColor);
+    if (input.about !== undefined) setAbout(row.id, input.about);
     if (input.privacy) setPrivacy(row.id, input.privacy);
     res.json({ user: ownUser(getUserByUsername(row.username)) });
   });
@@ -383,7 +384,7 @@ export const createApp = () => {
     const seeAnime = canSeeList(row, 'anime', viewer?.id ?? null);
     const seeManga = canSeeList(row, 'manga', viewer?.id ?? null);
     res.json({
-      user: publicUser(row),
+      user: { ...publicUser(row), about: row.about || '' },
       entries: {
         anime: seeAnime ? mine.anime.map(({ note, ...rest }) => rest) : [],
         manga: seeManga ? mine.manga.map(({ note, ...rest }) => rest) : [],

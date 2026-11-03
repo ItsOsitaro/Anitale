@@ -17,6 +17,8 @@ import { isEmail } from './accountPages.jsx';
 import { profileInsights } from '@/lib/profile-insights';
 import { ProfileFavorites } from '@/components/Favorites';
 import TasteMatch from '@/components/TasteMatch';
+import AboutEditor from '@/components/AboutEditor';
+import { AboutRich } from '@/lib/safe-markup.jsx';
 import { FavoriteGenres, ProfileReviews, RecentActivity, StatusBreakdown, TopRated } from '@/components/ProfileInsights';
 import AiringAlertList from '@/components/AiringAlertList';
 import { useAiringAlerts } from '@/hooks/use-airing-alerts';
@@ -512,6 +514,7 @@ export function UserDashboard() {
           </Button>
           {bioState === 'saved' && <span className="saved-note" role="status">{t('dashSaved')}</span>}
         </div>
+        <AboutEditor />
       </section>
     </main>
   );
@@ -769,6 +772,7 @@ export function UserPublicProfile() {
           />
         </div>
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+        {profile.about && <section className="profile-about panel" aria-label={t('aboutTitle')}><h2>{t('aboutTitle')}</h2><AboutRich text={profile.about} /></section>}
       </section>
 
       <div className="dash-stats" role="list">

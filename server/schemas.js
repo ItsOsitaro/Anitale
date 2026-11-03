@@ -117,6 +117,7 @@ export const siteRecInput = z.object({
 export const siteProfileInput = z.object({
   bio: text(300),
   avatarColor: z.number().refine((value) => [8, 342, 276, 208, 168, 96].includes(value), 'Invalid avatar color').optional(),
+  about: z.string().max(2000).optional(),
   privacy: z.object({ anime: z.enum(['public', 'friends', 'private']).optional(), manga: z.enum(['public', 'friends', 'private']).optional() }).optional(),
 });
 // Admin site-user management: create fully, or patch any subset (rename /

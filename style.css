@@ -4373,3 +4373,21 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .follow-sheet__sort { margin: 0 0 8px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 0.82rem; cursor: pointer; }
 .follow-sheet__sort[aria-pressed="true"] { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }
 .follow-sheet__match { margin-inline-start: auto; font-size: 0.82rem; color: var(--primary); font-weight: 600; }
+
+/* ---------- B6 about me ---------- */
+.about-rich { overflow-wrap: anywhere; line-height: 1.8; }
+.about-rich p { margin: 0 0 10px; }
+.about-rich h3 { margin: 14px 0 6px; font-size: 1rem; }
+.about-rich ul, .about-rich ol { margin: 0 0 10px; padding-inline-start: 22px; }
+.about-rich a { color: var(--primary); text-decoration: underline; }
+.about-spoiler { display: inline; padding: 0 4px; border: 0; border-radius: 4px; font: inherit; color: inherit; background: var(--muted-foreground); cursor: pointer; }
+.about-spoiler span { opacity: 0; }
+.about-spoiler.is-open { background: var(--muted); }
+.about-spoiler.is-open span { opacity: 1; }
+.profile-about { margin: 14px 0; padding: 14px; }
+.profile-about h2 { margin: 0 0 8px; font-size: 1.05rem; }
+.about-editor { display: flex; flex-direction: column; gap: 6px; margin-top: 18px; }
+.about-editor textarea { width: 100%; min-height: 140px; }
+.about-editor__bar { display: flex; flex-wrap: wrap; gap: 6px; }
+.about-editor__bar button { padding: 4px 12px; border-radius: 8px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 0.85rem; cursor: pointer; }
+.about-editor__preview { padding: 10px 12px; border: 1px dashed var(--border); border-radius: 10px; }
