@@ -71,6 +71,22 @@ export const siteResetInput = z.object({ token: z.string().trim().min(20).max(10
 export const siteVerifyInput = z.object({ token: z.string().trim().min(20).max(100) });
 export const siteEmailChangeInput = z.object({ email: emailField, password: z.string().max(200) });
 export const siteChangePasswordInput = z.object({ currentPassword: z.string().max(200), newPassword: newPasswordField });
+// YYYY-MM-DD that is a real calendar day (rejects 2026-02-31) and not absurd.
+const entryDate = z.string().trim().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be YYYY-MM-DD').refine((value) => {
+  const d = new Date(`${value}T00:00:00Z`);
+  return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === value && d.getUTCFullYear() >= 1950 && d.getUTCFullYear() <= 2100;
+}, 'Invalid date');
+// Up to 10 tags, 1–24 chars each; commas are stripped (they separate tags in storage and MAL exports).
+const entryTags = z.array(z.string().max(60)).max(10).transform((list) => {
+  const seen = new Set();
+  const out = [];
+  for (const raw of list) {
+    const tag = raw.replace(/[,\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 24);
+    const key = tag.toLowerCase();
+    if (tag && !seen.has(key)) { seen.add(key); out.push(tag); }
+  }
+  return out;
+});
 export const siteUserEntryInput = z.object({
   mediaType: z.enum(['anime', 'manga']),
   slug: z.string().trim().min(1).max(120),
@@ -79,6 +95,12 @@ export const siteUserEntryInput = z.object({
   rating: z.coerce.number().int().min(1).max(10).nullable().optional(),
   // Queue 21: episodes watched / chapters read (0..5000). Absent = keep stored.
   progress: z.coerce.number().int().min(0).max(5000).nullable().optional(),
+  // A3: list details. Absent = keep stored; null = clear.
+  startDate: entryDate.nullable().optional(),
+  finishDate: entryDate.nullable().optional(),
+  rewatch: z.coerce.number().int().min(0).max(99).optional(),
+  priority: z.enum(['low', 'medium', 'high']).nullable().optional(),
+  tags: entryTags.optional(),
 });
 export const siteReviewInput = z.object({
   mediaType: z.enum(['anime', 'manga']),
@@ -113,6 +135,11 @@ export const malImportInput = z.object({
     status: z.enum(['watching', 'completed', 'on_hold', 'dropped', 'planned']),
     score: z.number().int().min(0).max(10).optional(),
     progress: z.number().int().min(0).max(5000).optional(),
+    startDate: entryDate.nullable().optional(),
+    finishDate: entryDate.nullable().optional(),
+    rewatch: z.number().int().min(0).max(99).optional(),
+    priority: z.enum(['low', 'medium', 'high']).nullable().optional(),
+    tags: entryTags.optional(),
     title: z.string().max(200).optional(),
   })).max(1500),
 });

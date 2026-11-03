@@ -7,6 +7,7 @@ import { displayTitle } from '@/home-data';
 import { useSiteLang } from '@/i18n';
 import { useSheet } from '@/hooks/use-sheet';
 import { entryTotal } from './entry-utils';
+import EntryDetails from '@/components/EntryDetails';
 import { cn } from 'cn';
 import { coverUrl } from '@/lib/cover';
 
@@ -118,6 +119,13 @@ export default function EntrySheet({ open, onClose, entry, item, mediaType, user
               ))}
             </div>
           </section>
+
+          {typeof user.setDetails === 'function' && (
+            <section className="filter-sheet__group">
+              <h3 className="filter-sheet__label">{t('entryDetails')}</h3>
+              <EntryDetails entry={entry} mediaType={mediaType} t={t} onChange={(patch) => user.setDetails(mediaType, entry.slug, patch)} />
+            </section>
+          )}
 
           <section className="filter-sheet__group">
             <label className="filter-sheet__label" htmlFor="entry-note">{t('noteAria')}</label>

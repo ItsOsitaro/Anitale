@@ -41,7 +41,7 @@ export const userApi = {
   saveReview: (mediaType, slug, body, spoiler) => request('POST', '/api/user/reviews', { mediaType, slug, body, spoiler }),
   updateBio: (bio) => request('PUT', '/api/user/me', { bio }),
   updateAvatar: (bloom) => request('PUT', '/api/user/me', { avatarColor: bloom }),
-  addEntry: (mediaType, slug, status = 'watching', note, rating, progress) => request('PUT', '/api/user/entries', { mediaType, slug, status, ...(note !== undefined ? { note } : {}), ...(rating !== undefined ? { rating } : {}), ...(progress !== undefined ? { progress } : {}) }),
+  addEntry: (mediaType, slug, status = 'watching', note, rating, progress, extra = {}) => request('PUT', '/api/user/entries', { mediaType, slug, status, ...(note !== undefined ? { note } : {}), ...(rating !== undefined ? { rating } : {}), ...(progress !== undefined ? { progress } : {}), ...extra }),
   removeEntry: (mediaType, slug) => request('DELETE', `/api/user/entries/${mediaType}/${encodeURIComponent(slug)}`),
   notifications: () => request('GET', '/api/user/notifications'),
   readNotifications: () => request('POST', '/api/user/notifications/read', { all: true }),
@@ -88,24 +88,26 @@ const mirrorToLocalStorage = (entries) => {
   }
 };
 
-const normalize = (raw) => ({
-  anime: (raw?.anime || []).map((entry) => ({
-    slug: typeof entry === 'string' ? entry : entry.slug,
-    status: typeof entry === 'string' ? 'watching' : (entry.status || 'watching'),
-    note: typeof entry === 'string' ? '' : (entry.note || ''),
-    rating: typeof entry === 'string' ? null : (entry.rating ?? null),
-    progress: typeof entry === 'string' ? null : (entry.progress ?? null),
-    added: typeof entry === 'string' ? null : (entry.added || null),
-  })),
-  manga: (raw?.manga || []).map((entry) => ({
-    slug: typeof entry === 'string' ? entry : entry.slug,
-    status: typeof entry === 'string' ? 'watching' : (entry.status || 'watching'),
-    note: typeof entry === 'string' ? '' : (entry.note || ''),
-    rating: typeof entry === 'string' ? null : (entry.rating ?? null),
-    progress: typeof entry === 'string' ? null : (entry.progress ?? null),
-    added: typeof entry === 'string' ? null : (entry.added || null),
-  })),
+const normalizeEntry = (entry) => ({
+  slug: typeof entry === 'string' ? entry : entry.slug,
+  status: typeof entry === 'string' ? 'watching' : (entry.status || 'watching'),
+  note: typeof entry === 'string' ? '' : (entry.note || ''),
+  rating: typeof entry === 'string' ? null : (entry.rating ?? null),
+  progress: typeof entry === 'string' ? null : (entry.progress ?? null),
+  startDate: typeof entry === 'string' ? null : (entry.startDate || null),
+  finishDate: typeof entry === 'string' ? null : (entry.finishDate || null),
+  rewatch: typeof entry === 'string' ? 0 : (entry.rewatch || 0),
+  priority: typeof entry === 'string' ? null : (entry.priority || null),
+  tags: typeof entry === 'string' ? [] : (Array.isArray(entry.tags) ? entry.tags : []),
+  added: typeof entry === 'string' ? null : (entry.added || null),
 });
+
+const normalize = (raw) => ({
+  anime: (raw?.anime || []).map(normalizeEntry),
+  manga: (raw?.manga || []).map(normalizeEntry),
+});
+
+const DETAIL_KEYS = ['startDate', 'finishDate', 'rewatch', 'priority', 'tags'];
 
 export const UserContext = createContext(null);
 export const useUser = () => useContext(UserContext);
@@ -236,6 +238,8 @@ export function UserProvider({ children }) {
         ...(patch.note !== undefined ? [patch.note] : [currentEntry.note ?? '']),
         ...(patch.rating !== undefined ? [patch.rating] : [currentEntry.rating ?? null]),
         ...(patch.progress !== undefined ? [patch.progress] : [currentEntry.progress ?? null]),
+        // A3 details: only the keys that changed are sent, the server keeps the rest.
+        Object.fromEntries(DETAIL_KEYS.filter((key) => patch[key] !== undefined).map((key) => [key, patch[key]])),
       );
       const normalized = normalize(updated);
       setEntries(normalized);
@@ -245,6 +249,9 @@ export function UserProvider({ children }) {
       return { saved: false };
     }
   }, [me, entries, refresh]);
+
+  // A3: start / finish date, rewatch count, priority and tags (members only).
+  const setDetails = useCallback((mediaType, slug, patch) => patchEntry(mediaType, slug, patch), [patchEntry]);
 
   // Save (or clear) a personal note on an already-saved entry.
   const setNote = useCallback((mediaType, slug, note) => patchEntry(mediaType, slug, { note }), [patchEntry]);
@@ -273,6 +280,7 @@ export function UserProvider({ children }) {
       setNote,
       setRating,
       setProgress,
+      setDetails,
       logout,
       saveBio: userApi.updateBio,
       saveAvatar: userApi.updateAvatar,

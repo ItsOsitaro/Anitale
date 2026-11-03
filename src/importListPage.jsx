@@ -12,7 +12,7 @@ const postChunk = async (items, overwrite) => {
     method: 'POST',
     credentials: 'same-origin',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ items: items.map(({ type, malId, status, score, progress, title }) => ({ type, malId, status, score, progress, title })), overwrite }),
+    body: JSON.stringify({ items: items.map(({ type, malId, status, score, progress, title, startDate, finishDate, rewatch, priority, tags }) => ({ type, malId, status, score, progress, title, startDate, finishDate, rewatch, priority, tags })), overwrite }),
   });
   if (!response.ok) {
     const error = new Error('HTTP');

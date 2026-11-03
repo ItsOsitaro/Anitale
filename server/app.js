@@ -234,7 +234,9 @@ export const createApp = () => {
     const input = siteUserEntryInput.parse(req.body);
     const row = getUserByUsername(currentSiteUser(req));
     if (!row) throw httpError(401, 'Not logged in');
-    upsertEntry(row.id, input.mediaType, input.slug, input.status, input.note, input.rating, input.progress);
+    upsertEntry(row.id, input.mediaType, input.slug, input.status, input.note, input.rating, input.progress, {
+      startDate: input.startDate, finishDate: input.finishDate, rewatch: input.rewatch, priority: input.priority, tags: input.tags,
+    });
     res.json(listEntries(row.id));
   });
 
@@ -247,7 +249,7 @@ export const createApp = () => {
     if (!row) throw httpError(401, 'Not logged in');
     const table = type === 'anime' ? 'anime' : 'manga';
     const entries = db.prepare(`
-      SELECT e.slug, e.status, e.note, e.rating, e.progress, e.created_at, t.title, t.mal_id
+      SELECT e.slug, e.status, e.note, e.rating, e.progress, e.start_date, e.finish_date, e.rewatch, e.priority, e.tags, e.created_at, t.title, t.mal_id
       FROM user_entries e LEFT JOIN ${table} t ON t.slug = e.slug
       WHERE e.user_id = ? AND e.media_type = ? ORDER BY e.created_at, e.rowid
     `).all(row.id, type);
@@ -261,13 +263,13 @@ export const createApp = () => {
     res.setHeader('Content-Disposition', `attachment; filename="${base}.${format}"`);
     const cdata = (value) => `<![CDATA[${String(value ?? '').replace(/\]\]>/g, ']]]]><![CDATA[>')}]]>`;
     if (format === 'json') {
-      res.type('application/json; charset=utf-8').send(JSON.stringify({ type, exportedAt: new Date().toISOString(), entries: entries.map((e) => ({ malId: e.mal_id, title: e.title, slug: e.slug, status: e.status, score: e.rating, progress: e.progress, note: e.note })) }, null, 2));
+      res.type('application/json; charset=utf-8').send(JSON.stringify({ type, exportedAt: new Date().toISOString(), entries: entries.map((e) => ({ malId: e.mal_id, title: e.title, slug: e.slug, status: e.status, score: e.rating, progress: e.progress, startDate: e.start_date || null, finishDate: e.finish_date || null, rewatch: e.rewatch || 0, priority: e.priority || null, tags: e.tags ? e.tags.split(',') : [], note: e.note })) }, null, 2));
       return;
     }
     if (format === 'csv') {
       const cell = (value) => { let text = String(value ?? ''); if (/^[=+\-@\t\r]/.test(text)) text = `'${text}`; return /[",\n\r]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text; };
-      const lines = [['mal_id', 'title', 'status', 'score', type === 'anime' ? 'episodes_watched' : 'chapters_read', 'note'].join(',')];
-      for (const e of entries) lines.push([e.mal_id ?? '', cell(e.title), statusText[e.status], e.rating ?? '', e.progress ?? '', cell(e.note)].join(','));
+      const lines = [['mal_id', 'title', 'status', 'score', type === 'anime' ? 'episodes_watched' : 'chapters_read', 'start_date', 'finish_date', type === 'anime' ? 'times_watched' : 'times_read', 'priority', 'tags', 'note'].join(',')];
+      for (const e of entries) lines.push([e.mal_id ?? '', cell(e.title), statusText[e.status], e.rating ?? '', e.progress ?? '', e.start_date ?? '', e.finish_date ?? '', e.rewatch || 0, e.priority ?? '', cell(e.tags), cell(e.note)].join(','));
       res.type('text/csv; charset=utf-8').send(`﻿${lines.join('\r\n')}\r\n`);
       return;
     }
@@ -277,15 +279,18 @@ export const createApp = () => {
       `\t\t<user_export_type>${type === 'anime' ? 1 : 2}</user_export_type>`, `\t\t<user_total_${type}>${usable.length}</user_total_${type}>`, '\t</myinfo>'];
     for (const e of usable) {
       const score = e.rating || 0;
-      const date = '0000-00-00';
+      const startDate = e.start_date || '0000-00-00';
+      const finishDate = e.finish_date || '0000-00-00';
+      const priority = (e.priority || 'low').toUpperCase();
+      const tags = cdata(e.tags || '');
       if (type === 'anime') {
         parts.push('\t<anime>', `\t\t<series_animedb_id>${e.mal_id}</series_animedb_id>`, `\t\t<series_title>${cdata(e.title)}</series_title>`,
-          `\t\t<my_watched_episodes>${e.progress ?? 0}</my_watched_episodes>`, `\t\t<my_start_date>${date}</my_start_date>`, `\t\t<my_finish_date>${date}</my_finish_date>`,
-          `\t\t<my_score>${score}</my_score>`, `\t\t<my_status>${statusText[e.status]}</my_status>`, `\t\t<my_comments>${cdata(e.note)}</my_comments>`, '\t\t<update_on_import>1</update_on_import>', '\t</anime>');
+          `\t\t<my_watched_episodes>${e.progress ?? 0}</my_watched_episodes>`, `\t\t<my_start_date>${startDate}</my_start_date>`, `\t\t<my_finish_date>${finishDate}</my_finish_date>`,
+          `\t\t<my_score>${score}</my_score>`, `\t\t<my_status>${statusText[e.status]}</my_status>`, `\t\t<my_comments>${cdata(e.note)}</my_comments>`, `\t\t<my_times_watched>${e.rewatch || 0}</my_times_watched>`, `\t\t<my_priority>${priority}</my_priority>`, `\t\t<my_tags>${tags}</my_tags>`, '\t\t<update_on_import>1</update_on_import>', '\t</anime>');
       } else {
         parts.push('\t<manga>', `\t\t<manga_mangadb_id>${e.mal_id}</manga_mangadb_id>`, `\t\t<manga_title>${cdata(e.title)}</manga_title>`,
-          `\t\t<my_read_chapters>${e.progress ?? 0}</my_read_chapters>`, `\t\t<my_start_date>${date}</my_start_date>`, `\t\t<my_finish_date>${date}</my_finish_date>`,
-          `\t\t<my_score>${score}</my_score>`, `\t\t<my_status>${statusText[e.status]}</my_status>`, `\t\t<my_comments>${cdata(e.note)}</my_comments>`, '\t\t<update_on_import>1</update_on_import>', '\t</manga>');
+          `\t\t<my_read_chapters>${e.progress ?? 0}</my_read_chapters>`, `\t\t<my_start_date>${startDate}</my_start_date>`, `\t\t<my_finish_date>${finishDate}</my_finish_date>`,
+          `\t\t<my_score>${score}</my_score>`, `\t\t<my_status>${statusText[e.status]}</my_status>`, `\t\t<my_comments>${cdata(e.note)}</my_comments>`, `\t\t<my_times_read>${e.rewatch || 0}</my_times_read>`, `\t\t<my_priority>${priority}</my_priority>`, `\t\t<my_tags>${tags}</my_tags>`, '\t\t<update_on_import>1</update_on_import>', '\t</manga>');
       }
     }
     parts.push('</myanimelist>');
@@ -313,7 +318,9 @@ export const createApp = () => {
         if (!slug) { result.unmatched.push({ type: item.type, malId: item.malId }); missingToRecord.push(item); continue; }
         const key = `${item.type}:${slug}`;
         if (owned.has(key) && !input.overwrite) { result.skipped += 1; continue; }
-        upsertEntry(row.id, item.type, slug, item.status, undefined, item.score ? item.score : undefined, item.progress);
+        upsertEntry(row.id, item.type, slug, item.status, undefined, item.score ? item.score : undefined, item.progress, {
+          startDate: item.startDate ?? undefined, finishDate: item.finishDate ?? undefined, rewatch: item.rewatch, priority: item.priority, tags: item.tags, noAutoDates: true,
+        });
         if (owned.has(key)) result.updated += 1; else { result.added += 1; owned.add(key); }
       }
       recordMissing(row.id, missingToRecord);

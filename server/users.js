@@ -97,15 +97,29 @@ export const verifySiteCredentials = async (username, password) => {
 };
 
 // ---------- Personal list entries ----------
+const splitTags = (value) => (value ? String(value).split(',').map((tag) => tag.trim()).filter(Boolean) : []);
+
 export const listEntries = (userId) => db
-  .prepare('SELECT media_type, slug, status, note, rating, progress, created_at, updated_at FROM user_entries WHERE user_id = ? ORDER BY created_at DESC, rowid DESC')
+  .prepare('SELECT media_type, slug, status, note, rating, progress, start_date, finish_date, rewatch, priority, tags, created_at, updated_at FROM user_entries WHERE user_id = ? ORDER BY created_at DESC, rowid DESC')
   .all(userId)
   .reduce((acc, entry) => {
-    acc[entry.media_type].push({ slug: entry.slug, status: entry.status, note: entry.note || '', rating: entry.rating ?? null, progress: entry.progress ?? null, added: entry.created_at, updated: entry.updated_at || entry.created_at });
+    acc[entry.media_type].push({
+      slug: entry.slug, status: entry.status, note: entry.note || '', rating: entry.rating ?? null, progress: entry.progress ?? null,
+      startDate: entry.start_date || null, finishDate: entry.finish_date || null, rewatch: entry.rewatch || 0,
+      priority: entry.priority || null, tags: splitTags(entry.tags),
+      added: entry.created_at, updated: entry.updated_at || entry.created_at,
+    });
     return acc;
   }, { anime: [], manga: [] });
 
-export const upsertEntry = (userId, mediaType, slug, status, note, rating, progress) => {
+const todayUtc = () => new Date().toISOString().slice(0, 10);
+
+// `extra` carries the A3 list details: { startDate, finishDate, rewatch, priority, tags }.
+// Like note/rating/progress, a key that is absent is left untouched.
+// Dates fill in by themselves when the status changes (watching → start date,
+// completed → finish date) but only if the entry has no date yet and the caller
+// did not send one, so a manual date is never overwritten.
+export const upsertEntry = (userId, mediaType, slug, status, note, rating, progress, extra = {}) => {
   // note/rating/progress are optional: only touch them when the caller sent
   // them, so a status-only update never wipes them. SQLite validates NOT NULL
   // on the inserted values even in the ON CONFLICT DO UPDATE path, hence the
@@ -113,16 +127,39 @@ export const upsertEntry = (userId, mediaType, slug, status, note, rating, progr
   const noteGiven = note != null;
   const ratingGiven = rating !== undefined;
   const progressGiven = progress !== undefined;
+  const existing = db.prepare('SELECT status, start_date, finish_date FROM user_entries WHERE user_id = ? AND media_type = ? AND slug = ?').get(userId, mediaType, slug);
+  const statusChanged = !existing || existing.status !== status;
+  let startDate = extra.startDate;
+  let finishDate = extra.finishDate;
+  if (statusChanged && !extra.noAutoDates) {
+    if (startDate === undefined && !existing?.start_date && status === 'watching') startDate = todayUtc();
+    if (finishDate === undefined && !existing?.finish_date && status === 'completed') finishDate = todayUtc();
+  }
+  const startGiven = startDate !== undefined;
+  const finishGiven = finishDate !== undefined;
+  const rewatchGiven = extra.rewatch !== undefined;
+  const priorityGiven = extra.priority !== undefined;
+  const tagsGiven = extra.tags !== undefined;
   const cols = ['user_id', 'media_type', 'slug', 'status'];
   const values = [userId, mediaType, slug, status];
   if (noteGiven) { cols.push('note'); values.push(String(note).slice(0, 500)); }
   if (ratingGiven) { cols.push('rating'); values.push(rating == null ? null : Number(rating)); }
   if (progressGiven) { cols.push('progress'); values.push(progress == null ? null : Math.max(0, Number(progress))); }
+  if (startGiven) { cols.push('start_date'); values.push(startDate || null); }
+  if (finishGiven) { cols.push('finish_date'); values.push(finishDate || null); }
+  if (rewatchGiven) { cols.push('rewatch'); values.push(Math.max(0, Math.min(99, Number(extra.rewatch) || 0))); }
+  if (priorityGiven) { cols.push('priority'); values.push(extra.priority || null); }
+  if (tagsGiven) { cols.push('tags'); values.push((extra.tags || []).join(',')); }
   const sets = [
     'status = excluded.status',
     noteGiven ? 'note = excluded.note' : null,
     ratingGiven ? 'rating = excluded.rating' : null,
     progressGiven ? 'progress = excluded.progress' : null,
+    startGiven ? 'start_date = excluded.start_date' : null,
+    finishGiven ? 'finish_date = excluded.finish_date' : null,
+    rewatchGiven ? 'rewatch = excluded.rewatch' : null,
+    priorityGiven ? 'priority = excluded.priority' : null,
+    tagsGiven ? 'tags = excluded.tags' : null,
     "updated_at = datetime('now')",
   ].filter(Boolean);
   db.prepare(`

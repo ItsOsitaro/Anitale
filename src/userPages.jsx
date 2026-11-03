@@ -1,3 +1,4 @@
+import EntryDetails from '@/components/EntryDetails';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -53,7 +54,7 @@ function useEntryCatalogs() {
   };
 }
 
-function EntryCard({ entry, item, mediaType, onRemove, onNoteChange, onRatingChange, onProgressChange, t, ariaLabel }) {
+function EntryCard({ entry, item, mediaType, onRemove, onNoteChange, onRatingChange, onProgressChange, onDetailsChange, t, ariaLabel }) {
   const removable = typeof onRemove === 'function';
   const editableNote = typeof onNoteChange === 'function';
   const editableRating = typeof onRatingChange === 'function';
@@ -101,6 +102,11 @@ function EntryCard({ entry, item, mediaType, onRemove, onNoteChange, onRatingCha
           ? <Link className="entry-title" to={mediaHref(item, mediaType)}>{item.title}</Link>
           : <span className="entry-title">{entry.slug}</span>}
         <EntryBadge status={entry.status || 'watching'} mediaType={mediaType} t={t} />
+        {(entry.tags || []).length > 0 && (
+          <ul className="entry-tags" aria-label={t('detTags')}>
+            {entry.tags.map((tag) => <li key={tag} dir="auto">{tag}</li>)}
+          </ul>
+        )}
         {entry.rating != null && !editableRating && (
           <span className="entry-rating-chip" aria-label={t('ratingAria')}>{entry.rating}/10</span>
         )}
@@ -150,6 +156,12 @@ function EntryCard({ entry, item, mediaType, onRemove, onNoteChange, onRatingCha
               </span>
             </div>
           </div>
+        )}
+        {typeof onDetailsChange === 'function' && (
+          <details className="entry-details">
+            <summary>{t('entryDetails')}</summary>
+            <EntryDetails entry={entry} mediaType={mediaType} onChange={(patch) => onDetailsChange(mediaType, entry.slug, patch)} t={t} />
+          </details>
         )}
         {editableNote && (
           <textarea
@@ -282,6 +294,8 @@ export function UserDashboard() {
   const { animeBySlug, mangaBySlug } = useEntryCatalogs();
   const [tab, setTab] = useState('anime');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [tagFilter, setTagFilter] = useState('');
+  const [planSort, setPlanSort] = useState('recent');
   const [bio, setBio] = useState('');
   const [bioState, setBioState] = useState('idle'); // idle | saving | saved
   const [avatarSaving, setAvatarSaving] = useState(false);
@@ -333,11 +347,20 @@ export function UserDashboard() {
     acc[status] = (acc[status] || 0) + 1;
     return acc;
   }, { all: tabEntries.length });
-  const listEntries = statusFilter === 'all' ? tabEntries : tabEntries.filter((entry) => (entry.status || 'watching') === statusFilter);
+  const byStatus = statusFilter === 'all' ? tabEntries : tabEntries.filter((entry) => (entry.status || 'watching') === statusFilter);
+  // A3: tag filter (tags of the current tab, with counts) + priority order for the planned list.
+  const tagCounts = tabEntries.reduce((acc, entry) => { for (const tag of entry.tags || []) acc[tag] = (acc[tag] || 0) + 1; return acc; }, {});
+  const tagList = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b));
+  const activeTag = tagFilter && tagCounts[tagFilter] ? tagFilter : '';
+  const byTag = activeTag ? byStatus.filter((entry) => (entry.tags || []).includes(activeTag)) : byStatus;
+  const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+  const listEntries = statusFilter === 'planned' && planSort === 'priority'
+    ? [...byTag].sort((a, b) => (PRIORITY_RANK[a.priority] ?? 3) - (PRIORITY_RANK[b.priority] ?? 3))
+    : byTag;
   const statusFilters = ['all', 'watching', 'completed', 'on_hold', 'dropped', 'planned'].filter((key) => key === 'all' || statusCounts[key]);
 
   // Switching tabs resets the filter (the other tab may not have that status).
-  const pickTab = (next) => { setTab(next); setStatusFilter('all'); };
+  const pickTab = (next) => { setTab(next); setStatusFilter('all'); setTagFilter(''); setPlanSort('recent'); };
 
   const saveBio = async () => {
     setBioState('saving');
@@ -434,6 +457,29 @@ export function UserDashboard() {
             ))}
           </div>
         )}
+        {(tagList.length > 0 || statusFilter === 'planned') && (
+          <div className="tag-filter" role="group" aria-label={t('dashFilterTags')}>
+            {tagList.length > 0 && (
+              <>
+                <button type="button" aria-pressed={!activeTag} className={`status-filter-chip${!activeTag ? ' is-active' : ''}`} onClick={() => setTagFilter('')}>{t('dashFilterAll')}</button>
+                {tagList.map((tag) => (
+                  <button key={tag} type="button" aria-pressed={activeTag === tag} className={`status-filter-chip${activeTag === tag ? ' is-active' : ''}`} onClick={() => setTagFilter(activeTag === tag ? '' : tag)}>
+                    <span dir="auto">{tag}</span><span className="filter-count">{tagCounts[tag]}</span>
+                  </button>
+                ))}
+              </>
+            )}
+            {statusFilter === 'planned' && (
+              <label className="tag-filter__sort">
+                <span>{t('dashSortLabel')}</span>
+                <select value={planSort} onChange={(event) => setPlanSort(event.target.value)}>
+                  <option value="recent">{t('dashSortRecent')}</option>
+                  <option value="priority">{t('dashSortPriority')}</option>
+                </select>
+              </label>
+            )}
+          </div>
+        )}
         {listEntries.length === 0 ? (
           <div className="empty-list">
             <p>{t('dashEmpty')}</p>
@@ -443,7 +489,7 @@ export function UserDashboard() {
           <div className="entry-grid">
             {listEntries.map((entry) => {
               const item = (tab === 'anime' ? animeBySlug : mangaBySlug).get(entry.slug);
-              return <EntryCard key={entry.slug} entry={entry} item={item} mediaType={tab} onRemove={(slug) => user.toggle(tab, slug)} onNoteChange={(mt, slug, note) => user.setNote(mt, slug, note)} onRatingChange={(mt, slug, rating) => user.setRating(mt, slug, rating)} onProgressChange={(mt, slug, progress) => user.setProgress(mt, slug, progress)} t={t} ariaLabel={item?.title} />;
+              return <EntryCard key={entry.slug} entry={entry} item={item} mediaType={tab} onRemove={(slug) => user.toggle(tab, slug)} onNoteChange={(mt, slug, note) => user.setNote(mt, slug, note)} onRatingChange={(mt, slug, rating) => user.setRating(mt, slug, rating)} onProgressChange={(mt, slug, progress) => user.setProgress(mt, slug, progress)} onDetailsChange={(mt, slug, patch) => user.setDetails(mt, slug, patch)} t={t} ariaLabel={item?.title} />;
             })}
           </div>
         )}

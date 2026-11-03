@@ -202,3 +202,17 @@ if (userEntriesSql && !userEntriesSql.includes("'on_hold'")) {
     COMMIT;
   `);
 }
+
+// A3: per-entry list details (start/finish date, rewatch count, priority for
+// planned titles, free-form tags). Added after the rebuild above so both fresh
+// and migrated databases end up with the same columns.
+for (const [name, ddl] of [
+  ['start_date', 'TEXT'],
+  ['finish_date', 'TEXT'],
+  ['rewatch', 'INTEGER NOT NULL DEFAULT 0'],
+  ['priority', 'TEXT'],
+  ['tags', "TEXT NOT NULL DEFAULT ''"],
+]) {
+  const has = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('user_entries') WHERE name = ?").get(name);
+  if (!has.n) db.exec(`ALTER TABLE user_entries ADD COLUMN ${name} ${ddl}`);
+}

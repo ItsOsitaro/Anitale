@@ -40,8 +40,13 @@ export function StatusBreakdown({ insights }) {
           <li key={status}><span className={`pi-dot status-${status}`} aria-hidden="true" />{t(`status_${status}`)} <strong dir="ltr">{insights.statusCounts[status]}</strong></li>
         ))}
       </ul>
-      {(insights.episodes > 0 || insights.chapters > 0) && (
+      {(insights.episodes > 0 || insights.chapters > 0 || insights.daysWatched > 0) && (
         <p className="pi-totals">
+          {insights.daysWatched > 0 && (
+            <span title={insights.daysApprox ? t('piDaysApprox') : undefined}>
+              {t('piDays', { n: `${insights.daysApprox ? '≈ ' : ''}${insights.daysWatched >= 10 ? Math.round(insights.daysWatched) : insights.daysWatched.toFixed(1)}` })}
+            </span>
+          )}
           {insights.episodes > 0 && <span>{t('piEpisodes', { n: insights.episodes })}</span>}
           {insights.chapters > 0 && <span>{t('piChapters', { n: insights.chapters })}</span>}
         </p>

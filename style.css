@@ -4257,3 +4257,32 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .search-page__filters .sensitive-toggle { flex-basis: 100%; }
 .sensitive-gate__actions { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; margin-top: 16px; }
 .sensitive-gate__actions button.detail-back-link { font: inherit; cursor: pointer; background: none; border: 0; }
+
+/* ---------- A3: list details (dates, rewatch, priority, tags) ---------- */
+.entry-tags { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0 0; padding: 0; list-style: none; }
+.entry-tags li { padding: 1px 8px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); font-size: 0.72rem; line-height: 1.6; }
+.entry-details { margin-top: 8px; }
+.entry-details > summary { cursor: pointer; font-size: 0.8rem; color: var(--muted-foreground); }
+.entry-details > summary:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; border-radius: 4px; }
+.entry-details-body { display: grid; gap: 10px; margin-top: 8px; }
+.det-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 8px; }
+.det-field { display: grid; gap: 4px; font-size: 0.8rem; color: var(--muted-foreground); }
+.det-field input[type='date'], .det-tag-input { min-height: 36px; padding: 4px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--foreground); font: inherit; font-size: 16px; width: 100%; box-sizing: border-box; }
+.det-field input:focus-visible, .det-tag-input:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.det-stepper { display: inline-flex; align-items: center; gap: 10px; }
+.det-stepper button { width: 32px; height: 32px; border: 0; border-radius: 50%; background: var(--secondary); color: var(--secondary-foreground); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.det-stepper button:disabled { opacity: 0.4; cursor: default; }
+.det-stepper output { min-width: 2ch; text-align: center; font-weight: 700; color: var(--foreground); font-variant-numeric: tabular-nums; }
+.det-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.det-chip { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: inherit; font-size: 0.8rem; cursor: pointer; }
+.det-chip.is-active { border-color: var(--ring); background: color-mix(in oklch, var(--ring) 14%, var(--card)); }
+.det-tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; padding: 0; list-style: none; }
+.det-tags li { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 999px; background: var(--muted); color: var(--foreground); font-size: 0.8rem; }
+[dir='rtl'] .det-tags li { padding: 2px 10px 2px 4px; }
+.det-tags button { width: 20px; height: 20px; border: 0; border-radius: 50%; background: transparent; color: var(--muted-foreground); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.det-tags button:hover { background: var(--border); }
+.det-warn, .det-hint { margin: 0; font-size: 0.78rem; color: var(--muted-foreground); }
+.det-warn { color: oklch(0.55 0.17 40); }
+.tag-filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 10px 0; }
+.tag-filter__sort { display: inline-flex; align-items: center; gap: 6px; margin-inline-start: auto; font-size: 0.82rem; color: var(--muted-foreground); }
+.tag-filter__sort select { min-height: 32px; padding: 2px 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); color: var(--foreground); font: inherit; }

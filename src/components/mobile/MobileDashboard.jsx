@@ -39,6 +39,8 @@ export default function MobileDashboard({ me, entries, animeBySlug, mangaBySlug,
   const [main, setMain] = useState('mine'); // mine | friends
   const [tab, setTab] = useState('anime');
   const [filter, setFilter] = useState('all');
+  const [tagFilter, setTagFilter] = useState('');
+  const [planSort, setPlanSort] = useState('recent');
   const [selected, setSelected] = useState(null); // { mediaType, slug }
   const [editOpen, setEditOpen] = useState(false);
 
@@ -76,7 +78,16 @@ export default function MobileDashboard({ me, entries, animeBySlug, mangaBySlug,
     return acc;
   }, { all: tabEntries.length });
   const filters = ['all', ...STATUS_ORDER.filter((s) => counts[s])];
-  const list = filter === 'all' ? tabEntries : tabEntries.filter((e) => (e.status || 'watching') === filter);
+  const byStatus = filter === 'all' ? tabEntries : tabEntries.filter((e) => (e.status || 'watching') === filter);
+  // Tag chips for the current tab (most used first) and the priority order of the planned list.
+  const tagCounts = tabEntries.reduce((acc, e) => { for (const tag of e.tags || []) acc[tag] = (acc[tag] || 0) + 1; return acc; }, {});
+  const tagList = Object.keys(tagCounts).sort((a, b) => tagCounts[b] - tagCounts[a] || a.localeCompare(b));
+  const activeTag = tagFilter && tagCounts[tagFilter] ? tagFilter : '';
+  const byTag = activeTag ? byStatus.filter((e) => (e.tags || []).includes(activeTag)) : byStatus;
+  const PRIORITY_RANK = { high: 0, medium: 1, low: 2 };
+  const list = filter === 'planned' && planSort === 'priority'
+    ? [...byTag].sort((a, b) => (PRIORITY_RANK[a.priority] ?? 3) - (PRIORITY_RANK[b.priority] ?? 3))
+    : byTag;
   const statusLabel = (status, mediaType) => (status === 'watching' && mediaType === 'manga' ? t('status_reading') : t(`status_${status}`));
 
   const selectedEntry = selected ? entries[selected.mediaType].find((e) => e.slug === selected.slug) : null;
@@ -188,7 +199,7 @@ export default function MobileDashboard({ me, entries, animeBySlug, mangaBySlug,
                   type="button"
                   aria-pressed={tab === mediaType}
                   className={cn('mobile-chip', tab === mediaType && 'is-active')}
-                  onClick={() => { setTab(mediaType); setFilter('all'); }}
+                  onClick={() => { setTab(mediaType); setFilter('all'); setTagFilter(''); setPlanSort('recent'); }}
                 >
                   {t(mediaType === 'anime' ? 'dashAnimeTab' : 'dashMangaTab')}
                   <span className="mdash__tabcount" dir="ltr">{entries[mediaType].length}</span>
@@ -210,6 +221,33 @@ export default function MobileDashboard({ me, entries, animeBySlug, mangaBySlug,
                     <span className="mdash__chipcount" dir="ltr">{counts[key]}</span>
                   </button>
                 ))}
+              </div>
+            )}
+
+            {(tagList.length > 0 || filter === 'planned') && (
+              <div className="mdash__filters mdash__tags" role="group" aria-label={t('dbTags')}>
+                {tagList.map((tag) => (
+                  <button
+                    key={tag}
+                    type="button"
+                    aria-pressed={activeTag === tag}
+                    className={cn('mobile-chip', activeTag === tag && 'is-active')}
+                    onClick={() => setTagFilter(activeTag === tag ? '' : tag)}
+                  >
+                    <span dir="auto">{tag}</span>
+                    <span className="mdash__chipcount" dir="ltr">{tagCounts[tag]}</span>
+                  </button>
+                ))}
+                {filter === 'planned' && (
+                  <button
+                    type="button"
+                    aria-pressed={planSort === 'priority'}
+                    className={cn('mobile-chip', planSort === 'priority' && 'is-active')}
+                    onClick={() => setPlanSort(planSort === 'priority' ? 'recent' : 'priority')}
+                  >
+                    {t('dashSortLabel')}: {t('dashSortPriority')}
+                  </button>
+                )}
               </div>
             )}
 
