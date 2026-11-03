@@ -18,3 +18,8 @@ server/xcache/
 
 *.sync-conflict-*
 .stfolder/
+
+# Syncthing temp files
+~syncthing~*
+.syncthing.*.tmp
+.stfolder
