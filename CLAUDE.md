@@ -30,7 +30,7 @@
 - Ubuntu، 1 vCPU، حدود 1–2GB RAM. پروژه `/var/www/anitale`، سرویس `anitale.service` با `User=anitale`، nginx پورت 80 → node روی `127.0.0.1:3000`، پشت CDN آروان (HTTPS در آروان تمام می‌شود). `TRUST_PROXY=1`.
 - اسکریپت‌های `deploy/real-ip.sh` و `deploy/harden.sh` قبلاً موفق اجرا شده‌اند.
 - پوشه پروژه روی سرور با **Syncthing** هم همگام می‌شود → حتماً `.stignore` شامل `node_modules` و `dist` باشد (جزئیات در HANDOFF).
-- باز و اختیاری: ورود SSH با root/رمز هنوز فعال است؛ unattended-upgrades تأیید نشده.
+- سخت‌سازی SSH/unattended-upgrades: مالک تصمیم گرفت انجام نشود؛ پیشنهادش نده.
 
 ## شروع نشست جدید
 1. `docs/HANDOFF.md` را بخوان (به‌خصوص بخش‌های 7، 11 و 12).

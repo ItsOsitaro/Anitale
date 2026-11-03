@@ -73,6 +73,15 @@ export const userApi = {
 
 const LIST_KEYS = { anime: 'malAnimeList', manga: 'malMangaList' };
 const GUEST_DEFAULT = 'watching';
+// A3 list details kept next to the basics in localStorage, so they survive logout and migrate on login.
+const DETAIL_KEYS = ['startDate', 'finishDate', 'rewatch', 'priority', 'tags'];
+const detailsOf = (entry) => ({
+  startDate: entry?.startDate || null,
+  finishDate: entry?.finishDate || null,
+  rewatch: entry?.rewatch || 0,
+  priority: entry?.priority || null,
+  tags: Array.isArray(entry?.tags) ? entry.tags : [],
+});
 
 // Guest localStorage format: [{ slug, status, added }]. Lists saved by older
 // versions were bare slug strings — those come back as «watching» entries.
@@ -82,8 +91,8 @@ export const readGuestEntries = (mediaType) => {
     if (!Array.isArray(parsed)) return [];
     return parsed
       .map((entry) => {
-        if (typeof entry === 'string') return { slug: entry, status: GUEST_DEFAULT, added: null, note: '', rating: null, progress: null };
-        return { slug: String(entry?.slug || ''), status: entry?.status || GUEST_DEFAULT, added: entry?.added || null, note: entry?.note || '', rating: entry?.rating ?? null, progress: entry?.progress ?? null };
+        if (typeof entry === 'string') return { slug: entry, status: GUEST_DEFAULT, added: null, note: '', rating: null, progress: null, ...detailsOf() };
+        return { slug: String(entry?.slug || ''), status: entry?.status || GUEST_DEFAULT, added: entry?.added || null, note: entry?.note || '', rating: entry?.rating ?? null, progress: entry?.progress ?? null, ...detailsOf(entry) };
       })
       .filter((entry) => entry.slug);
   } catch {
@@ -101,7 +110,7 @@ const writeGuestEntries = (mediaType, list) => {
 // the guest state after logout picks up exactly where the account left off.
 const mirrorToLocalStorage = (entries) => {
   for (const mediaType of ['anime', 'manga']) {
-    writeGuestEntries(mediaType, entries[mediaType].map((entry) => ({ slug: entry.slug, status: entry.status, note: entry.note || '', rating: entry.rating ?? null, progress: entry.progress ?? null, added: entry.added || null })));
+    writeGuestEntries(mediaType, entries[mediaType].map((entry) => ({ slug: entry.slug, status: entry.status, note: entry.note || '', rating: entry.rating ?? null, progress: entry.progress ?? null, added: entry.added || null, ...detailsOf(entry) })));
   }
 };
 
@@ -124,7 +133,10 @@ const normalize = (raw) => ({
   manga: (raw?.manga || []).map(normalizeEntry),
 });
 
-const DETAIL_KEYS = ['startDate', 'finishDate', 'rewatch', 'priority', 'tags'];
+// Only what the guest actually set, so migrating never blanks details of a title the account already has.
+const nonEmptyDetails = (entry) => Object.fromEntries(
+  Object.entries(detailsOf(entry)).filter(([, value]) => (Array.isArray(value) ? value.length : Boolean(value))),
+);
 
 export const UserContext = createContext(null);
 export const useUser = () => useContext(UserContext);
@@ -134,7 +146,7 @@ export const useUser = () => useContext(UserContext);
 const migrateGuestLists = async () => {
   for (const mediaType of ['anime', 'manga']) {
     for (const entry of readGuestEntries(mediaType)) {
-      try { await userApi.addEntry(mediaType, entry.slug, entry.status); } catch { /* keep going */ }
+      try { await userApi.addEntry(mediaType, entry.slug, entry.status, undefined, undefined, undefined, nonEmptyDetails(entry)); } catch { /* keep going */ }
     }
   }
 };
