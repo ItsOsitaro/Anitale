@@ -4319,3 +4319,11 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .search-page__folks span { display: flex; flex-direction: column; min-width: 0; }
 .search-page__folks strong { font-size: 0.9rem; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .search-page__folks small { color: var(--muted-foreground); font-size: 0.78rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* ---------- B1 review votes and sorting ---------- */
+.community-reviews-bar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; }
+.community-sort { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--muted-foreground); }
+.community-sort select { padding: 4px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--background); color: inherit; font: inherit; }
+.community-helpful { margin-top: 8px; display: inline-flex; align-items: center; gap: 6px; padding: 3px 12px; border-radius: 999px; border: 1px solid var(--border); background: transparent; color: inherit; font: inherit; font-size: 0.82rem; cursor: pointer; }
+.community-helpful:disabled { cursor: default; opacity: 0.8; }
+.community-helpful.is-active { border-color: var(--primary); background: color-mix(in srgb, var(--primary) 14%, transparent); }

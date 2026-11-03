@@ -134,7 +134,28 @@ function ReviewForm({ mediaType, slug, onSaved }) {
   );
 }
 
-function ReviewItem({ review }) {
+function HelpfulButton({ review, signedIn }) {
+  const { t } = useSiteLang();
+  const [state, setState] = useState({ helpful: review.helpful || 0, voted: Boolean(review.voted), busy: false });
+  useEffect(() => { setState({ helpful: review.helpful || 0, voted: Boolean(review.voted), busy: false }); }, [review.helpful, review.voted]);
+  const canVote = signedIn && !review.mine;
+  const toggle = async () => {
+    if (!canVote || state.busy) return;
+    setState((cur) => ({ ...cur, busy: true }));
+    try {
+      const result = await userApi.setHelpful(review.id, !state.voted);
+      setState({ helpful: result.helpful, voted: result.voted, busy: false });
+    } catch { setState((cur) => ({ ...cur, busy: false })); }
+  };
+  if (!canVote && !state.helpful) return null;
+  return (
+    <button type="button" className={`community-helpful${state.voted ? ' is-active' : ''}`} aria-pressed={state.voted} disabled={!canVote || state.busy} onClick={toggle}>
+      {t('reviewHelpful')} <strong dir="ltr">{state.helpful}</strong>
+    </button>
+  );
+}
+
+function ReviewItem({ review, signedIn }) {
   const { t, lang } = useSiteLang();
   const [shown, setShown] = useState(!review.spoiler);
   const date = new Date(review.createdAt).toLocaleDateString(lang === 'fa' ? 'fa-IR' : 'en-GB', { year: 'numeric', month: 'short', day: 'numeric' });
@@ -151,6 +172,7 @@ function ReviewItem({ review }) {
       ) : (
         <button type="button" className="community-spoiler" onClick={() => setShown(true)}>{t('reviewSpoilerShow')}</button>
       )}
+      <HelpfulButton review={review} signedIn={signedIn} />
     </li>
   );
 }
@@ -162,20 +184,21 @@ export default function CommunitySection({ mediaType, slug }) {
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
   const [page, setPage] = useState(1);
+  const [sort, setSort] = useState('new');
   const me = user.me?.username || null;
 
   const load = useCallback(async (targetPage = 1) => {
     try {
-      const result = await userApi.community(mediaType, slug, targetPage);
+      const result = await userApi.community(mediaType, slug, targetPage, sort);
       setData((current) => (targetPage > 1 && current
         ? { ...result, reviews: [...current.reviews, ...result.reviews] }
         : result));
       setPage(targetPage);
       setFailed(false);
     } catch { setFailed(true); }
-  }, [mediaType, slug]);
+  }, [mediaType, slug, sort]);
 
-  useEffect(() => { setData(null); load(1); }, [load, me]);
+  useEffect(() => { load(1); }, [load, me]);
 
   if (failed && !data) return <p className="community-hint">{t('communityLoadFailed')}</p>;
   if (!data) return <p className="community-hint" role="status">{t('communityLoading')}</p>;
@@ -196,15 +219,28 @@ export default function CommunitySection({ mediaType, slug }) {
       {mine && (
         <div className="community-mine">
           <h3>{t('reviewYours')}</h3>
-          <ul className="community-reviews"><ReviewItem review={mine} /></ul>
+          <ul className="community-reviews"><ReviewItem review={mine} signedIn /></ul>
         </div>
       )}
 
-      <h3 className="community-reviews-head">{t('reviewsCount', { n: data.total })}</h3>
+      <div className="community-reviews-bar">
+        <h3 className="community-reviews-head">{t('reviewsCount', { n: data.total })}</h3>
+        {data.total > 1 && (
+          <label className="community-sort">
+            <span>{t('reviewSort')}</span>
+            <select value={sort} onChange={(event) => setSort(event.target.value)}>
+              <option value="new">{t('reviewSortNew')}</option>
+              <option value="helpful">{t('reviewSortHelpful')}</option>
+              <option value="high">{t('reviewSortHigh')}</option>
+              <option value="low">{t('reviewSortLow')}</option>
+            </select>
+          </label>
+        )}
+      </div>
       {others.length === 0 ? (
         <p className="community-hint">{t('reviewsEmpty')}</p>
       ) : (
-        <ul className="community-reviews">{others.map((review) => <ReviewItem key={review.id} review={review} />)}</ul>
+        <ul className="community-reviews">{others.map((review) => <ReviewItem key={review.id} review={review} signedIn={Boolean(user.me)} />)}</ul>
       )}
       {data.reviews.length < data.total && (
         <Button type="button" variant="outline" size="sm" onClick={() => load(page + 1)}>{t('reviewsMore')}</Button>

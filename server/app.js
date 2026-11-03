@@ -16,7 +16,7 @@ import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdmin
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
-import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, titleExists } from './reviews.js';
+import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
 import { listNotifications, markNotificationsRead, notifyFollow, notifyFollowersOfReview } from './notifications.js';
 import { isSensitiveItem } from './sensitive.js';
 import { searchCatalog } from './search.js';
@@ -423,7 +423,7 @@ export const createApp = () => {
     const mediaType = mediaParam(req);
     res.setHeader('Cache-Control', 'no-cache');
     const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
-    const reviews = listReviews(mediaType, req.params.slug, { viewerId: viewerId(req), limit: 10, offset: (page - 1) * 10 });
+    const reviews = listReviews(mediaType, req.params.slug, { viewerId: viewerId(req), limit: 10, offset: (page - 1) * 10, sort: ['new', 'helpful', 'high', 'low'].includes(req.query.sort) ? req.query.sort : 'new' });
     res.json({ stats: communityStats(mediaType, req.params.slug), reviews: reviews.items, total: reviews.total, page });
   });
 
@@ -436,6 +436,18 @@ export const createApp = () => {
     notifyFollowersOfReview(row.id, input.mediaType, input.slug);
     res.status(201).json({ ok: true });
   });
+
+  // "Helpful" on someone else's review (PUT = on, DELETE = off).
+  const helpfulHandler = (on) => (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    const id = Number.parseInt(req.params.id, 10);
+    const result = Number.isInteger(id) ? setHelpful(row.id, id, on) : null;
+    if (!result) throw httpError(404, 'Review not found, or it is yours');
+    res.json({ ok: true, ...result });
+  };
+  app.put('/api/user/reviews/:id/helpful', requireSiteUser, reviewLimiter, helpfulHandler(true));
+  app.delete('/api/user/reviews/:id/helpful', requireSiteUser, reviewLimiter, helpfulHandler(false));
 
   app.get('/api/admin/reviews', requireAdmin, (req, res) => {
     const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 15));

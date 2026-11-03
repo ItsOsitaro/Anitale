@@ -17,6 +17,12 @@ CREATE TABLE IF NOT EXISTS reviews (
   UNIQUE (user_id, media_type, slug)
 );
 CREATE INDEX IF NOT EXISTS idx_reviews_title ON reviews(media_type, slug, created_at);
+CREATE TABLE IF NOT EXISTS review_votes (
+  review_id INTEGER NOT NULL,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (review_id, user_id)
+);
 `);
 
 export const titleExists = (mediaType, slug) => Boolean(
@@ -52,20 +58,41 @@ const shape = (row, viewerId) => ({
   rating: row.rating ?? null,
   createdAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
   mine: viewerId != null && row.user_id === viewerId,
+  helpful: row.helpful || 0,
+  voted: Boolean(row.voted),
 });
 
-export const listReviews = (mediaType, slug, { viewerId = null, limit = 20, offset = 0 } = {}) => {
+const SORTS = {
+  new: 'r.created_at DESC, r.id DESC',
+  helpful: 'helpful DESC, r.created_at DESC, r.id DESC',
+  high: '(e.rating IS NULL), e.rating DESC, r.created_at DESC, r.id DESC',
+  low: '(e.rating IS NULL), e.rating ASC, r.created_at DESC, r.id DESC',
+};
+
+export const listReviews = (mediaType, slug, { viewerId = null, limit = 20, offset = 0, sort = 'new' } = {}) => {
+  const order = SORTS[sort] || SORTS.new;
   const rows = db.prepare(`
-    SELECT r.*, u.username, u.avatar_color, e.rating
+    SELECT r.*, u.username, u.avatar_color, e.rating,
+      (SELECT COUNT(*) FROM review_votes v WHERE v.review_id = r.id) AS helpful,
+      EXISTS (SELECT 1 FROM review_votes v WHERE v.review_id = r.id AND v.user_id = ?) AS voted
     FROM reviews r
     JOIN users u ON u.id = r.user_id
     LEFT JOIN user_entries e ON e.user_id = r.user_id AND e.media_type = r.media_type AND e.slug = r.slug
     WHERE r.media_type = ? AND r.slug = ?
-    ORDER BY (r.user_id = ?) DESC, r.created_at DESC, r.id DESC
+    ORDER BY (r.user_id = ?) DESC, ${order}
     LIMIT ? OFFSET ?
-  `).all(mediaType, slug, viewerId ?? -1, limit, offset);
+  `).all(viewerId ?? -1, mediaType, slug, viewerId ?? -1, limit, offset);
   const total = db.prepare('SELECT COUNT(*) AS n FROM reviews WHERE media_type = ? AND slug = ?').get(mediaType, slug).n;
   return { items: rows.map((row) => shape(row, viewerId)), total };
+};
+
+// "Helpful" vote: one per user per review, never on your own review. Returns the new state or null when not allowed.
+export const setHelpful = (userId, reviewId, on) => {
+  const review = db.prepare('SELECT id, user_id FROM reviews WHERE id = ?').get(reviewId);
+  if (!review || review.user_id === userId) return null;
+  if (on) db.prepare('INSERT OR IGNORE INTO review_votes (review_id, user_id) VALUES (?, ?)').run(reviewId, userId);
+  else db.prepare('DELETE FROM review_votes WHERE review_id = ? AND user_id = ?').run(reviewId, userId);
+  return { helpful: db.prepare('SELECT COUNT(*) AS n FROM review_votes WHERE review_id = ?').get(reviewId).n, voted: on };
 };
 
 // Reviews are write-once: a user cannot edit or delete theirs (only an admin can remove one).
@@ -107,4 +134,7 @@ export const adminListReviews = ({ q = '', limit = 15, offset = 0 } = {}) => {
   return { items: rows.map((row) => ({ ...shape(row, null), mediaType: row.media_type, slug: row.slug })), total };
 };
 
-export const adminDeleteReview = (id) => db.prepare('DELETE FROM reviews WHERE id = ?').run(id).changes > 0;
+export const adminDeleteReview = (id) => {
+  db.prepare('DELETE FROM review_votes WHERE review_id = ?').run(id);
+  return db.prepare('DELETE FROM reviews WHERE id = ?').run(id).changes > 0;
+};
