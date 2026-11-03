@@ -4302,3 +4302,10 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .search-letters button { min-width: 32px; min-height: 32px; padding: 2px 8px; border-radius: 8px; border: 1px solid var(--border); background: var(--card); color: var(--foreground); font: inherit; font-size: 0.82rem; cursor: pointer; }
 .search-letters button.is-active { border-color: var(--ring); background: color-mix(in oklch, var(--ring) 14%, var(--card)); font-weight: 700; }
 .search-letters button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* ---------- A2 / A7 ---------- */
+.community-statuses { margin: 10px 0 4px; }
+.community-statuses__total { margin: 0 0 6px; font-size: 0.85rem; color: var(--muted-foreground); }
+.community-statuses ul { display: flex; flex-wrap: wrap; gap: 6px 14px; margin: 0; padding: 0; list-style: none; font-size: 0.85rem; }
+.community-statuses li { display: inline-flex; align-items: center; gap: 6px; }
+.search-genres__kind { margin: 10px 0 4px; font-size: 0.8rem; font-weight: 600; color: var(--muted-foreground); }

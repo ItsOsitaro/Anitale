@@ -1,3 +1,4 @@
+import { splitGenres, splitInfoRows } from '@/lib/genre-kinds';
 import React, { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { BrowserRouter, Link, NavLink, Route, Routes, useLocation, useNavigate, useParams } from 'react-router-dom';
 import uniq from 'lodash/uniq.js';
@@ -773,7 +774,17 @@ function CatalogControls({ query, onQueryChange, genre, onGenreChange, genres, c
         <span>{t('genreLabel')}</span>
         <select value={genre} onChange={(event) => onGenreChange(event.target.value)}>
           <option value="All">{t('allGenres')}</option>
-          {genres.map((item) => <option value={item} key={item}>{item}</option>)}
+          {(() => {
+            const groups = splitGenres(genres);
+            const labelOf = { genre: t('genresLabel'), theme: t('themesLabel'), demographic: t('demographicLabel') };
+            const filled = Object.entries(groups).filter(([, list]) => list.length);
+            if (filled.length <= 1) return genres.map((item) => <option value={item} key={item}>{item}</option>);
+            return filled.map(([kind, list]) => (
+              <optgroup key={kind} label={labelOf[kind]}>
+                {list.map((item) => <option value={item} key={item}>{item}</option>)}
+              </optgroup>
+            ));
+          })()}
         </select>
       </label>
       {(formats?.length ?? 0) > 1 && (
@@ -1079,12 +1090,12 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
       flash(copied ? t('shareCopied') : t('shareFailed'));
     }
   };
-  const informationRows = item.information || [
+  const informationRows = splitInfoRows(item.information || [
     { label: t('typeLabel'), value: mediaType === 'manga' ? (lang === 'fa' ? 'مانگا' : 'Manga') : item.format },
     { label: t('categoryLabel'), value: item.category },
     { label: t('yearLabel'), value: item.year },
     { label: t('genresLabel'), value: item.genres.join(lang === 'fa' ? '، ' : ', ') },
-  ];
+  ]);
   const statisticsRows = item.statistics
     ? [
         { label: t('scoreLabel'), value: item.statistics.score },

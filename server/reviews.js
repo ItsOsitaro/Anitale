@@ -35,7 +35,12 @@ export const communityStats = (mediaType, slug) => {
   }
   const reviewCount = db.prepare('SELECT COUNT(*) AS n FROM reviews WHERE media_type = ? AND slug = ?').get(mediaType, slug).n;
   const listed = db.prepare('SELECT COUNT(*) AS n FROM user_entries WHERE media_type = ? AND slug = ?').get(mediaType, slug).n;
-  return { average: count ? Math.round((sum / count) * 10) / 10 : null, count, histogram, reviewCount, listed };
+  // How many members hold the title in each list status (A2).
+  const statuses = { watching: 0, completed: 0, on_hold: 0, dropped: 0, planned: 0 };
+  for (const { status, n } of db.prepare('SELECT status, COUNT(*) AS n FROM user_entries WHERE media_type = ? AND slug = ? GROUP BY status').all(mediaType, slug)) {
+    if (status in statuses) statuses[status] = n;
+  }
+  return { average: count ? Math.round((sum / count) * 10) / 10 : null, count, histogram, reviewCount, listed, statuses };
 };
 
 const shape = (row, viewerId) => ({

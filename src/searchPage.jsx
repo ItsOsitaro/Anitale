@@ -7,6 +7,7 @@ import { displayTitle } from './home-data.js';
 import { coverUrl } from '@/lib/cover';
 import { useShowSensitive } from './lib/catalog-rules.js';
 import SensitiveToggle from './components/SensitiveToggle.jsx';
+import { genreKind } from './lib/genre-kinds.js';
 
 const PARAMS = ['q', 'type', 'genre', 'xgenre', 'year', 'from', 'to', 'format', 'status', 'studio', 'rating', 'letter', 'min', 'sort', 'page'];
 const FILTER_KEYS = ['genre', 'xgenre', 'year', 'from', 'to', 'format', 'status', 'studio', 'rating', 'letter', 'min'];
@@ -139,8 +140,14 @@ export default function SearchPage() {
         <details className="search-genres" open={pickedGenres > 0 || undefined}>
           <summary>{t('genreLabel')}{pickedGenres > 0 ? ` · ${t('searchGenresPicked', { n: pickedGenres })}` : ''}</summary>
           <p className="search-genres__hint">{t('searchGenreHint')}</p>
-          <div className="search-genres__chips">
-            {facets.genres.map((genre) => {
+          {['genre', 'theme', 'demographic'].map((kind) => {
+            const group = facets.genres.filter((genre) => genreKind(genre.value) === kind);
+            if (!group.length) return null;
+            return (
+              <React.Fragment key={kind}>
+                <h3 className="search-genres__kind">{t(kind === 'genre' ? 'genresLabel' : kind === 'theme' ? 'themesLabel' : 'demographicLabel')}</h3>
+                <div className="search-genres__chips">
+            {group.map((genre) => {
               const state = included.includes(genre.value) ? 'in' : (excluded.includes(genre.value) ? 'out' : 'off');
               return (
                 <button
@@ -155,7 +162,10 @@ export default function SearchPage() {
                 </button>
               );
             })}
-          </div>
+                </div>
+              </React.Fragment>
+            );
+          })}
         </details>
       )}
 

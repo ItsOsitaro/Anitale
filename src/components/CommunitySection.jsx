@@ -7,6 +7,28 @@ import { useUser, userApi } from '@/user.jsx';
 const MIN_LENGTH = 10;
 const MAX_LENGTH = 2000;
 
+const STATUS_ORDER = ['completed', 'watching', 'on_hold', 'planned', 'dropped'];
+
+// A2: how many members have this title, split by list status.
+function StatusCounts({ stats, mediaType }) {
+  const { t } = useSiteLang();
+  if (!stats.listed) return null;
+  const counts = stats.statuses || {};
+  return (
+    <div className="community-statuses">
+      <p className="community-statuses__total">{t('communityListed', { n: stats.listed })}</p>
+      <ul aria-label={t('communityStatusAria')}>
+        {STATUS_ORDER.filter((status) => counts[status]).map((status) => (
+          <li key={status}>
+            <span className={`pi-dot status-${status}`} aria-hidden="true" />
+            {status === 'watching' && mediaType === 'manga' ? t('status_reading') : t(`status_${status}`)} <strong dir="ltr">{counts[status]}</strong>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
 function ScoreSummary({ stats }) {
   const { t } = useSiteLang();
   const peak = Math.max(1, ...stats.histogram);
@@ -165,6 +187,7 @@ export default function CommunitySection({ mediaType, slug }) {
   return (
     <div className="community">
       <ScoreSummary stats={data.stats} />
+      <StatusCounts stats={data.stats} mediaType={mediaType} />
       <MyRating mediaType={mediaType} slug={slug} onRated={() => load(1)} />
 
       {user.me && !mine && <ReviewForm mediaType={mediaType} slug={slug} onSaved={refreshAfterSave} />}

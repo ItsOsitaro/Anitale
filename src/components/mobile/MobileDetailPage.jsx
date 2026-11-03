@@ -1,3 +1,4 @@
+import { splitGenres } from '@/lib/genre-kinds';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
@@ -206,14 +207,14 @@ export default function MobileDetailPage({
                 </button>
               )}
             </section>
-            {item.genres?.length > 0 && (
-              <section>
-                <h2 className="mobile-detail__h">{t('genresLabel')}</h2>
+            {item.genres?.length > 0 && Object.entries(splitGenres(item.genres)).filter(([, list]) => list.length).map(([kind, list]) => (
+              <section key={kind}>
+                <h2 className="mobile-detail__h">{t(kind === 'genre' ? 'genresLabel' : kind === 'theme' ? 'themesLabel' : 'demographicLabel')}</h2>
                 <div className="mobile-detail__genres">
-                  {item.genres.map((g) => <span key={g} className="mobile-detail__genre">{g}</span>)}
+                  {list.map((g) => <span key={g} className="mobile-detail__genre">{g}</span>)}
                 </div>
               </section>
-            )}
+            ))}
           </>
         )}
 

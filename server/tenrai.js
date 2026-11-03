@@ -214,6 +214,7 @@ export const mapTenraiToDraft = (data) => {
     row('Studios', names(data.studios)),
     row('Source', data.source),
     row('Genres', genres),
+    row('Demographic', names(data.demographics)),
     row('Duration', data.duration),
     row('Rating', data.rating),
   ].filter((entry) => entry.value.trim() !== '');
