@@ -16,11 +16,10 @@ export default function RankRow({ item, rank, mediaType = 'anime' }) {
     <Link
       to={href}
       className={cn('mobile-rank-row')}
-      aria-label={title}
     >
       <span className={cn('mobile-rank-row__num', isTop && 'is-top')}>{rank}</span>
       <span className="mobile-rank-row__cover">
-        <img src={coverUrl(item.image, 120)} alt={title} loading="lazy" decoding="async" width="48" height="66" />
+        <img src={coverUrl(item.image, 120)} alt="" loading="lazy" decoding="async" width="48" height="66" />
       </span>
       <div className="mobile-rank-row__copy">
         <span className="mobile-rank-row__title">{title}</span>
