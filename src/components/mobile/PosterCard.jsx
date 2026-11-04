@@ -12,7 +12,7 @@ export default function PosterCard({ item, mediaType = 'anime' }) {
   const showScore = item.sampleScore != null && item.sampleScore !== 0;
   return (
     <article className="mobile-poster-card">
-      <Link className="mobile-poster-card__link" to={href} aria-label={title}>
+      <Link className="mobile-poster-card__link" to={href}>
         <img
           className="mobile-poster-card__image"
           src={coverUrl(item.image, 360)}
