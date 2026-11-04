@@ -1,0 +1,230 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-04T10:27:38.393Z",
+  "title": "Design System: Anitale",
+  "extensions": {
+    "colorMeta": {
+      "sakura-rose": {
+        "role": "primary",
+        "displayName": "Sakura Rose",
+        "canonical": "oklch(0.58 0.19 12)",
+        "tonalRamp": [
+          "oklch(0.2 0.076 12)",
+          "oklch(0.3 0.190 12)",
+          "oklch(0.4 0.190 12)",
+          "oklch(0.5 0.190 12)",
+          "oklch(0.62 0.190 12)",
+          "oklch(0.74 0.190 12)",
+          "oklch(0.86 0.190 12)",
+          "oklch(0.95 0.076 12)"
+        ]
+      },
+      "petal-wash": {
+        "role": "secondary",
+        "displayName": "Petal Wash",
+        "canonical": "oklch(0.925 0.026 340)",
+        "tonalRamp": [
+          "oklch(0.2 0.020 340)",
+          "oklch(0.3 0.050 340)",
+          "oklch(0.4 0.050 340)",
+          "oklch(0.5 0.050 340)",
+          "oklch(0.62 0.050 340)",
+          "oklch(0.74 0.050 340)",
+          "oklch(0.86 0.050 340)",
+          "oklch(0.95 0.020 340)"
+        ]
+      },
+      "ink-plum": {
+        "role": "neutral",
+        "displayName": "Ink Plum",
+        "canonical": "oklch(0.26 0.035 335)",
+        "tonalRamp": [
+          "oklch(0.2 0.014 335)",
+          "oklch(0.3 0.035 335)",
+          "oklch(0.4 0.035 335)",
+          "oklch(0.5 0.035 335)",
+          "oklch(0.62 0.035 335)",
+          "oklch(0.74 0.035 335)",
+          "oklch(0.86 0.035 335)",
+          "oklch(0.95 0.014 335)"
+        ]
+      },
+      "paper-mist": {
+        "role": "neutral",
+        "displayName": "Paper Mist",
+        "canonical": "oklch(0.976 0.007 330)",
+        "tonalRamp": [
+          "oklch(0.2 0.005 330)",
+          "oklch(0.3 0.012 330)",
+          "oklch(0.4 0.012 330)",
+          "oklch(0.5 0.012 330)",
+          "oklch(0.62 0.012 330)",
+          "oklch(0.74 0.012 330)",
+          "oklch(0.86 0.012 330)",
+          "oklch(0.95 0.005 330)"
+        ]
+      },
+      "petal-border": {
+        "role": "neutral",
+        "displayName": "Petal Border",
+        "canonical": "oklch(0.904 0.032 345)",
+        "tonalRamp": [
+          "oklch(0.2 0.016 345)",
+          "oklch(0.3 0.040 345)",
+          "oklch(0.4 0.040 345)",
+          "oklch(0.5 0.040 345)",
+          "oklch(0.62 0.040 345)",
+          "oklch(0.74 0.040 345)",
+          "oklch(0.86 0.040 345)",
+          "oklch(0.95 0.016 345)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default reading text."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Section headings."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Chips and action links."
+      }
+    },
+    "shadows": [
+      {
+        "name": "control",
+        "value": "0 1px 2px 0 oklch(0.26 0.035 335 / 0.09)",
+        "purpose": "Buttons and fields at rest."
+      },
+      {
+        "name": "press",
+        "value": "inset 0 1px 3px 0 oklch(0.26 0.035 335 / 0.16)",
+        "purpose": "Pressed controls."
+      },
+      {
+        "name": "panel",
+        "value": "0 1px 2px oklch(0.26 0.035 335 / 0.04), 0 18px 44px -18px oklch(0.45 0.09 340 / 0.12)",
+        "purpose": "Panels."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.4, 0, 0.2, 1)",
+        "purpose": "Short state transitions (about 150ms)."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "mobile",
+        "value": "820px"
+      },
+      {
+        "name": "wide",
+        "value": "1100px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action; soft rose fill.",
+      "html": "<button class=\"ds-btn-primary\">ثبت</button>",
+      "css": ".ds-btn-primary{background:oklch(0.58 0.19 12);color:oklch(0.99 0.002 200);border:1px solid transparent;border-radius:14px;height:38px;padding:0 14px;font:700 13px/1.4 \"Vazirmatn Variable\",Tahoma,sans-serif;cursor:pointer;transition:background .15s,transform .15s}.ds-btn-primary:hover{background:oklch(0.58 0.19 12 / .8)}.ds-btn-primary:active{transform:scale(.95)}.ds-btn-primary:focus-visible{outline:2px solid oklch(0.58 0.19 12);outline-offset:2px}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action on white.",
+      "html": "<button class=\"ds-btn-outline\">انصراف</button>",
+      "css": ".ds-btn-outline{background:#fff;color:oklch(0.26 0.035 335);border:1px solid oklch(0.904 0.032 345);border-radius:14px;height:38px;padding:0 14px;font:700 13px/1.4 \"Vazirmatn Variable\",Tahoma,sans-serif;box-shadow:0 1px 2px 0 oklch(0.26 0.035 335 / .09);cursor:pointer}.ds-btn-outline:hover{background:oklch(0.945 0.013 335)}.ds-btn-outline:focus-visible{outline:2px solid oklch(0.58 0.19 12);outline-offset:2px}"
+    },
+    {
+      "name": "Chip",
+      "kind": "chip",
+      "refersTo": "chip",
+      "description": "Pill filter chip; active state uses rose.",
+      "html": "<button class=\"ds-chip\">اکشن</button> <button class=\"ds-chip is-active\">درام</button>",
+      "css": ".ds-chip{background:oklch(0.925 0.026 340);color:oklch(0.42 0.13 8);border:0;border-radius:999px;padding:6px 14px;font:700 13px/1.4 \"Vazirmatn Variable\",Tahoma,sans-serif;cursor:pointer}.ds-chip.is-active{background:oklch(0.58 0.19 12);color:#fff}.ds-chip:focus-visible{outline:2px solid oklch(0.58 0.19 12);outline-offset:2px}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Translucent rounded container.",
+      "html": "<div class=\"ds-panel\"><h3>عنوان بخش</h3><p>متن نمونه داخل پنل.</p></div>",
+      "css": ".ds-panel{background:oklch(1 0 0 / .88);border:1px solid oklch(0.904 0.032 345 / .58);border-radius:20px;padding:16px;box-shadow:0 1px 2px oklch(0.26 0.035 335 / .04),0 18px 44px -18px oklch(0.45 0.09 340 / .12);color:oklch(0.26 0.035 335);font:400 14px/1.65 \"Vazirmatn Variable\",Tahoma,sans-serif}.ds-panel h3{margin:0 0 6px;font-size:18px}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "",
+      "description": "Pill-shaped field with plum-tinted border.",
+      "html": "<input class=\"ds-input\" placeholder=\"جستجوی عنوان...\">",
+      "css": ".ds-input{background:#fff;border:1px solid oklch(0.904 0.032 345);border-radius:999px;height:38px;padding:0 16px;font:400 14px \"Vazirmatn Variable\",Tahoma,sans-serif;box-shadow:0 1px 2px 0 oklch(0.26 0.035 335 / .09);color:oklch(0.26 0.035 335)}.ds-input:focus-visible{outline:2px solid oklch(0.58 0.19 12);outline-offset:2px}"
+    }
+  ],
+  "narrative": {
+    "northStar": "Sakura & Ink",
+    "overview": "Soft cherry-blossom pinks on a warm paper ground with deep plum ink text. Rounded, quiet, slightly translucent surfaces; calm reading room for anime and manga. Persian and RTL are native.",
+    "keyCharacteristics": [
+      "Warm paper background with faint radial blooms",
+      "One accent: Sakura Rose",
+      "Rounded forms (14px controls, 20px panels, pill chips)",
+      "Translucent blurred top bar",
+      "Vazirmatn Variable everywhere"
+    ],
+    "rules": [
+      {
+        "name": "The One Voice Rule",
+        "body": "Sakura Rose is the only saturated color; it marks what is actionable or current and stays rare on any screen.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tinted Neutral Rule",
+        "body": "Neutrals carry a trace of plum; no pure grey or black in light theme; dark theme stays plum.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Do not introduce a second typeface; vary weight and size instead.",
+        "section": "typography"
+      },
+      {
+        "name": "The Persian Digit Rule",
+        "body": "Numbers shown to users go through formatNumber(value, lang).",
+        "section": "typography"
+      },
+      {
+        "name": "The Quiet Lift Rule",
+        "body": "Shadows are tinted with plum and stay faint; nothing casts a hard or grey shadow.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do use tokens and dark-theme counterparts instead of raw colors.",
+      "Do build with RTL logical properties and keep Persian as the primary voice.",
+      "Do keep touch targets at least 24px (44px for main mobile actions) and labels matching visible text.",
+      "Do keep motion light and short; respect reduced motion.",
+      "Do keep sensitive-content covers behind the user toggle."
+    ],
+    "donts": [
+      "Don't imitate the dense, dated look of old MyAnimeList.",
+      "Don't add neon or high-saturation glow to the dark theme.",
+      "Don't add heavy or decorative animation.",
+      "Don't add a second typeface or hard-coded colors.",
+      "Don't use grey or black shadows."
+    ]
+  }
+}
