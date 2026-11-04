@@ -531,7 +531,7 @@ function SchedulePanel() {
             <li key={entry.slug} className={entry.day === today ? 'is-today' : undefined}>
               <span className="schedule-title">
                 <img className="schedule-cover" src={coverUrl(anime.image, 240)} alt="" loading="lazy" />
-                <Link to={mediaHref(anime)}>{entry.title}</Link>
+                <Link to={mediaHref(anime)} dir="auto">{entry.title}</Link>
               </span>
               <span className="day-badge">
                 {t(dayMessages[entry.day])}
@@ -760,7 +760,7 @@ function RankedList({ items, toPrefix }) {
             <img src={coverUrl(item.image, 360)} alt={item.title} loading="lazy" />
           </Link>
           <div className="rank-copy">
-            <Link className="rank-title" to={mediaHref(item, mediaType)}>{item.title}</Link>
+            <Link className="rank-title" to={mediaHref(item, mediaType)} dir="auto">{item.title}</Link>
             <span><span>{item.category}</span><span aria-hidden="true">·</span><span dir="ltr">{item.year}</span></span>
           </div>
           {item.sampleScore && (

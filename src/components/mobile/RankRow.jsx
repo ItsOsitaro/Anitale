@@ -22,7 +22,7 @@ export default function RankRow({ item, rank, mediaType = 'anime' }) {
         <img src={coverUrl(item.image, 120)} alt="" loading="lazy" decoding="async" width="48" height="66" />
       </span>
       <div className="mobile-rank-row__copy">
-        <span className="mobile-rank-row__title">{title}</span>
+        <span className="mobile-rank-row__title" dir="auto">{title}</span>
         <div className="mobile-rank-row__meta" aria-hidden="true">
           {item.category}
           <span aria-hidden="true">·</span>
