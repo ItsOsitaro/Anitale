@@ -122,6 +122,29 @@ export const registerSeoRoutes = (app) => {
     res.send(`User-agent: *\nAllow: /\n${PRIVATE_PATHS.map((p) => `Disallow: ${p}`).join('\n')}\n\nSitemap: ${originOf(req)}/sitemap.xml\n`);
   });
 
+  // llms.txt (llmstxt.org): a short Markdown map of the site for AI agents.
+  app.get('/llms.txt', (req, res) => {
+    const origin = originOf(req);
+    res.type('text/markdown; charset=utf-8').setHeader('Cache-Control', 'public, max-age=3600');
+    res.send(`# ${SITE_NAME}
+
+> کاتالوگ فارسی (راست‌چین) انیمه و مانگا با کاور، ژانر، خلاصهٔ داستان، رتبه‌بندی، نظر و امتیاز کاربران و فهرست شخصی. A Persian/English anime and manga catalog.
+
+## Browse
+- [Anime catalog](${origin}/anime): all anime with search and filters
+- [Manga catalog](${origin}/manga): all manga with search and filters
+- [Top anime](${origin}/top/anime): ranked by score
+- [Top manga](${origin}/top/manga): ranked by score
+- [Top characters](${origin}/top/characters): most favorited characters
+- [Seasonal anime](${origin}/seasonal): currently airing
+- [Weekly schedule](${origin}/schedule): which day each anime airs
+
+## Data
+- [Developers](${origin}/developers): public read-only JSON API at ${origin}/api/v1 (no key, 60 requests/minute per IP)
+- [Sitemap](${origin}/sitemap.xml): every public title page
+`);
+  });
+
   // Home: site-wide title/description, Open Graph preview and a WebSite search box for Google.
   app.get('/', async (req, res, next) => {
     try {

@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom';
-import { ContinueWatching } from '@/components/QuickEpisode';
 import { L, useSiteLang } from '@/i18n';
 import { mediaHref } from '@/catalog';
 import { displayTitle, selectCurrentSeasonPicks } from '@/home-data';
@@ -64,7 +63,6 @@ export default function MobileHomePage({ picks, lang, t }) {
     <div className="mobile-home">
       {heroItems && heroItems.length > 0 && <HeroCarousel items={heroItems} />}
       <QuickChips />
-      <ContinueWatching />
       <SectionHeader title={t('homeSeason')} to="/seasonal" />
       <Rail>
         {picks.currentSeason.map((item) => (

@@ -59,6 +59,7 @@ export default function HeroCarousel({ items }) {
                   src={coverUrl(item.image, 720)}
                   alt=""
                   loading={index === 0 ? 'eager' : 'lazy'}
+                  fetchPriority={index === 0 ? 'high' : undefined}
                   decoding="async"
                 />
               </div>
