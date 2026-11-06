@@ -44,6 +44,7 @@ import { StacksBrowse, StackView } from './stacksPages.jsx';
 import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
 import IntroStrip from './components/IntroStrip.jsx';
+import { formatNumber, toPersianDigits } from '@/lib/digits.js';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
@@ -355,6 +356,13 @@ function SiteSidebar() {
   );
 }
 
+// Rank badges are zero-padded ("01"); keep the padding but follow the UI language for digits.
+const padRank = (value, lang) => {
+  const padded = String(value).padStart(2, '0');
+  return lang === 'fa' ? toPersianDigits(padded) : padded;
+};
+const yearText = (year, lang) => (year ? formatNumber(year, lang, { useGrouping: false }) : year);
+
 function AnimeCard({ item, rank }) {
   const { lang, t } = useSiteLang();
   const isManga = item.format === 'Manga';
@@ -366,7 +374,7 @@ function AnimeCard({ item, rank }) {
 
   return (
     <article className="anime-card">
-      {rank && <span className="card-rank">{String(rank).padStart(2, '0')}</span>}
+      {rank && <span className="card-rank">{padRank(rank, lang)}</span>}
       <Link className="anime-cover" to={href} aria-label={`${t(isManga ? 'breadcrumbManga' : 'breadcrumbAnime')}: ${title}`}>
         <img src={coverUrl(item.image, 360)} alt={title} loading="lazy" />
       </Link>
@@ -375,7 +383,7 @@ function AnimeCard({ item, rank }) {
         <div className="anime-meta">
           <span>{item.category}</span>
           <span aria-hidden="true">·</span>
-          <span dir="ltr">{item.year}</span>
+          <span dir="ltr">{yearText(item.year, lang)}</span>
         </div>
         {item.sampleScore && (
           <div className="sample-score">
@@ -710,13 +718,13 @@ function RankedList({ items, toPrefix }) {
     <ol className="rank-list">
       {items.map((item, index) => (
         <li className="rank-row" key={item.slug}>
-          <span className="rank-number">{String(index + 1).padStart(2, '0')}</span>
+          <span className="rank-number">{padRank(index + 1, lang)}</span>
           <Link className="rank-cover" to={mediaHref(item, mediaType)} aria-label={item.title}>
             <img src={coverUrl(item.image, 360)} alt={item.title} loading="lazy" />
           </Link>
           <div className="rank-copy">
             <Link className="rank-title" to={mediaHref(item, mediaType)} dir="auto">{item.title}</Link>
-            <span><span>{item.category}</span><span aria-hidden="true">·</span><span dir="ltr">{item.year}</span></span>
+            <span><span>{item.category}</span><span aria-hidden="true">·</span><span dir="ltr">{yearText(item.year, lang)}</span></span>
           </div>
           {item.sampleScore && (
             <span className="rank-score">
