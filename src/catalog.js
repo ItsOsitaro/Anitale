@@ -1,7 +1,7 @@
 // The catalog comes from the local CMS API (/api/anime, /api/manga). If the API is not running,
 // it falls back to the static JSON files in public/data so the site still works.
 const baseUrl = import.meta.env.BASE_URL;
-const PLACEHOLDER = `${baseUrl}covers/placeholder.svg`;
+const PLACEHOLDER = `${baseUrl}cover-placeholder.svg`;
 
 const fetchJson = async (url) => {
   const response = await fetch(url);
