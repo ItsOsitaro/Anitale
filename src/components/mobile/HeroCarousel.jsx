@@ -6,6 +6,7 @@ import { displayTitle, synopsisText } from '@/home-data';
 import { useSiteLang } from '@/i18n';
 import { cn } from 'cn';
 import { coverUrl } from '@/lib/cover';
+import { formatNumber } from '@/lib/digits.js';
 
 export default function HeroCarousel({ items }) {
   const { lang, t } = useSiteLang();
@@ -68,13 +69,13 @@ export default function HeroCarousel({ items }) {
                   {item.sampleScore != null && item.sampleScore !== 0 && (
                     <span className="mobile-hero-card__chip mobile-hero-card__chip--score">
                       <Star width={12} height={12} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" style={{ color: '#fff' }} aria-hidden="true" />
-                      <span dir="ltr">{item.sampleScore}</span>
+                      <span dir="ltr">{formatNumber(item.sampleScore, lang)}</span>
                     </span>
                   )}
                   {item.category && <span className="mobile-hero-card__chip">{item.category}</span>}
                   {item.year && (
                     <span className="mobile-hero-card__chip" dir="ltr">
-                      {item.year}
+                      {formatNumber(item.year, lang, { useGrouping: false })}
                     </span>
                   )}
                 </div>
