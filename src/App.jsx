@@ -336,32 +336,21 @@ function SiteHeader() {
   );
 }
 
-const SIDEBAR_VISIBLE = 5;
+// The header already links to the main catalog pages, so the sidebar lists only the destinations it does not.
+const HEADER_TARGETS = new Set(primaryNavigation.map((item) => item.to));
 
 function SiteSidebar() {
-  const { lang, t } = useSiteLang();
+  const { lang } = useSiteLang();
   return (
     <aside className="sidebar panel">
-      {sidebarSections.map((section) => {
-        const primary = section.links.slice(0, SIDEBAR_VISIBLE);
-        const more = section.links.slice(SIDEBAR_VISIBLE);
-        return (
-          <div className="sidebar-section" key={section.to ?? L(section.title, lang)}>
-            <div className="side-title">{L(section.title, lang)}</div>
-            <ul className="side-list">
-              {primary.map((item) => <li key={item.to}><Link to={item.to}>{L(item.label, lang)}</Link></li>)}
-            </ul>
-            {more.length > 0 && (
-              <details className="side-more">
-                <summary>{t('sideMore')}</summary>
-                <ul className="side-list">
-                  {more.map((item) => <li key={item.to}><Link to={item.to}>{L(item.label, lang)}</Link></li>)}
-                </ul>
-              </details>
-            )}
-          </div>
-        );
-      })}
+      {sidebarSections.map((section) => (
+        <div className="sidebar-section" key={section.to ?? L(section.title, lang)}>
+          <div className="side-title">{L(section.title, lang)}</div>
+          <ul className="side-list">
+            {section.links.filter((item) => !HEADER_TARGETS.has(item.to)).map((item) => <li key={item.to}><Link to={item.to}>{L(item.label, lang)}</Link></li>)}
+          </ul>
+        </div>
+      ))}
     </aside>
   );
 }

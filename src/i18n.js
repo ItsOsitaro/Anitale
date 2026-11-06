@@ -100,7 +100,7 @@ export const messages = {
     mangaRankingNote: 'ترتیب بر اساس امتیاز ثبت‌شده برای هر مانگاست؛ عنوان‌های بدون امتیاز آخر فهرست می‌آیند.',
     // Section page
     pageNotFound: 'صفحه‌ای پیدا نشد', notFoundSearch: 'جستجو در انی‌تیل', notCatalog: 'آدرس را بررسی کن یا از صفحهٔ اصلی ادامه بده.',
-    backHome: 'بازگشت به خانه', sideMore: 'بخش‌های بیشتر', exploreSections: 'بخش‌ها را ببینید',
+    backHome: 'بازگشت به خانه', exploreSections: 'بخش‌ها را ببینید',
     // Detail page
     seriesProfile: 'پروفایل سریال', mangaProfile: 'پروفایل مانگا',
     addToList: 'افزودن به فهرست', inList: 'در فهرست شماست', listAria: 'افزودن یا حذف از فهرست شخصی',
@@ -276,7 +276,7 @@ export const messages = {
     animeRankingNote: 'Scores are live MyAnimeList ratings, refreshed automatically.',
     mangaRankingNote: 'Ordered by each manga\'s recorded score; titles without a score come last.',
     pageNotFound: 'Page not found', notFoundSearch: 'Search Anitale', notCatalog: 'Check the address or continue from the home page.',
-    backHome: 'Back to home', sideMore: 'More sections', exploreSections: 'Explore sections',
+    backHome: 'Back to home', exploreSections: 'Explore sections',
     seriesProfile: 'Series profile', mangaProfile: 'Manga profile',
     addToList: 'Add to list', inList: 'In your list', listAria: 'Add or remove from your personal list',
     alternativeTitles: 'Alternative Titles', information: 'Information', statistics: 'Statistics', availableAt: 'Available At',
