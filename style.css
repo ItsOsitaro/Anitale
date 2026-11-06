@@ -118,7 +118,7 @@ select {
 
 .brand-copy small {
   color: var(--muted-foreground);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.1em;
 }
@@ -303,7 +303,7 @@ select {
 }
 
 .search-opt-meta {
-  font-size: 10.5px;
+  font-size: 11px;
   color: var(--muted-foreground);
   white-space: nowrap;
 }
@@ -312,7 +312,7 @@ select {
   margin-inline-start: auto;
   padding: 2.5px 8px;
   border-radius: 999px;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   flex: 0 0 auto;
   color: var(--primary);
@@ -393,7 +393,7 @@ select {
 }
 
 .side-title {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.14em;
   text-transform: uppercase;
@@ -857,7 +857,7 @@ select {
   padding-block-start: 9px;
   border-block-start: 1px solid color-mix(in oklch, var(--border) 55%, transparent);
   color: var(--muted-foreground);
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 .sample-score strong,
@@ -1004,7 +1004,7 @@ select {
 }
 
 .stat span {
-  font-size: 10px;
+  font-size: 11px;
   color: var(--muted-foreground);
 }
 
@@ -1032,7 +1032,7 @@ select {
 }
 
 .day-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   color: color-mix(in oklch, var(--primary) 72%, var(--foreground));
   background: color-mix(in oklch, var(--primary) 10%, transparent);
@@ -1051,7 +1051,7 @@ select {
   box-shadow: inset 0 0 0 1px color-mix(in oklch, var(--primary) 22%, transparent);
 }
 .today-chip {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 999px;
@@ -1297,7 +1297,7 @@ select {
   border-radius: 999px;
   background: color-mix(in oklch, var(--primary) 9%, transparent);
   color: var(--primary);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   transition: background-color 0.16s ease, color 0.16s ease;
 }
@@ -1363,7 +1363,7 @@ select {
 
 .story-category {
   color: var(--primary);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.06em;
 }
@@ -1589,7 +1589,7 @@ body[data-theme='dark'] .status-pill.is-active {
 .detail-sidebar-section p {
   margin: 0;
   color: var(--muted-foreground);
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.6;
 }
 
@@ -1601,11 +1601,11 @@ body[data-theme='dark'] .status-pill.is-active {
 }
 
 .detail-sidebar-section .detail-facts dt {
-  font-size: 9.5px;
+  font-size: 11px;
 }
 
 .detail-sidebar-section .detail-facts dd {
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 .sidebar-data-list {
@@ -1623,7 +1623,7 @@ body[data-theme='dark'] .status-pill.is-active {
 
 .sidebar-data-list dt {
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.4;
 }
 
@@ -1631,7 +1631,7 @@ body[data-theme='dark'] .status-pill.is-active {
   min-width: 0;
   margin: 0;
   color: var(--foreground);
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.5;
   overflow-wrap: anywhere;
 }
@@ -1650,7 +1650,7 @@ body[data-theme='dark'] .status-pill.is-active {
   align-items: flex-start;
   gap: 6px;
   color: var(--primary);
-  font-size: 10.5px;
+  font-size: 11px;
   line-height: 1.45;
   overflow-wrap: anywhere;
 }
@@ -1664,7 +1664,7 @@ body[data-theme='dark'] .status-pill.is-active {
   border-radius: 6px;
   background: color-mix(in oklch, var(--primary) 10%, transparent);
   color: var(--primary);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 800;
 }
 
@@ -1682,7 +1682,7 @@ body[data-theme='dark'] .status-pill.is-active {
   align-items: center;
   gap: 7px;
   color: var(--foreground);
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 .platform-mark {
@@ -1694,13 +1694,13 @@ body[data-theme='dark'] .status-pill.is-active {
   border-radius: 6px;
   background: color-mix(in oklch, var(--primary) 10%, transparent);
   color: var(--primary);
-  font-size: 9.5px;
+  font-size: 11px;
   font-weight: 800;
 }
 
 .detail-sidebar-section .streaming-notice {
   margin-block-start: 8px;
-  font-size: 9.5px;
+  font-size: 11px;
 }
 
 .detail-sidebar-section .genre-list {
@@ -1710,7 +1710,7 @@ body[data-theme='dark'] .status-pill.is-active {
 
 .detail-sidebar-section .genre-list li {
   padding: 4px 10px;
-  font-size: 9.5px;
+  font-size: 11px;
   border-radius: 999px;
 }
 
@@ -1723,7 +1723,7 @@ body[data-theme='dark'] .status-pill.is-active {
 }
 
 .detail-sidebar-section .detail-statline span {
-  font-size: 9.5px;
+  font-size: 11px;
 }
 
 .detail-sidebar-section .detail-link-row {
@@ -1732,7 +1732,7 @@ body[data-theme='dark'] .status-pill.is-active {
 
 .detail-sidebar-section .detail-link-row a,
 .detail-sidebar-section .section-link {
-  font-size: 10.5px;
+  font-size: 11px;
 }
 
 .detail-main-column {
@@ -2009,7 +2009,7 @@ body[data-theme='dark'] .status-pill.is-active {
   padding: 2px 7px;
   margin-block-end: 8px;
   color: var(--primary);
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 850;
   border-radius: 999px;
   background: color-mix(in oklch, var(--primary) 9%, transparent);
@@ -2091,7 +2091,7 @@ body[data-theme='dark'] .status-pill.is-active {
 .rail-group h3 {
   margin: 0 0 8px;
   color: var(--muted-foreground);
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: 0.1em;
   text-transform: uppercase;
 }
@@ -2305,7 +2305,7 @@ body[data-theme='dark'] .status-pill.is-active {
 .rank-score small {
   display: block;
   color: var(--muted-foreground);
-  font-size: 9px;
+  font-size: 11px;
   font-weight: 400;
 }
 
@@ -2496,7 +2496,7 @@ body[data-theme='dark'] .status-pill.is-active {
   }
 
   .anime-meta {
-    font-size: 10.5px;
+    font-size: 11px;
     gap: 5px;
   }
 
@@ -2505,11 +2505,11 @@ body[data-theme='dark'] .status-pill.is-active {
     inset-inline-start: 8px;
     width: 26px;
     height: 26px;
-    font-size: 10px;
+    font-size: 11px;
   }
 
   .sample-score {
-    font-size: 10.5px;
+    font-size: 11px;
     margin-block-start: 7px;
     padding-block-start: 7px;
   }
@@ -3461,7 +3461,7 @@ body[data-theme='dark'] .entry-note { border-color: oklch(0.58 0.045 335); }
 }
 
 .entry-progress-text {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 700;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
