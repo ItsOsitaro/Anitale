@@ -599,7 +599,7 @@ function HomePage() {
   const animeCatalog = useVisibleCatalog();
   const mangaCatalog = useVisibleMangaCatalog();
   const picks = selectHomePicks({ animeCatalog, mangaCatalog });
-  const { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga, popularAnime, upcomingAnime } = picks;
+  const { topAnime, trendingAnime, currentSeason, topAiring, mangaItems, freshManga, popularAnime, upcomingAnime } = picks;
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
   // visit, and manually re-rollable with the dice action in the hero.
   // Seen picks this session never repeat (when the catalog is exhausted, the
@@ -680,7 +680,7 @@ function HomePage() {
             </section>
             <section>
               <SectionHeading title={t('topAiring')} to="/top/anime" action="fullRanking" />
-              <RankedList items={airingAnime} toPrefix="/anime" />
+              <RankedList items={topAiring} toPrefix="/anime" />
             </section>
             {upcomingAnime.length > 0 && (
               <section id="upcomingSoon">

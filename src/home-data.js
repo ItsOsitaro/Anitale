@@ -188,6 +188,8 @@ export const selectHomePicks = ({ animeCatalog, mangaCatalog }) => {
   const airingAnime = buildSchedule(animeCatalog)
     .map((entry) => animeCatalog.find((anime) => anime.slug === entry.slug))
     .filter(Boolean);
+  // "Top airing": the ten best-scored shows that are airing (the home list is a glance, /top/anime has the full ranking).
+  const topAiring = sortBy(airingAnime, (anime) => -(anime.weightedScore ?? anime.sampleScore ?? 0)).slice(0, 10);
   const mangaItems = withMangaImages(mangaCatalog, animeCatalog);
   // Queue 20: currently-publishing manga, most chapters first (hidden when none).
   const freshManga = sortBy(
@@ -196,6 +198,6 @@ export const selectHomePicks = ({ animeCatalog, mangaCatalog }) => {
   ).reverse().slice(0, 5);
   const popularAnime = [...animeCatalog].sort((a, b) => membersOf(b) - membersOf(a)).slice(0, 6);
   const upcomingAnime = selectUpcoming(animeCatalog);
-  return { topAnime, trendingAnime, currentSeason, airingAnime, mangaItems, freshManga, popularAnime, upcomingAnime };
+  return { topAnime, trendingAnime, currentSeason, airingAnime, topAiring, mangaItems, freshManga, popularAnime, upcomingAnime };
 };
 
