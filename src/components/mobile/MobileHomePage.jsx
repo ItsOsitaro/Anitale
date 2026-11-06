@@ -3,6 +3,7 @@ import { L, useSiteLang } from '@/i18n';
 import { mediaHref } from '@/catalog';
 import { displayTitle, selectCurrentSeasonPicks } from '@/home-data';
 import HeroCarousel from './HeroCarousel';
+import IntroStrip from '@/components/IntroStrip';
 import QuickChips from './QuickChips';
 import SectionHeader from './SectionHeader';
 import Rail from './Rail';
@@ -62,6 +63,7 @@ export default function MobileHomePage({ picks, lang, t }) {
   return (
     <div className="mobile-home">
       {heroItems && heroItems.length > 0 && <HeroCarousel items={heroItems} />}
+      <IntroStrip />
       <QuickChips />
       <SectionHeader title={t('homeSeason')} to="/seasonal" />
       <Rail>

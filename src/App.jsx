@@ -43,6 +43,7 @@ import MySuggestions from './suggestionsPage.jsx';
 import { StacksBrowse, StackView } from './stacksPages.jsx';
 import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
+import IntroStrip from './components/IntroStrip.jsx';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
@@ -655,6 +656,7 @@ function HomePage() {
       <div className="page-shell">
         <div className="layout">
           <main className="main-column">
+            <IntroStrip />
             {featured && (
               <section className="hero panel" style={{ '--hero-image': `url("${featured.image}")` }}>
                 <div className="hero-poster" aria-hidden="true">
