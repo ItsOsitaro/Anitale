@@ -336,18 +336,32 @@ function SiteHeader() {
   );
 }
 
+const SIDEBAR_VISIBLE = 5;
+
 function SiteSidebar() {
-  const { lang } = useSiteLang();
+  const { lang, t } = useSiteLang();
   return (
     <aside className="sidebar panel">
-      {sidebarSections.map((section) => (
-        <div className="sidebar-section" key={section.to ?? L(section.title, lang)}>
-          <div className="side-title">{L(section.title, lang)}</div>
-          <ul className="side-list">
-            {section.links.map((item) => <li key={item.to}><Link to={item.to}>{L(item.label, lang)}</Link></li>)}
-          </ul>
-        </div>
-      ))}
+      {sidebarSections.map((section) => {
+        const primary = section.links.slice(0, SIDEBAR_VISIBLE);
+        const more = section.links.slice(SIDEBAR_VISIBLE);
+        return (
+          <div className="sidebar-section" key={section.to ?? L(section.title, lang)}>
+            <div className="side-title">{L(section.title, lang)}</div>
+            <ul className="side-list">
+              {primary.map((item) => <li key={item.to}><Link to={item.to}>{L(item.label, lang)}</Link></li>)}
+            </ul>
+            {more.length > 0 && (
+              <details className="side-more">
+                <summary>{t('sideMore')}</summary>
+                <ul className="side-list">
+                  {more.map((item) => <li key={item.to}><Link to={item.to}>{L(item.label, lang)}</Link></li>)}
+                </ul>
+              </details>
+            )}
+          </div>
+        );
+      })}
     </aside>
   );
 }
@@ -496,31 +510,15 @@ function UserPanel() {
   );
 }
 
-function CompactRanking({ title, items, to }) {
-  const { lang, t } = useSiteLang();
-  return (
-    <div className="panel side-mini">
-      <SectionHeading title={title} to={to} action="fullList" />
-      <ol className="compact-ranking">
-        {items.slice(0, 3).map((item, index) => (
-          <li key={item.slug}>
-            <span>{String(index + 1).padStart(2, '0')}</span>
-            <Link to={mediaHref(item, item.format === 'Manga' ? 'manga' : 'anime')}>
-              {typeof item.title === 'string' ? item.title : L(item.title, lang)}
-            </Link>
-            {item.sampleScore && <strong dir="ltr">{item.sampleScore.toFixed(1)}</strong>}
-          </li>
-        ))}
-      </ol>
-    </div>
-  );
-}
-
 function SchedulePanel() {
   const { t } = useSiteLang();
   const animeCatalog = useVisibleCatalog();
-  const entries = useMemo(() => buildSchedule(animeCatalog), [animeCatalog]);
   const today = useMemo(() => currentWeekday(), []);
+  // Sidebar glance: today's shows first, then the next ones; the full week lives on /schedule.
+  const entries = useMemo(() => {
+    const all = buildSchedule(animeCatalog);
+    return [...all.filter((e) => e.day === today), ...all.filter((e) => e.day !== today)].slice(0, 8);
+  }, [animeCatalog, today]);
   return (
     <div className="panel side-mini">
       <SectionHeading title={t('airingSchedule')} to="/schedule" action="seasonAction" />
@@ -679,30 +677,6 @@ function HomePage() {
                 </div>
               </section>
             )}
-            <section id="featuredSeries">
-              <SectionHeading title={t('featuredSeries')} to="/anime" action="browseAll" />
-              <div className="featured-series-grid">
-                {topAnime.slice(0, 3).map((item) => (
-                  <div key={item.slug} className="featured-series-card">
-                    <Link to={mediaHref(item)} aria-label={item.title}>
-                      <img src={coverUrl(item.image, 360)} alt={item.title} loading="lazy" />
-                    </Link>
-                    <div className="featured-series-info">
-                      <h3><Link to={mediaHref(item)}>{item.title}</Link></h3>
-                      <div className="featured-series-meta">
-                        <span>{item.category}</span>
-                        <span aria-hidden="true">·</span>
-                        <span dir="ltr">{item.year}</span>
-                      </div>
-                      <div className="featured-series-score">
-                        <span>{t('scoreLabel')}</span>
-                        <strong><NumberTicker value={item.sampleScore} decimalPlaces={1} /></strong>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
             <section id="topAnimeGrid">
               <SectionHeading title={t('topAnime')} to="/top/anime" action="fullRanking" />
               <AnimeShelf items={topAnime} showRank />
@@ -740,9 +714,6 @@ function HomePage() {
           <aside className="right-column">
             <UserPanel />
             <SchedulePanel />
-            <CompactRanking title={t('topAiring')} items={airingAnime} to="/top/anime" />
-            {upcomingAnime.length > 0 && <CompactRanking title={t('upcomingRanking')} items={upcomingAnime} to="/seasonal" />}
-            <CompactRanking title={t('popularRanking')} items={popularAnime} to="/anime" />
           </aside>
         </div>
       </div>

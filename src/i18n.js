@@ -50,7 +50,7 @@ export const messages = {
     // Home hero
     featuredLabel: 'پیشنهادی', suggestAnother: 'پیشنهاد دیگری بده', viewAnime: 'مشاهده انیمه',
     // Home sections
-    featuredSeries: 'سریال‌های منتخب', topAnime: 'برترین انیمه‌ها', trendingNow: 'موج امروز',
+    topAnime: 'برترین انیمه‌ها', trendingNow: 'موج امروز',
     homeDiscussions: 'گفت‌وگ‌های تازه‌ی انیمه', latestReviews: 'تازه‌ترین نقد و بررسی‌ها', latestRecs: 'تازه‌ترین پیشنهادها',
     seasonalLineup: 'فصل پخش جاری', episodeUpdates: 'به‌روزرسانی قسمت‌ها', popularTrailers: 'تریلرهای پرطرفدار',
     animeMangaNews: 'اخبار انیمه و مانگا', topAiring: 'برترین‌های در حال پخش', topUpcoming: 'برترین‌های به‌زودی',
@@ -80,7 +80,7 @@ export const messages = {
     sourceScoreLabel: 'امتیاز MyAnimeList', sourceScoreSuffix: 'امتیاز MAL',
     // Side panels
     friendActivity: 'فعالیت دوستان', clubs: 'کلوب‌ها', quickLinks: 'دسترسی سریع',
-    airingSchedule: 'جدول پخش', scheduleEmpty: 'هنوز برنامه‌ای ثبت نشده', upcomingRanking: 'رتبه‌بندی به‌زودی', popularRanking: 'رتبه‌بندی محبوب‌ها',
+    airingSchedule: 'جدول پخش', scheduleEmpty: 'هنوز برنامه‌ای ثبت نشده', 
     panelJoinTitle: 'فهرست شخصی خودت را بساز',
     panelJoinText: 'ثبت‌نام کن؛ فهرست‌هایت محفوظ می‌مانند و پروفایل عمومی می‌گیری.',
     statWatching: 'در حال تماشا', statCompleted: 'کامل‌شده', statPlan: 'در برنامه',
@@ -100,7 +100,7 @@ export const messages = {
     mangaRankingNote: 'ترتیب بر اساس امتیاز ثبت‌شده برای هر مانگاست؛ عنوان‌های بدون امتیاز آخر فهرست می‌آیند.',
     // Section page
     pageNotFound: 'صفحه‌ای پیدا نشد', notFoundSearch: 'جستجو در انی‌تیل', notCatalog: 'آدرس را بررسی کن یا از صفحهٔ اصلی ادامه بده.',
-    backHome: 'بازگشت به خانه', exploreSections: 'بخش‌ها را ببینید',
+    backHome: 'بازگشت به خانه', sideMore: 'بخش‌های بیشتر', exploreSections: 'بخش‌ها را ببینید',
     // Detail page
     seriesProfile: 'پروفایل سریال', mangaProfile: 'پروفایل مانگا',
     addToList: 'افزودن به فهرست', inList: 'در فهرست شماست', listAria: 'افزودن یا حذف از فهرست شخصی',
@@ -230,7 +230,7 @@ export const messages = {
     readingShelf: 'Reading shelf', more: 'More', fullList: 'Full list', allClubs: 'All clubs', allActivity: 'All activity',
     seasonAction: 'Season', open: 'Open', read: 'Read', seasonsAction: 'Season',
     featuredLabel: 'Suggested', suggestAnother: 'Another pick', viewAnime: 'View anime',
-    featuredSeries: 'Featured Series', topAnime: 'Top Anime', trendingNow: 'Trending Now',
+    topAnime: 'Top Anime', trendingNow: 'Trending Now',
     homeDiscussions: 'Recent Anime Discussions', latestReviews: 'Latest Anime Reviews', latestRecs: 'Latest Recommendations',
     seasonalLineup: 'Seasonal Lineup', episodeUpdates: 'Episode Video Updates', popularTrailers: 'Popular Anime Trailers',
     animeMangaNews: 'Anime & Manga News', topAiring: 'Top Airing Anime', topUpcoming: 'Top Upcoming Anime',
@@ -258,7 +258,7 @@ export const messages = {
     sampleScoreLabel: 'Score',
     sourceScoreLabel: 'MyAnimeList score', sourceScoreSuffix: 'MAL rating',
     friendActivity: 'Friend Activity', clubs: 'Clubs', quickLinks: 'Quick Links',
-    airingSchedule: 'Airing Schedule', scheduleEmpty: 'No airing schedule yet', upcomingRanking: 'Upcoming Ranking', popularRanking: 'Popular Ranking',
+    airingSchedule: 'Airing Schedule', scheduleEmpty: 'No airing schedule yet', 
     panelJoinTitle: 'Build your own list',
     panelJoinText: 'Sign up: your lists stay saved, and you get a public profile.',
     statWatching: 'Watching', statCompleted: 'Completed', statPlan: 'Plan',
@@ -276,7 +276,7 @@ export const messages = {
     animeRankingNote: 'Scores are live MyAnimeList ratings, refreshed automatically.',
     mangaRankingNote: 'Ordered by each manga\'s recorded score; titles without a score come last.',
     pageNotFound: 'Page not found', notFoundSearch: 'Search Anitale', notCatalog: 'Check the address or continue from the home page.',
-    backHome: 'Back to home', exploreSections: 'Explore sections',
+    backHome: 'Back to home', sideMore: 'More sections', exploreSections: 'Explore sections',
     seriesProfile: 'Series profile', mangaProfile: 'Manga profile',
     addToList: 'Add to list', inList: 'In your list', listAria: 'Add or remove from your personal list',
     alternativeTitles: 'Alternative Titles', information: 'Information', statistics: 'Statistics', availableAt: 'Available At',
