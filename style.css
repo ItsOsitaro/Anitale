@@ -1055,8 +1055,8 @@ select {
   font-weight: 800;
   padding: 2px 7px;
   border-radius: 999px;
-  color: oklch(0.99 0.005 200);
-  background: oklch(0.62 0.19 var(--primary));
+  color: var(--primary-foreground);
+  background: var(--primary);
 }
 .airing-today {
   display: flex;
@@ -1075,7 +1075,7 @@ select {
   gap: 8px;
 }
 .airing-today-label strong {
-  color: oklch(0.55 0.13 var(--primary));
+  color: var(--secondary-foreground);
   font-size: 12.5px;
 }
 .airing-today-day {
