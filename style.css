@@ -2790,24 +2790,6 @@ body {
 
 
 /* Account CTA for guests */
-.user-cta-title {
-  margin: 0;
-  font-size: 14px;
-  font-weight: 800;
-}
-
-.user-cta-text {
-  margin: 5px 0 2px;
-  color: var(--muted-foreground);
-  font-size: 12.5px;
-  line-height: 1.75;
-}
-
-.user-cta-btn {
-  width: 100%;
-  margin-block-start: 10px;
-}
-
 /* In-panel quick links (dashboard / sign out) */
 .user-links {
   display: flex;
@@ -4380,9 +4362,6 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .not-found-code { margin: 0 0 4px; font-size: 64px; font-weight: 800; line-height: 1; color: var(--primary); }
 .not-found-actions { display: flex; justify-content: center; flex-wrap: wrap; gap: 8px 24px; margin-block-start: 16px; }
 .not-found-actions .detail-back-link { padding: 10px 4px; }
-
-/* Touch target: sidebar sign-in button */
-.user-cta-btn { min-height: 32px; min-width: 44px; color: var(--primary-foreground); }
 
 /* Home intro line for signed-out visitors */
 .intro-strip { display: flex; align-items: center; justify-content: space-between; gap: 12px 16px; flex-wrap: wrap; margin-block-end: 16px; padding: 12px 16px; border-radius: var(--radius-control); background: color-mix(in oklch, var(--secondary) 70%, transparent); }

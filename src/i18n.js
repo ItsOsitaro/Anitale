@@ -81,8 +81,6 @@ export const messages = {
     // Side panels
     friendActivity: 'فعالیت دوستان', clubs: 'کلوب‌ها', quickLinks: 'دسترسی سریع',
     airingSchedule: 'جدول پخش', scheduleEmpty: 'هنوز برنامه‌ای ثبت نشده', 
-    panelJoinTitle: 'فهرست شخصی خودت را بساز',
-    panelJoinText: 'ثبت‌نام کن؛ فهرست‌هایت محفوظ می‌مانند و پروفایل عمومی می‌گیری.',
     statWatching: 'در حال تماشا', statCompleted: 'کامل‌شده', statPlan: 'در برنامه',
     episodesLabel: 'قسمت‌ها',
     // Catalog page
@@ -259,8 +257,6 @@ export const messages = {
     sourceScoreLabel: 'MyAnimeList score', sourceScoreSuffix: 'MAL rating',
     friendActivity: 'Friend Activity', clubs: 'Clubs', quickLinks: 'Quick Links',
     airingSchedule: 'Airing Schedule', scheduleEmpty: 'No airing schedule yet', 
-    panelJoinTitle: 'Build your own list',
-    panelJoinText: 'Sign up: your lists stay saved, and you get a public profile.',
     statWatching: 'Watching', statCompleted: 'Completed', statPlan: 'Plan',
     episodesLabel: 'Episodes',
     filterTitles: 'Filter titles', titleOrKeyword: 'Title or keyword', genreLabel: 'Genre', allGenres: 'All genres',

@@ -441,6 +441,9 @@ function UserPanel() {
     }
   }
 
+  // Signed-out visitors get the single sign-up prompt in the home IntroStrip, so no second card here.
+  if (user.meLoaded && !user.me) return null;
+
   return (
     <div className="panel user-box">
       {!user.meLoaded && (
@@ -451,16 +454,6 @@ function UserPanel() {
             <Skeleton className="skeleton-line short" />
           </div>
         </div>
-      )}
-
-      {!user.me && user.meLoaded && (
-        <>
-          <p className="user-cta-title"><strong>{t('panelJoinTitle')}</strong></p>
-          <p className="user-cta-text">{t('panelJoinText')}</p>
-          <Button render={<Link to="/login" />} nativeButton={false} size="sm" className="user-cta-btn">
-            {t('navAuth')}
-          </Button>
-        </>
       )}
 
       {user.me && (
