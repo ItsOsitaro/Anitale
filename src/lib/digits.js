@@ -294,3 +294,9 @@ export function resolvePersianDigitsEnabled(options) {
 
   return isPersianLocaleContext({ dir, lang, locale })
 }
+
+/** Score shown to one decimal everywhere (desktop NumberTicker already uses one). */
+export function formatScore(value, locale = "fa") {
+  const n = Number(value)
+  return Number.isFinite(n) ? formatNumber(Number(n.toFixed(1)), locale) : String(value)
+}

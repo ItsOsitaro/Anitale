@@ -6,7 +6,7 @@ import { displayTitle, synopsisText } from '@/home-data';
 import { useSiteLang } from '@/i18n';
 import { cn } from 'cn';
 import { coverUrl } from '@/lib/cover';
-import { formatNumber } from '@/lib/digits.js';
+import { formatNumber, formatScore } from '@/lib/digits.js';
 
 export default function HeroCarousel({ items }) {
   const { lang, t } = useSiteLang();
@@ -47,7 +47,7 @@ export default function HeroCarousel({ items }) {
         {items.map((item, index) => {
           const href = mediaHref(item);
           const title = displayTitle(item, lang);
-          const Heading = index === 0 ? 'h1' : 'h2'; // one page-level h1
+          const Heading = index === 0 ? 'h1' : 'div'; // one page-level h1; other slides are not headings
           return (
             <Link
               key={item.slug}
@@ -69,7 +69,7 @@ export default function HeroCarousel({ items }) {
                   {item.sampleScore != null && item.sampleScore !== 0 && (
                     <span className="mobile-hero-card__chip mobile-hero-card__chip--score">
                       <Star width={12} height={12} strokeWidth={1.7} strokeLinecap="round" strokeLinejoin="round" style={{ color: '#fff' }} aria-hidden="true" />
-                      <span dir="ltr">{formatNumber(item.sampleScore, lang)}</span>
+                      <span dir="ltr">{formatScore(item.sampleScore, lang)}</span>
                     </span>
                   )}
                   {item.category && <span className="mobile-hero-card__chip">{item.category}</span>}

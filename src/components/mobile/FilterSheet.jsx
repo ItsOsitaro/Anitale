@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useSiteLang } from '@/i18n';
 import { splitGenres } from '@/lib/genre-kinds';
+import { formatNumber } from '@/lib/digits.js';
 import { cn } from 'cn';
 
 const FOCUSABLE = 'button:not([disabled]), select:not([disabled]), input:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])';
@@ -14,7 +15,7 @@ export default function FilterSheet({
   year, onYearChange, years,
   sort, onSortChange, onClear, activeCount,
 }) {
-  const { t } = useSiteLang();
+  const { t, lang } = useSiteLang();
   const dialogRef = useRef(null);
   const dragRef = useRef(null);
 
@@ -162,7 +163,7 @@ export default function FilterSheet({
                 onChange={(e) => onYearChange(e.target.value)}
               >
                 <option value="All">{t('allYears')}</option>
-                {years.map((y) => <option key={y} value={y}>{y}</option>)}
+                {years.map((y) => <option key={y} value={y}>{formatNumber(y, lang, { useGrouping: false })}</option>)}
               </select>
             </section>
           )}

@@ -4,7 +4,7 @@ import { mediaHref } from '@/catalog';
 import { displayTitle } from '@/home-data';
 import { useSiteLang } from '@/i18n';
 import { coverUrl } from '@/lib/cover';
-import { formatNumber } from '@/lib/digits.js';
+import { formatNumber, formatScore } from '@/lib/digits.js';
 
 export default function PosterCard({ item, mediaType = 'anime' }) {
   const { lang } = useSiteLang();
@@ -26,7 +26,7 @@ export default function PosterCard({ item, mediaType = 'anime' }) {
         {showScore && (
           <span className="mobile-poster-card__badge">
             <Star width={11} height={11} strokeWidth={1.6} strokeLinecap="round" strokeLinejoin="round" style={{ color: '#fff' }} aria-hidden="true" />
-            <span dir="ltr">{formatNumber(item.sampleScore, lang)}</span>
+            <span dir="ltr">{formatScore(item.sampleScore, lang)}</span>
           </span>
         )}
       </Link>

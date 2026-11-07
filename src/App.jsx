@@ -44,7 +44,7 @@ import { StacksBrowse, StackView } from './stacksPages.jsx';
 import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
 import IntroStrip from './components/IntroStrip.jsx';
-import { formatNumber, toPersianDigits } from '@/lib/digits.js';
+import { formatNumber, formatScore, toPersianDigits } from '@/lib/digits.js';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
@@ -385,7 +385,7 @@ function AnimeCard({ item, rank }) {
           <span aria-hidden="true">·</span>
           <span dir="ltr">{yearText(item.year, lang)}</span>
         </div>
-        {item.sampleScore && (
+        {item.sampleScore > 0 && (
           <div className="sample-score">
             <span>{item.malId ? t('sourceScoreLabel') : t('sampleScoreLabel')}</span>
             <NumberTicker value={item.sampleScore} decimalPlaces={1} className="sample-score-value" />
@@ -653,6 +653,11 @@ function HomePage() {
                 <div className="hero-content">
                   <Badge variant="secondary" className="hero-eyebrow">{t('featuredLabel')}</Badge>
                   <h1>{featured.title}</h1>
+                  <p className="hero-meta">
+                    {featured.category && <span>{featured.category}</span>}
+                    {featured.year && <span dir="ltr">{yearText(featured.year, lang)}</span>}
+                    {featured.sampleScore > 0 && <span dir="ltr">★ {formatScore(featured.sampleScore, lang)}</span>}
+                  </p>
                   <p dir="auto">{synopsisText(featured, lang)}</p>
                   <div className="hero-action-row">
                     <Link className="hero-action" to={mediaHref(featured)}>{t('viewAnime')}</Link>
@@ -706,6 +711,9 @@ function HomePage() {
             <SchedulePanel />
           </aside>
         </div>
+        <footer className="site-footer">
+          <p>{t('footerCopyright')}</p>
+        </footer>
       </div>
     </>
   );
@@ -726,7 +734,7 @@ function RankedList({ items, toPrefix }) {
             <Link className="rank-title" to={mediaHref(item, mediaType)} dir="auto">{item.title}</Link>
             <span><span>{item.category}</span><span aria-hidden="true">·</span><span dir="ltr">{yearText(item.year, lang)}</span></span>
           </div>
-          {item.sampleScore && (
+          {item.sampleScore > 0 && (
             <span className="rank-score">
               <NumberTicker value={item.sampleScore} decimalPlaces={1} />
               <small>{item.malId ? t('sourceScoreSuffix') : t('scoreLabel')}</small>
@@ -777,7 +785,7 @@ function CatalogControls({ query, onQueryChange, genre, onGenreChange, genres, c
           <span>{t('yearLabel')}</span>
           <select value={year} onChange={(event) => onYearChange(event.target.value)}>
             <option value="All">{t('allYears')}</option>
-            {years.map((item) => <option value={item} key={item}>{item}</option>)}
+            {years.map((item) => <option value={item} key={item}>{formatNumber(item, lang, { useGrouping: false })}</option>)}
           </select>
         </label>
       )}
