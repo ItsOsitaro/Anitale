@@ -14,6 +14,7 @@ import SectionHeader from './SectionHeader';
 import Rail from './Rail';
 import { cn } from 'cn';
 import { coverUrl } from '@/lib/cover';
+import { formatNumber, formatScore } from '@/lib/digits.js';
 import CommunitySection from '../CommunitySection';
 import { hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
 
@@ -130,11 +131,16 @@ export default function MobileDetailPage({
     }
   };
 
-  const score = item.statistics?.score ?? (item.sampleScore ? item.sampleScore.toFixed(1) : null);
+  const num = (raw) => {
+    const digits = String(raw ?? '').replace(/[^\d.]/g, '');
+    return digits ? Number(digits) : null;
+  };
+  const rankOf = (raw) => (num(raw) ? `#${formatNumber(num(raw), lang)}` : null);
+  const scoreNum = num(item.statistics?.score) ?? (item.sampleScore > 0 ? item.sampleScore : null);
   const stats = [
-    { label: t('scoreLabel'), value: score },
-    { label: t('rankedLabel'), value: item.rank ? `#${item.rank}` : item.statistics?.ranked },
-    { label: t('popularity'), value: item.statistics?.popularity },
+    { label: t('scoreLabel'), value: scoreNum ? formatScore(scoreNum, lang) : null },
+    { label: t('rankedLabel'), value: rankOf(item.rank || item.statistics?.ranked) },
+    { label: t('popularity'), value: rankOf(item.statistics?.popularity) },
   ];
   const synonyms = alternativeTitles.synonyms?.join(lang === 'fa' ? '، ' : ', ');
   const hasAlt = synonyms || alternativeTitles.japanese || alternativeTitles.english || item.titleFa;
@@ -164,7 +170,7 @@ export default function MobileDetailPage({
             <p className="mobile-detail__sub">
               {item.format && <span>{item.format}</span>}
               {item.format && item.year && <span aria-hidden="true">·</span>}
-              {item.year && <span dir="ltr">{item.year}</span>}
+              {item.year && <span dir="ltr">{formatNumber(item.year, lang, { useGrouping: false })}</span>}
             </p>
           </div>
         </div>
@@ -174,7 +180,7 @@ export default function MobileDetailPage({
       <div className="mobile-detail__stats" aria-label={t('statistics')}>
         {stats.map((stat) => (
           <div key={stat.label} className="mobile-detail__stat">
-            <strong dir="ltr">{stat.value || '—'}</strong>
+            <strong dir="auto">{stat.value || '—'}</strong>
             <span>{stat.label}</span>
           </div>
         ))}

@@ -1103,6 +1103,46 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     document.title = `${item.title} ${t('pageTitles').suffix}`;
   }, [item.title, t]);
 
+  // Hero summary: the facts and numbers people scan first (type, year, status,
+  // score, rank) used to be buried in the sidebar below the fold.
+  const infoValue = (label) => (item.information || []).find((row) => String(row.label).toLowerCase() === label)?.value || '';
+  const numericOf = (raw) => {
+    const digits = String(raw ?? '').replace(/[^\d.]/g, '');
+    return digits ? Number(digits) : null;
+  };
+  const rankText = (raw) => {
+    const n = numericOf(raw);
+    return n ? `#${formatNumber(n, lang)}` : null;
+  };
+  const statusText = (raw) => {
+    if (!raw) return null;
+    if (lang !== 'fa') return raw;
+    const map = { 'finished airing': 'پایان‌یافته', 'currently airing': 'در حال پخش', 'not yet aired': 'هنوز پخش نشده', finished: 'پایان‌یافته', publishing: 'در حال انتشار', 'on hiatus': 'متوقف‌شده', discontinued: 'متوقف‌شده' };
+    return map[String(raw).toLowerCase()] || raw;
+  };
+  const episodesRaw = infoValue('episodes') || infoValue('chapters');
+  const heroFacts = [
+    mediaType === 'manga' ? (lang === 'fa' ? 'مانگا' : 'Manga') : (infoValue('type') || item.format),
+    item.year ? yearText(item.year, lang) : null,
+    episodesRaw && episodesRaw !== 'Unknown'
+      ? `${formatNumber(numericOf(episodesRaw) ?? episodesRaw, lang)} ${mediaType === 'manga' ? t('chaptersUnit') : t('episodesUnit')}`
+      : null,
+    statusText(infoValue('status')),
+  ].filter(Boolean);
+  const scoreValue = numericOf(item.statistics?.score) ?? (item.sampleScore > 0 ? item.sampleScore : null);
+  const heroStats = [
+    scoreValue ? {
+      label: t('scoreLabel'),
+      value: formatScore(scoreValue, lang),
+      note: numericOf(item.statistics?.scoredBy) ? `${formatNumber(numericOf(item.statistics.scoredBy), lang)} ${t('votesUnit')}` : null,
+      primary: true,
+    } : null,
+    rankText(item.rank || item.statistics?.ranked) ? { label: t('rankedLabel'), value: rankText(item.rank || item.statistics?.ranked) } : null,
+    rankText(item.statistics?.popularity) ? { label: t('popularity'), value: rankText(item.statistics.popularity) } : null,
+    numericOf(item.statistics?.members) ? { label: t('membersLabel'), value: formatNumber(numericOf(item.statistics.members), lang) } : null,
+    numericOf(item.statistics?.favorites) ? { label: t('favoritesLabel'), value: formatNumber(numericOf(item.statistics.favorites), lang) } : null,
+  ].filter(Boolean);
+
   const toggleSaved = () => {
     user.toggle(mediaType, item.slug);
   };
@@ -1203,11 +1243,8 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 <DetailSection id="detailInformation" title={t('information')} className="detail-sidebar-section">
                   <SidebarDataList rows={informationRows} />
                 </DetailSection>
-                <DetailSection id="detailStatistics" title={t('statistics')} className="detail-sidebar-section">
-                  <SidebarDataList rows={statisticsRows} />
-                </DetailSection>
-                <DetailSection id="detailAvailableAt" title={t('availableAt')} className="detail-sidebar-section">
-                  {item.availableAt?.length ? (
+                {item.availableAt?.length > 0 && (
+                  <DetailSection id="detailAvailableAt" title={t('availableAt')} className="detail-sidebar-section">
                     <ul className="sidebar-link-list">
                       {item.availableAt.map((entry) => (
                         <li key={entry.label}>
@@ -1216,35 +1253,30 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                         </li>
                       ))}
                     </ul>
-                  ) : <p>{t('emptyLocalEntry')}</p>}
-                </DetailSection>
-                <DetailSection id="detailResources" title={t('resources')} className="detail-sidebar-section">
-                  {item.resources?.length ? (
-                    <>
-                      <ul className="sidebar-link-list">
-                        {item.resources.map((resource) => (
-                          <li key={resource.label}>
-                            <span className="sidebar-resource-icon" aria-hidden="true">{resource.icon}</span>
-                            <span>{resource.label}</span>
-                          </li>
-                        ))}
-                      </ul>
-                      <a className="section-link" href="#detailNews">{t('moreLinks')}</a>
-                    </>
-                  ) : <p>{t('emptyLocalEntry')}</p>}
-                </DetailSection>
-                <DetailSection id="detailStreaming" title={t('streaming')} className="detail-sidebar-section">
-                  {item.streamingPlatforms?.length ? (
-                    <>
-                      <ul className="streaming-platform-list">
-                        {item.streamingPlatforms.map((platform) => (
-                          <li key={platform}><span className="platform-mark" aria-hidden="true">{platform[0]}</span><span dir="ltr">{platform}</span></li>
-                        ))}
-                      </ul>
-                      {item.streamingNotice && <p className="streaming-notice">{item.streamingNotice}</p>}
-                    </>
-                  ) : <p>{t('emptyLocalEntry')}</p>}
-                </DetailSection>
+                  </DetailSection>
+                )}
+                {item.resources?.length > 0 && (
+                  <DetailSection id="detailResources" title={t('resources')} className="detail-sidebar-section">
+                    <ul className="sidebar-link-list">
+                      {item.resources.map((resource) => (
+                        <li key={resource.label}>
+                          <span className="sidebar-resource-icon" aria-hidden="true">{resource.icon}</span>
+                          <span>{resource.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </DetailSection>
+                )}
+                {item.streamingPlatforms?.length > 0 && (
+                  <DetailSection id="detailStreaming" title={t('streaming')} className="detail-sidebar-section">
+                    <ul className="streaming-platform-list">
+                      {item.streamingPlatforms.map((platform) => (
+                        <li key={platform}><span className="platform-mark" aria-hidden="true">{platform[0]}</span><span dir="ltr">{platform}</span></li>
+                      ))}
+                    </ul>
+                    {item.streamingNotice && <p className="streaming-notice">{item.streamingNotice}</p>}
+                  </DetailSection>
+                )}
               </div>
             </aside>
 
@@ -1254,6 +1286,28 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                   <h1 dir="auto">{item.title}</h1>
                   {romajiTitle && romajiTitle !== item.title && (
                     <p className="detail-romaji" dir="ltr" lang="ja-Latn">{romajiTitle}</p>
+                  )}
+                  {heroFacts.length > 0 && (
+                    <p className="detail-facts-line">
+                      {heroFacts.map((fact) => <span key={fact}>{fact}</span>)}
+                    </p>
+                  )}
+                  {item.genres?.length > 0 && (
+                    <ul className="detail-genre-chips" aria-label={t('genresLabel')}>
+                      {item.genres.map((genre) => (
+                        <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genre}</Link></li>
+                      ))}
+                    </ul>
+                  )}
+                  {heroStats.length > 0 && (
+                    <dl className="detail-stat-strip">
+                      {heroStats.map((stat) => (
+                        <div key={stat.label} className={stat.primary ? 'is-primary' : undefined}>
+                          <dt>{stat.label}</dt>
+                          <dd>{stat.value}{stat.note && <small>{stat.note}</small>}</dd>
+                        </div>
+                      ))}
+                    </dl>
                   )}
                 </div>
               </section>

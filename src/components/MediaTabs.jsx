@@ -49,14 +49,20 @@ function Episodes({ item, malId }) {
 
 function EpisodePage({ page, malId, seen, onMark, onMore, t, lang }) {
   const state = useMedia('anime', malId, 'episodes', page);
+  const [expanded, setExpanded] = useState(false);
   if (state.status === 'loading') return <p className="extras-muted" role="status">{t('extrasLoading')}</p>;
   if (state.status === 'error') return <p className="extras-muted" role="status">{t('mediaError')}</p>;
   const { items, hasNext } = state.data;
   if (!items.length && page === 1) return <p className="extras-muted">{t('mediaNoEpisodes')}</p>;
+  // A long series would otherwise push everything below it thousands of pixels
+  // down: the first page shows a short preview until the visitor asks for more.
+  const PREVIEW = 12;
+  const collapsed = page === 1 && !expanded && items.length > PREVIEW;
+  const shown = collapsed ? items.slice(0, PREVIEW) : items;
   return (
     <>
       <ol className="media-ep-list" start={items[0]?.number}>
-        {items.map((e) => {
+        {shown.map((e) => {
           const done = e.number <= seen;
           return (
             <li key={e.number} className={done ? 'is-seen' : undefined}>
@@ -76,7 +82,8 @@ function EpisodePage({ page, malId, seen, onMark, onMore, t, lang }) {
           );
         })}
       </ol>
-      {hasNext && onMore && <button type="button" className="media-more" onClick={onMore}>{t('mediaMoreEpisodes')}</button>}
+      {collapsed && <button type="button" className="media-more" onClick={() => setExpanded(true)}>{t('mediaShowAllEpisodes')} ({formatNumber(items.length, lang)})</button>}
+      {!collapsed && hasNext && onMore && <button type="button" className="media-more" onClick={onMore}>{t('mediaMoreEpisodes')}</button>}
     </>
   );
 }

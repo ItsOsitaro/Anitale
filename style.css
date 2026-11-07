@@ -4359,3 +4359,73 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 
 /* <small> never drops below the 12px floor */
 small { font-size: max(12px, 0.8em); }
+
+/* ---- Title page (desktop): summary hero, calmer sections ---- */
+.detail-facts-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 0;
+  margin: 14px 0 0;
+  color: var(--muted-foreground);
+  font-size: 14px;
+  font-weight: 600;
+}
+.detail-facts-line span + span::before {
+  content: '·';
+  margin-inline: 10px;
+  opacity: 0.55;
+}
+.detail-genre-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 14px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.detail-genre-chips a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding-inline: 13px;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--card);
+  color: var(--foreground);
+  font-size: 12.5px;
+  font-weight: 600;
+}
+.detail-genre-chips a:hover { border-color: var(--primary); color: var(--primary-text); }
+.detail-stat-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 0;
+  margin: 22px 0 0;
+  padding: 14px 4px;
+  border-block: 1px solid color-mix(in oklch, var(--border) 70%, transparent);
+}
+.detail-stat-strip > div {
+  display: grid;
+  gap: 2px;
+  padding-inline: 22px;
+  min-width: 0;
+}
+.detail-stat-strip > div + div { border-inline-start: 1px solid color-mix(in oklch, var(--border) 70%, transparent); }
+.detail-stat-strip > div:first-child { padding-inline-start: 0; }
+.detail-stat-strip dt { font-size: 12px; color: var(--muted-foreground); font-weight: 600; }
+.detail-stat-strip dd { margin: 0; font-size: 20px; font-weight: 800; line-height: 1.3; }
+.detail-stat-strip dd small { display: block; font-size: 12px; font-weight: 500; color: var(--muted-foreground); }
+.detail-stat-strip .is-primary dd { font-size: 30px; color: var(--primary-text); line-height: 1.15; }
+.anime-profile { padding-block-end: 22px; }
+.detail-synopsis { font-size: 15px; line-height: 2; max-width: 72ch; }
+.detail-content-section p.detail-synopsis { color: color-mix(in oklch, var(--foreground) 88%, var(--muted-foreground)); font-size: 15px; line-height: 2; }
+.detail-content-section h2 { font-size: 17px; }
+/* Trailer: a click-to-play card, not a full-width black slab. */
+#detailTrailer .extras-trailer { max-width: 560px; }
+/* Episodes: compact two-column list instead of one row per line. */
+@media (min-width: 1000px) {
+  .media-ep-list { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+.media-ep-list li { padding: 6px 10px; }
+.media-ep-num { width: 30px; }
+.media-more { display: block; margin-inline: auto; }
