@@ -29,8 +29,25 @@ export default function AutoImport() {
     } finally { setBusy(''); }
   };
 
+  // One-click full import: polls while it runs.
+  const [all, setAll] = useState(null);
+  const loadAll = useCallback(async () => {
+    try { setAll(await api.importAllGet()); } catch { /* ignore */ }
+  }, []);
+  useEffect(() => { loadAll(); }, [loadAll]);
+  useEffect(() => {
+    if (!all?.running) return undefined;
+    const timer = setInterval(loadAll, 3000);
+    return () => clearInterval(timer);
+  }, [all?.running, loadAll]);
+  const doAll = async (action) => {
+    if (action !== 'stop' && !window.confirm(t('allConfirm'))) return;
+    try { setAll(await api.importAllDo(action)); } catch (err) { toast(errText(err, t), 'error'); }
+  };
+
   const last = state?.last;
   return (
+    <>
     <div className="adm-card">
       <header className="adm-card-head">
         <div>
@@ -60,5 +77,33 @@ export default function AutoImport() {
         </div>
       </div>
     </div>
+    <div className="adm-card" style={{ marginTop: 16 }}>
+      <header className="adm-card-head">
+        <div>
+          <h2 className="adm-card-title">{t('allTitle')}</h2>
+          <p className="adm-card-sub">{t('allSub')}</p>
+        </div>
+        {all && <span className="adm-chip" aria-live="polite">{t(all.running ? (all.stop ? 'allStopping' : 'allRunning') : 'allIdle')}</span>}
+      </header>
+      <div className="adm-card-body">
+        <div className="adm-row" style={{ gap: 8, flexWrap: 'wrap' }}>
+          {all?.running
+            ? <button className="adm-btn" type="button" disabled={all.stop} onClick={() => doAll('stop')}>{t('allStop')}</button>
+            : (
+              <>
+                <button className="adm-btn adm-primary" type="button" disabled={!all} onClick={() => doAll('start')}>{t(all?.page > 1 ? 'allContinue' : 'allStart')}</button>
+                {all?.page > 1 && <button className="adm-btn" type="button" onClick={() => doAll('restart')}>{t('allRestart')}</button>}
+              </>
+            )}
+        </div>
+        {all && (all.running || all.imported > 0 || all.error) && (
+          <div className="adm-panel" style={{ marginTop: 16 }}>
+            <p>{t('allProgress', { page: all.page, pages: all.pages || '?', imported: all.imported, skipped: all.skipped, missing: all.missing, failed: all.failed })}</p>
+            {all.error && <p className="adm-error">{t('allErr', { msg: all.error })}</p>}
+          </div>
+        )}
+      </div>
+    </div>
+    </>
   );
 }

@@ -30,6 +30,7 @@ import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft
 import { mapPool } from './pool.js';
 import { activateVpn, applyVpn, deleteVpnProfile, testVpn, turnOffVpn, vpnStatus } from './vpn.js';
 import { getAutoImportState, runAutoImport, setAutoImportEnabled } from './auto-import.js';
+import { importAllState, startImportAll, stopImportAll } from './import-all.js';
 import { registerSeoRoutes } from './seo.js';
 import { registerExtrasRoutes } from './extras.js';
 import { registerPeopleRoutes } from './people.js';
@@ -1374,7 +1375,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
         }
       }
     }
-    if (imported > 0) exportData();
+    if (imported > 0 && !req.body?.noExport) exportData();
     res.json({ mediaType, preview, imported, exists, failed, missing, results });
   };
   app.locals.bulkImport = bulkImportHandler;
@@ -1704,6 +1705,14 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   app.post('/api/admin/auto-import', requireAdmin, writeLimiter, (req, res) => {
     setAutoImportEnabled(req.body?.enabled === true);
     res.json(getAutoImportState());
+  });
+  // ---------- One-click import of all MyAnimeList anime ----------
+  app.get('/api/admin/import-all', requireAdmin, (req, res) => res.json(importAllState()));
+  app.post('/api/admin/import-all', requireAdmin, writeLimiter, (req, res) => {
+    const action = req.body?.action;
+    if (action === 'stop') return res.json(stopImportAll());
+    if (action === 'start' || action === 'restart') return res.json(startImportAll(bulkImportHandler, { restart: action === 'restart' }));
+    throw httpError(400, 'Unknown action');
   });
   app.post('/api/admin/auto-import/run', requireAdmin, writeLimiter, async (req, res) => {
     if (getAutoImportState().running) throw httpError(429, 'An auto-import run is already in flight');

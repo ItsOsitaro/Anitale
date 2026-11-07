@@ -81,6 +81,8 @@ export const api = {
   autoImportGet: () => request('GET', '/api/admin/auto-import'),
   autoImportSet: (enabled) => request('POST', '/api/admin/auto-import', { enabled }),
   autoImportRun: () => request('POST', '/api/admin/auto-import/run'),
+  importAllGet: () => request('GET', '/api/admin/import-all'),
+  importAllDo: (action) => request('POST', '/api/admin/import-all', { action }),
   backfill: (body = {}) => request('POST', '/api/admin/translate/backfill', body),
   // Site-user management
   reviewsList: (q, page) => request('GET', `/api/admin/reviews?q=${encodeURIComponent(q)}&page=${page}&limit=15`),

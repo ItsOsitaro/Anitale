@@ -28,8 +28,9 @@ http.createServer((req,res)=>{
   let mm;
   if (p==='/v1/seasons/now') return send(res,200,{data:[{...anime(9301),type:'TV'},{...anime(9302),type:'Music'},{...anime(9303),type:'TV',genres:[{name:'Hentai'}]},{...anime(9304),type:'Movie'}],pagination:{last_visible_page:1,has_next_page:false}});
   if (p==='/v1/anime'||p==='/v1/manga') {
-    const bad=[...u.searchParams.keys()].filter(k=>!['q','limit','page','sfw','sfw-strict'].includes(k)); if (bad.length) return send(res,400,{status:400,type:'BadRequestException',message:`unknown parameter ${bad[0]}`});
-    const q=u.searchParams.get('q')||''; if (q==='nomatch') return send(res,200,{data:[],pagination:{last_visible_page:1,has_next_page:false}});
+    const bad=[...u.searchParams.keys()].filter(k=>!['q','limit','page','sfw','sfw-strict','order_by','sort'].includes(k)); if (bad.length) return send(res,400,{status:400,type:'BadRequestException',message:`unknown parameter ${bad[0]}`});
+    if (p==='/v1/anime'&&u.searchParams.get('order_by')) { const pg=Number(u.searchParams.get('page')||1); return send(res,200,{data:[1,2,3].map(i=>anime(9500+(pg-1)*3+i)),pagination:{last_visible_page:3,has_next_page:pg<3,current_page:pg,items:{count:3,total:9,per_page:3}}}); }
+    const q=u.searchParams.get('q')||'';  if (q==='nomatch') return send(res,200,{data:[],pagination:{last_visible_page:1,has_next_page:false}});
     const mk=p.endsWith('anime')?anime:manga; const base=p.endsWith('anime')?9100:9200;
     return send(res,200,{data:[mk(base+1),{...mk(base+2),mal_id:null}],pagination:{last_visible_page:1,has_next_page:false}});
   }
