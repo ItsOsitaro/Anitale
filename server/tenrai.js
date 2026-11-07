@@ -284,6 +284,7 @@ export const mapTenraiMangaToDraft = (data) => {
     score: data.score ?? null,
     publicationStatus: data.status || '',
     chapters: data.chapters ?? null,
+    members: Number(data.members) || 0,
     genres,
     synopsis: data.synopsis || '',
     information,

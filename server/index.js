@@ -1,4 +1,6 @@
 import './config.js';
+import { warmSearch } from './search.js';
+import { startMaintenance } from './maintenance.js';
 import { createApp } from './app.js';
 import { seedIfEmpty, seedMangaIfEmpty } from './seed.js';
 import { cleanupTemp } from './images.js';
@@ -20,6 +22,8 @@ initVpn();
 const app = createApp();
 startAutoImportScheduler(app.locals.bulkImport);
 startMagazineBackfill();
+startMaintenance();
 app.listen(port, host, () => {
+  warmSearch(); // build the (slim) search index in the background
   console.log(`API + site on http://${host === '0.0.0.0' ? '127.0.0.1' : host}:${port}   (admin: /admin)`);
 });

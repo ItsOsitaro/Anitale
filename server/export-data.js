@@ -4,7 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { ROOT_DIR, db } from './db.js';
 import { rowToItem } from './shape.js';
-import { listManga } from './repo.js';
+import { coreAnimeRows, listMangaCore } from './repo.js';
 
 // Atomic write: land the bytes on <target>.tmp first, then a same-volume
 // rename — a crash mid-write can never leave a truncated JSON behind.
@@ -23,7 +23,8 @@ export const exportData = () => {
     const dataDir = path.join(ROOT_DIR, 'public', 'data');
     fs.mkdirSync(dataDir, { recursive: true });
 
-    const rows = db.prepare('SELECT * FROM anime ORDER BY id ASC').all();
+    // Only the core catalog: the file is an offline fallback / seed, and 150k titles would be hundreds of MB.
+    const rows = coreAnimeRows();
     const items = rows.map(rowToItem);
     const listJson = items.map(({ alternativeTitles, information, statistics, availableAt, resources, streamingPlatforms, streamingNotice, image, cover, id, malId, ...entry }) => entry);
     const detailsJson = items.map((item) => ({
@@ -37,7 +38,7 @@ export const exportData = () => {
       ...(item.streamingNotice ? { streamingNotice: item.streamingNotice } : {}),
     }));
     // Manga mirrors GET /api/manga exactly (listManga already returns the API shape).
-    const mangaJson = listManga();
+    const mangaJson = listMangaCore();
 
     writeJsonAtomic(path.join(dataDir, 'anime.json'), listJson);
     writeJsonAtomic(path.join(dataDir, 'anime-details.json'), detailsJson);

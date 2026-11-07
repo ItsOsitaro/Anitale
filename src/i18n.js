@@ -86,7 +86,7 @@ export const messages = {
     // Catalog page
     filterTitles: 'فیلتر عنوان‌ها', titleOrKeyword: 'عنوان یا کلیدواژه', genreLabel: 'ژانر', allGenres: 'همه‌ی ژانرها',
     formatLabel: 'فرمت', allFormats: 'همه‌ی فرمت‌ها', yearLabel: 'سال', allYears: 'همه‌ی سال‌ها', sortLabel: 'ترتیب', sortScore: 'امتیاز', sortNew: 'جدیدترین', sortOld: 'قدیمی‌ترین', sortAz: 'الفبا',
-    titlesCount: '{n} عنوان',
+    titlesCount: '{n} عنوان', catalogCoreNote: 'این فهرست محبوب‌ترین عنوان‌هاست؛ برای دیدن همه از جستجو استفاده کنید.',
     mdSummary: 'خلاصه', mdReviews: 'نظرات', mdRelated: 'مرتبط', mdBack: 'بازگشت', mdLess: 'کمتر',
     mcFilters: 'فیلتر', mcHeroSlide: '{n} از {total}', mcAll: 'همه', mcClose: 'بستن', mcClearAll: 'پاک کردن فیلترها', mcShowResults: 'نمایش {n} نتیجه',
     dbTaste: 'ژانرهای محبوب من', dbTabMine: 'فهرست من', dbTabFriends: 'دوستان',
@@ -262,7 +262,7 @@ export const messages = {
     episodesLabel: 'Episodes',
     filterTitles: 'Filter titles', titleOrKeyword: 'Title or keyword', genreLabel: 'Genre', allGenres: 'All genres',
     formatLabel: 'Format', allFormats: 'All formats', yearLabel: 'Year', allYears: 'All years', sortLabel: 'Sort', sortScore: 'Score', sortNew: 'Newest', sortOld: 'Oldest', sortAz: 'A–Z',
-    titlesCount: '{n} titles',
+    titlesCount: '{n} titles', catalogCoreNote: 'This list shows the most popular titles; use search to find everything.',
     mdSummary: 'Summary', mdReviews: 'Reviews', mdRelated: 'Related', mdBack: 'Back', mdLess: 'Less',
     mcFilters: 'Filters', mcHeroSlide: '{n} of {total}', mcAll: 'All', mcClose: 'Close', mcClearAll: 'Clear filters', mcShowResults: 'Show {n} results',
     dbTaste: 'My favourite genres', dbTabMine: 'My list', dbTabFriends: 'Friends',

@@ -14,7 +14,7 @@ import {
 import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.js';
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
-import { deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, mangaRowToItem, updateAnime, updateManga } from './repo.js';
+import { animeRowsBy, coreAnimeRows, deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, listMangaCore, mangaItemsBy, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, setAbout, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
@@ -640,17 +640,47 @@ export const createApp = () => {
   // alternative titles, streaming platforms, full synopsis) are left out and
   // the detail page fetches them from /api/anime/:slug. Admin keeps the full list.
   const clipText = (value, max) => (typeof value === 'string' && value.length > max ? `${value.slice(0, max).trimEnd()}…` : value);
+  const clipSynopsis = (synopsis) => (typeof synopsis === 'string'
+    ? clipText(synopsis, 320)
+    : (synopsis && typeof synopsis === 'object' ? { ...synopsis, fa: clipText(synopsis.fa, 320), en: clipText(synopsis.en, 320) } : synopsis));
   const liteAnime = (item) => {
     const { availableAt, alternativeTitles, streamingPlatforms, synopsis, ...rest } = item;
-    const short = typeof synopsis === 'string'
-      ? clipText(synopsis, 320)
-      : (synopsis && typeof synopsis === 'object' ? { ...synopsis, fa: clipText(synopsis.fa, 320), en: clipText(synopsis.en, 320) } : synopsis);
-    return { ...rest, synopsis: short };
+    return { ...rest, synopsis: clipSynopsis(synopsis) };
   };
+  const liteManga = (item) => ({ ...item, synopsis: clipSynopsis(item.synopsis) });
   app.get('/api/anime', (req, res) => {
     publicCatalogCache(res);
-    const items = db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem);
+    // Only the "core" (most popular + scheduled + hand-made) ships in one go; the
+    // rest is reached through search, /api/titles and /api/title/:type/:key.
+    const items = coreAnimeRows().map(rowToItem);
     res.json(req.query.lite === '1' ? items.map(liteAnime) : items);
+  });
+  const MAX_BATCH = 100;
+  const keyList = (value, numeric) => [...new Set(String(value || '').split(',').map((v) => v.trim()).filter(Boolean))]
+    .filter((v) => (numeric ? /^\d{1,9}$/.test(v) : /^[A-Za-z0-9._~-]{1,200}$/.test(v)))
+    .slice(0, MAX_BATCH);
+  // One title by slug or MAL id, full record (anime or manga).
+  app.get('/api/title/:type/:key', (req, res) => {
+    const key = String(req.params.key || '');
+    const mal = /^\d+$/.test(key) ? Number(key) : null;
+    let item = null;
+    if (req.params.type === 'anime') {
+      const row = getBySlug(key) || (mal ? getByMalId(mal) : null);
+      item = row ? rowToItem(row) : null;
+    } else if (req.params.type === 'manga') {
+      item = mangaItemsBy({ slugs: [key], malIds: mal ? [mal] : [] })[0] || null;
+    }
+    if (!item) throw httpError(404, 'Title not found');
+    publicCatalogCache(res);
+    res.json(item);
+  });
+  // Several titles at once (lists, relations, stacks): ?type=anime&slugs=a,b or &malIds=1,2 — lite shape.
+  app.get('/api/titles', (req, res) => {
+    const slugs = keyList(req.query.slugs, false);
+    const malIds = keyList(req.query.malIds, true).map(Number);
+    publicCatalogCache(res);
+    if (req.query.type === 'manga') { res.json(mangaItemsBy({ slugs, malIds }).map(liteManga)); return; }
+    res.json(animeRowsBy({ slugs, malIds }).map(rowToItem).map(liteAnime));
   });
   app.get('/api/anime/:slug', (req, res) => {
     const row = getBySlug(req.params.slug);
@@ -660,7 +690,8 @@ export const createApp = () => {
   });
   app.get('/api/manga', (req, res) => {
     publicCatalogCache(res);
-    res.json(listManga());
+    const items = listMangaCore();
+    res.json(req.query.lite === '1' ? items.map(liteManga) : items);
   });
 
   // ---------- Admin: site-user management ----------
@@ -746,56 +777,32 @@ export const createApp = () => {
   // Matches the main title plus english / romaji / japanese / synonyms, so
   // e.g. "Sousou no Frieren" finds the same entry the English title does.
   // foldTitle keeps ordering, accents and Arabic letter variants forgiving.
-  app.get('/api/search', (req, res) => {
-    const query = foldTitle(String(req.query.q || '').trim());
-    if (!query) { res.json({ items: [] }); return; }
-
-    const titlesOf = (item) => {
-      const titles = item.alternativeTitles || {};
-      return [item.title, item.titleFa, titles.english, titles.romaji, titles.japanese, ...(titles.synonyms || [])]
-        .filter(Boolean)
-        .map(foldTitle);
+  // Search answers are cached for a minute (same query = same answer; typing repeats a lot).
+  const searchCache = new Map();
+  const cacheSearch = (req, res, next) => {
+    const key = req.originalUrl;
+    const hit = searchCache.get(key);
+    if (hit && Date.now() - hit.at < 60_000) { res.json(hit.body); return; }
+    const send = res.json.bind(res);
+    res.json = (body) => {
+      if (res.statusCode === 200) {
+        if (searchCache.size > 300) searchCache.clear();
+        searchCache.set(key, { at: Date.now(), body });
+      }
+      return send(body);
     };
-
-    // One pass builds the anime cover fallback map AND the anime hits.
-    const animeBase = new Map();
-    const hits = [];
-    const sfw = req.query.sfw === '1';
-    for (const item of db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem)) {
-      animeBase.set(item.slug, item.image || '');
-      if (sfw && isSensitiveItem(item)) continue;
-      const titles = titlesOf(item);
-      if (!titles.includes(query) && !titles.some((value) => value.includes(query))) continue;
-      hits.push({
-        kind: 'anime',
-        slug: item.slug,
-        title: item.title,
-        year: item.year,
-        format: item.format,
-        image: item.image,
-        rank: titles.some((value) => value.startsWith(query)) ? 0 : 1,
-      });
-    }
-    for (const item of listManga()) {
-      if (sfw && isSensitiveItem(item)) continue;
-      const titles = [...titlesOf(item), ...[item.titleFa].filter(Boolean).map(foldTitle)];
-      if (!titles.includes(query) && !titles.some((value) => value.includes(query))) continue;
-      hits.push({
-        kind: 'manga',
-        slug: item.slug,
-        title: item.title,
-        year: item.year,
-        format: item.format,
-        // Manga covers reuse the matching anime cover; fall back to the plain PNG path.
-        image: item.image || animeBase.get(item.slug) || coverUrlFor(item.slug),
-        rank: titles.some((value) => value.startsWith(query)) ? 0 : 1,
-      });
-    }
+    next();
+  };
+  app.get('/api/search', cacheSearch, (req, res) => {
+    const text = String(req.query.q || '').trim().slice(0, 80);
+    const query = foldTitle(text);
+    if (!query) { res.json({ items: [] }); return; }
+    const found = searchCatalog({ q: text, type: 'all', limit: 8, sfw: req.query.sfw === '1' });
+    const hits = found.items.map((row) => ({ kind: row.kind, slug: row.slug, malId: row.malId, title: row.title, year: row.year, format: row.format, image: row.image }));
 
     // Site users match too — the header combobox shows them after the titles.
-    const users = db.prepare('SELECT username, bio, avatar_color FROM users ORDER BY id ASC').all()
-      .filter((row) => foldTitle(row.username).includes(query))
-      .slice(0, 4)
+    const users = db.prepare('SELECT username, bio, avatar_color FROM users WHERE username LIKE ? LIMIT 4')
+      .all('%' + text.replace(/[%_]/g, '') + '%')
       .map((row) => ({
         kind: 'user',
         username: row.username,
@@ -803,12 +810,12 @@ export const createApp = () => {
         bloom: Number.parseInt(row.avatar_color, 10) || 12,
       }));
 
-    res.json({ items: hits.sort((a, b) => a.rank - b.rank).slice(0, 8), users });
+    res.json({ items: hits, users });
   });
 
   // Full search page: relevance ranking, typo tolerance, filters and facets.
   const searchLimiter = rateLimit({ windowMs: 60_000, limit: 90, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many searches' } });
-  app.get('/api/search/full', searchLimiter, (req, res) => {
+  app.get('/api/search/full', searchLimiter, cacheSearch, (req, res) => {
     const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
     const text = String(req.query.q || '').slice(0, 80);
     // Comma separated genre lists (at most 10 names), and a 4-digit year in a sane range.
@@ -825,6 +832,8 @@ export const createApp = () => {
       format: String(req.query.format || '').slice(0, 30),
       status: pick(String(req.query.status || ''), ['airing', 'finished', 'upcoming', 'other'], ''),
       studio: String(req.query.studio || '').slice(0, 80),
+      producer: String(req.query.producer || '').slice(0, 80),
+      magazine: String(req.query.magazine || '').slice(0, 80),
       rating: String(req.query.rating || '').slice(0, 12),
       letter: /^[A-Za-z#]$/.test(String(req.query.letter || '')) ? String(req.query.letter).toUpperCase() : '',
       minScore: Math.min(10, Math.max(0, Number(req.query.min) || 0)),
@@ -848,7 +857,7 @@ export const createApp = () => {
     const q = String(req.query.q || '').trim();
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
-    const like = `%${q.replace(/[%_\\]/g, '\\$&')}%`;
+    const like = `%${q.replace(/[%_]/g, '')}%`;
     const where = q ? "WHERE title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\'" : '';
     const params = q ? [like, like] : [];
     const total = db.prepare(`SELECT COUNT(*) AS n FROM anime ${where}`).get(...params).n;
@@ -1047,11 +1056,25 @@ export const createApp = () => {
   };
 
   // Refresh every manga row that has a MyAnimeList id (admin bulk action).
+  // Paged admin list (the table can hold 100k+ rows, so the browser never gets it all at once).
+  app.get('/api/admin/manga', requireAdmin, (req, res) => {
+    const q = String(req.query.q || '').trim().slice(0, 80);
+    const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
+    const page = Math.max(Number(req.query.page) || 1, 1);
+    const like = `%${q.replace(/[%_]/g, '')}%`;
+    const where = q ? 'WHERE title LIKE ? OR slug LIKE ? OR title_fa LIKE ?' : '';
+    const params = q ? [like, like, like] : [];
+    const total = db.prepare(`SELECT COUNT(*) AS n FROM manga ${where}`).get(...params).n;
+    const rows = db.prepare(`SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id ${where.replace(/(title|slug|title_fa) LIKE/g, 'm.$1 LIKE')} ORDER BY m.id ASC LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
+    res.json({ items: rows.map(mangaRowToItem), total, page, pages: Math.max(Math.ceil(total / limit), 1), withMalId: db.prepare('SELECT COUNT(*) AS n FROM manga WHERE mal_id IS NOT NULL').get().n });
+  });
   app.post('/api/admin/manga/refresh-all', requireAdmin, writeLimiter, (req, res) => {
     cleanupTemp();
-    const rows = db.prepare('SELECT * FROM manga WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
+    const rows = db.prepare('SELECT id, slug, title FROM manga WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
     const deferPersian = !inlinePersianEnabled();
-    startBulk('manga', rows, async (row) => {
+    startBulk('manga', rows, async (light) => {
+      const row = db.prepare('SELECT * FROM manga WHERE id = ?').get(light.id);
+      if (!row) return { slug: light.slug, title: light.title, ok: false, error: 'Deleted meanwhile' };
       const { item, coverWarning, changes } = await refreshMangaFromSource(row, { deferPersian });
       return { slug: row.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) };
     });
@@ -1113,11 +1136,8 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   const row = getMangaBySlug(req.params.slug);
   if (!row) throw httpError(404, 'Manga not found');
   deleteManga(row.id);
-  if (row.cover) {
-    for (const name of fs.readdirSync(COVERS_DIR)) {
-      if (name.startsWith(`${row.slug}.`)) fs.rmSync(path.join(COVERS_DIR, name), { force: true });
-    }
-  }
+  // Direct path, not a scan: the covers folder can hold 150k files.
+  if (row.cover && path.basename(row.cover) === row.cover) fs.rmSync(path.join(COVERS_DIR, row.cover), { force: true });
   exportData();
   res.json({ ok: true });
 });
@@ -1310,7 +1330,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
               : draft.synopsis;
             const created = insertManga(
               { slug, title: draft.title, category: draft.category, year: draft.year, format: 'Manga', genres: draft.genres, synopsis: mangaSynopsis },
-              { malId: draft.malId, score: draft.score, cover, publicationStatus: draft.publicationStatus || '', chapters: draft.chapters ?? null },
+              { malId: draft.malId, score: draft.score, cover, publicationStatus: draft.publicationStatus || '', chapters: draft.chapters ?? null, members: draft.members || 0 },
             );
             imported += 1;
             results.push({ malId, status: 'imported', title: created.title, slug, ...(coverInfo.warning ? { warning: coverInfo.warning } : {}) });
@@ -1360,7 +1380,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
           if (inlinePersianEnabled()) await draftPersian(payload); // local engine: backfill ride
           const created = insertManga(
             { slug, title: payload.title, category: payload.category, year: payload.year, format: 'Manga', genres: payload.genres, synopsis: payload.synopsisFa ? { fa: payload.synopsisFa, en: payload.synopsis, auto: true } : payload.synopsis },
-            { malId: payload.malId, score: payload.score, cover, publicationStatus: payload.publicationStatus || '', chapters: payload.chapters ?? null },
+            { malId: payload.malId, score: payload.score, cover, publicationStatus: payload.publicationStatus || '', chapters: payload.chapters ?? null, members: payload.members || 0 },
           );
           imported += 1;
           results.push({ malId, status: 'imported', title: created.title, slug, ...(warning ? { warning } : {}) });
@@ -1453,9 +1473,12 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   // Refresh every entry that has a MyAnimeList id (admin bulk action; see the job helpers above).
   app.post('/api/admin/anime/refresh-all', requireAdmin, writeLimiter, (req, res) => {
     cleanupTemp();
-    const rows = db.prepare('SELECT * FROM anime WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
+    // Light rows only (50k full rows would not fit in memory); each full row is read when its turn comes.
+    const rows = db.prepare('SELECT id, slug, title FROM anime WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
     const deferPersian = !inlinePersianEnabled();
-    startBulk('anime', rows, async (row) => {
+    startBulk('anime', rows, async (light) => {
+      const row = db.prepare('SELECT * FROM anime WHERE id = ?').get(light.id);
+      if (!row) return { slug: light.slug, title: light.title, ok: false, error: 'Deleted meanwhile' };
       const { item, coverWarning, changes } = await refreshRowFromSource(row, { deferPersian });
       return { slug: item.slug, title: item.title, ok: true, changes, ...(coverWarning ? { warning: coverWarning } : {}) };
     }, () => exportData());

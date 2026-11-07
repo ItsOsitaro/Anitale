@@ -1,13 +1,19 @@
 import { db } from './db.js';
 import { foldTitle, rowToItem } from './shape.js';
-import { listManga } from './repo.js';
+import { mangaRowToItem } from './repo.js';
 import { coverUrlFor } from './images.js';
 import { isSensitiveItem } from './sensitive.js';
 
-// Full catalog search: relevance-ranked, typo tolerant, filterable. The catalog is
-// small, so the folded index is kept in memory and rebuilt when a table changes.
+// Full catalog search: relevance-ranked, typo tolerant, filterable. The folded index
+// lives in memory, but each entry is SLIM (a card + folded text + a few numbers) so
+// 150k titles stay well under the memory of a 1 GB server. Full records are read from
+// SQLite only for the rows that are actually returned. A changed table rebuilds the
+// index in small chunks (never blocking the event loop) and at most every couple of minutes.
 
-let cache = { key: '', docs: [] };
+let cache = { key: '', docs: [], at: 0, bySlug: { anime: new Map(), manga: new Map() }, byMal: { anime: new Map(), manga: new Map() }, facets: new Map() };
+let building = false;
+const REBUILD_MIN_MS = 120_000;
+const CHUNK = 1500;
 
 const versionKey = () => {
   const a = db.prepare("SELECT COUNT(*) AS n, COALESCE(MAX(updated_at), '') AS m FROM anime").get();
@@ -18,6 +24,17 @@ const versionKey = () => {
 const infoValue = (item, label) => String((Array.isArray(item.information) ? item.information : []).find((row) => row.label === label)?.value || '').trim();
 const countOf = (text) => Number(String(text ?? '').replace(/[^\d]/g, '')) || 0;
 
+// Identical strings share one instance (genres, studios, formats repeat 100k times).
+const NONE = Object.freeze([]);
+const pool = new Map();
+const intern = (value) => {
+  const text = String(value);
+  const hit = pool.get(text);
+  if (hit !== undefined) return hit;
+  pool.set(text, text);
+  return text;
+};
+
 // Searchable facts that are not part of the title text: publication status bucket,
 // studios, age rating, popularity numbers, episode/chapter count and first letter.
 const factsOf = (item, kind) => {
@@ -27,66 +44,152 @@ const factsOf = (item, kind) => {
   else if (/not yet|upcoming|announced/.test(rawStatus)) status = 'upcoming';
   else if (/finished|complete/.test(rawStatus)) status = 'finished';
   else if (rawStatus) status = 'other';
-  const first = foldTitle(String(item.title || '')).replace(/[^a-z0-9\u0600-\u06ff]/gi, '').charAt(0).toUpperCase();
+  const first = foldTitle(String(item.title || '')).replace(/[^a-z0-9؀-ۿ]/gi, '').charAt(0).toUpperCase();
+  const list = (label) => {
+    const names = infoValue(item, label).split(',').map((name) => name.trim()).filter(Boolean).map(intern);
+    return names.length ? names : NONE;
+  };
   return {
-    status,
-    studios: infoValue(item, 'Studios').split(',').map((name) => name.trim()).filter(Boolean),
-    rating: infoValue(item, 'Rating').split(' - ')[0].trim(),
-    members: countOf(item.statistics?.members),
+    status: intern(status),
+    studios: list('Studios'),
+    producers: list('Producers'),
+    magazines: kind === 'manga' && item.serialization?.length ? item.serialization.map(intern) : NONE,
+    rating: intern(infoValue(item, 'Rating').split(' - ')[0].trim()),
+    members: countOf(item.statistics?.members) || Number(item.members) || 0,
     votes: countOf(item.statistics?.scoredBy),
     episodes: kind === 'manga' ? (Number(item.chapters) || 0) : countOf(infoValue(item, 'Episodes')),
     letter: /^[A-Z]$/.test(first) ? first : '#',
   };
 };
 
-const buildDocs = () => {
-  const animeBase = new Map();
-  const docs = [];
-  for (const item of db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem)) {
-    animeBase.set(item.slug, item.image || '');
-    const alt = item.alternativeTitles || {};
-    docs.push({
-      kind: 'anime', item, image: item.image || '',
-      titles: [item.title, item.titleFa, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle),
-      genres: (item.genres || []).map(foldTitle),
-      sensitive: isSensitiveItem(item),
-      ...factsOf(item, 'anime'),
-    });
-  }
-  for (const item of listManga()) {
-    const alt = item.alternativeTitles || {};
-    docs.push({
-      kind: 'manga', item, image: item.image || animeBase.get(item.slug) || coverUrlFor(item.slug),
-      titles: [item.title, item.titleFa, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle),
-      genres: (item.genres || []).map(foldTitle),
-      sensitive: isSensitiveItem(item),
-      ...factsOf(item, 'manga'),
-    });
-  }
-  return docs;
+// One flat object per title. `item` points back at it, so code that reads doc.item.title
+// (search rows, sorts, facets) works without a second "card" object per title.
+const makeDoc = (kind, item, image) => {
+  const alt = item.alternativeTitles || {};
+  const genres = (item.genres || []).map(intern);
+  const doc = {
+    kind,
+    slug: item.slug,
+    malId: item.malId ?? null,
+    title: item.title,
+    titleFa: item.titleFa || '',
+    year: item.year,
+    format: intern(item.format || ''),
+    sampleScore: item.sampleScore ?? null,
+    genres,
+    airingDay: intern(item.airingDay || ''),
+    image,
+    t: [item.title, item.titleFa, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle).join(''),
+    g: genres.map((name) => intern(foldTitle(name))),
+    sensitive: isSensitiveItem(item),
+    ...factsOf(item, kind),
+  };
+  doc.item = doc;
+  return doc;
 };
+
+// Rows are read in pages so 150k titles are never all in memory as JS objects at once.
+function* docGen() {
+  for (let after = 0; ;) {
+    const rows = db.prepare('SELECT * FROM anime WHERE id > ? ORDER BY id ASC LIMIT ?').all(after, CHUNK);
+    if (!rows.length) break;
+    after = rows[rows.length - 1].id;
+    for (const row of rows) {
+      const item = rowToItem(row);
+      yield makeDoc('anime', item, item.image || '');
+    }
+  }
+  for (let after = 0; ;) {
+    const rows = db.prepare('SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id WHERE m.id > ? ORDER BY m.id ASC LIMIT ?').all(after, CHUNK);
+    if (!rows.length) break;
+    after = rows[rows.length - 1].id;
+    for (const row of rows) {
+      const item = mangaRowToItem(row);
+      yield makeDoc('manga', item, item.image || coverUrlFor(item.slug));
+    }
+  }
+}
 
 // Weighted (Bayesian) score, same formula as src/lib/catalog-rules.js: a high score from a
 // handful of votes must not beat a slightly lower one backed by many.
 const MIN_VOTES = 1000;
-const count = (text) => Number(String(text ?? '').replace(/[^\d]/g, '')) || 0;
 const addWeighted = (docs) => {
   for (const kind of ['anime', 'manga']) {
-    const scored = docs.filter((doc) => doc.kind === kind && Number(doc.item.sampleScore) > 0);
-    if (!scored.length) continue;
-    const mean = scored.reduce((sum, doc) => sum + Number(doc.item.sampleScore), 0) / scored.length;
-    for (const doc of scored) {
-      const v = count(doc.item.statistics?.scoredBy) || count(doc.item.statistics?.members) || MIN_VOTES;
+    let n = 0;
+    let sum = 0;
+    for (const doc of docs) {
+      if (doc.kind === kind && Number(doc.item.sampleScore) > 0) { n += 1; sum += Number(doc.item.sampleScore); }
+    }
+    if (!n) continue;
+    const mean = sum / n;
+    for (const doc of docs) {
+      if (doc.kind !== kind || !(Number(doc.item.sampleScore) > 0)) continue;
+      const v = doc.votes || doc.members || MIN_VOTES;
       doc.weighted = (v / (v + MIN_VOTES)) * Number(doc.item.sampleScore) + (MIN_VOTES / (v + MIN_VOTES)) * mean;
     }
   }
   return docs;
 };
 
+const install = (docs, key) => {
+  const bySlug = { anime: new Map(), manga: new Map() };
+  const byMal = { anime: new Map(), manga: new Map() };
+  for (const doc of docs) {
+    bySlug[doc.kind].set(doc.slug, doc);
+    if (doc.malId != null) byMal[doc.kind].set(doc.malId, doc);
+  }
+  cache = { key, docs: addWeighted(docs), at: Date.now(), bySlug, byMal, facets: new Map() };
+};
+
+const rebuildAsync = async (key) => {
+  building = true;
+  try {
+    const docs = [];
+    for (const doc of docGen()) {
+      docs.push(doc);
+      if (docs.length % 1000 === 0) await new Promise((resolve) => setImmediate(resolve));
+    }
+    install(docs, key);
+  } catch (error) {
+    console.error('[search] index rebuild failed:', error.message);
+  } finally {
+    building = false;
+  }
+};
+
+// Called at start-up so the first visitor does not pay for the build.
+export const warmSearch = () => {
+  if (!building && !cache.docs.length) rebuildAsync(versionKey());
+};
+
 export const getDocs = () => {
   const key = versionKey();
-  if (cache.key !== key) cache = { key, docs: addWeighted(buildDocs()) };
+  if (cache.key === key) return cache.docs;
+  if (!cache.docs.length) {
+    // Nothing built yet (a request before warm-up finished): build once, synchronously.
+    install(Array.from(docGen()), key);
+  } else if (!building && Date.now() - cache.at > REBUILD_MIN_MS) {
+    rebuildAsync(key);
+  }
   return cache.docs;
+};
+
+export const findDoc = (kind, key) => {
+  getDocs();
+  const asMal = /^\d+$/.test(String(key)) ? Number(key) : null;
+  return cache.bySlug[kind]?.get(String(key)) || (asMal != null ? cache.byMal[kind]?.get(asMal) : undefined);
+};
+
+// Full record for a search hit (the index only holds a card).
+export const fullItemOf = (doc) => {
+  if (doc.kind === 'anime') {
+    const row = db.prepare('SELECT * FROM anime WHERE slug = ?').get(doc.slug);
+    return row ? rowToItem(row) : doc.item;
+  }
+  const row = db.prepare('SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id WHERE m.slug = ?').get(doc.slug);
+  if (!row) return doc.item;
+  const item = mangaRowToItem(row);
+  return { ...item, image: item.image || doc.image };
 };
 
 // Edit distance, giving up early once it must exceed `max`.
@@ -106,19 +209,24 @@ const within = (a, b, max) => {
   return prev[b.length] <= max;
 };
 
-const scoreDoc = (doc, q) => {
+const WORD = /[\s\-:·,]+/;
+const scoreDoc = (doc, q, fuzzy = false) => {
   let best = 0;
-  for (const title of doc.titles) {
-    if (title === q) best = Math.max(best, 100);
-    else if (title.startsWith(q)) best = Math.max(best, 80);
-    else if (title.split(/[\s\-:·,]+/).some((word) => word.startsWith(q))) best = Math.max(best, 60);
-    else if (title.includes(q)) best = Math.max(best, 40);
+  // Every text match (exact, prefix, word start, substring) needs the query to occur in the text.
+  if (doc.t.includes(q)) {
+    for (const title of doc.t.split('\u0001')) {
+      if (title === q) best = Math.max(best, 100);
+      else if (title.startsWith(q)) best = Math.max(best, 80);
+      else if (title.split(WORD).some((word) => word.startsWith(q))) best = Math.max(best, 60);
+      else if (title.includes(q)) best = Math.max(best, 40);
+    }
   }
-  if (best === 0 && doc.genres.includes(q)) best = 20;
-  if (best === 0 && q.length >= 4) {
+  if (best === 0 && doc.g.includes(q)) best = 20;
+  // Typo tolerance is the costly part: only popular titles are checked.
+  if (best === 0 && fuzzy && q.length >= 4 && doc.members >= 1000) {
     const max = q.length >= 8 ? 2 : 1;
-    for (const title of doc.titles) {
-      if (title.split(/[\s\-:·,]+/).some((word) => word.length >= 3 && within(word.slice(0, q.length + 1), q, max))) { best = 15; break; }
+    for (const title of doc.t.split('\u0001')) {
+      if (title.split(WORD).some((word) => word.length >= 3 && within(word.slice(0, q.length + 1), q, max))) { best = 15; break; }
     }
   }
   return best;
@@ -149,31 +257,59 @@ const toRow = (doc, relevance) => ({
   relevance,
 });
 
+const countBy = (values) => {
+  const map = new Map();
+  for (const value of values) map.set(value, (map.get(value) || 0) + 1);
+  return [...map];
+};
+
+const buildFacets = (matched) => ({
+  genres: countBy(matched.flatMap((d) => d.item.genres || [])).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([value, n]) => ({ value, n })),
+  years: countBy(matched.map((d) => String(d.item.year || '')).filter(Boolean)).sort((a, b) => b[0].localeCompare(a[0])).map(([value, n]) => ({ value, n })),
+  formats: countBy(matched.map((d) => d.item.format).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
+  statuses: countBy(matched.map((d) => d.status).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
+  studios: countBy(matched.flatMap((d) => d.studios || [])).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 80).map(([value, n]) => ({ value, n })),
+  ratings: countBy(matched.map((d) => d.rating).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
+});
+
 // genres / excludeGenres are arrays (a title must have every included genre and none of the excluded);
 // the old single `genre` and `year` still work. fromYear/toYear bound the year, inclusive.
-export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], excludeGenres = [], year = '', fromYear = 0, toYear = 0, format = '', status = '', studio = '', rating = '', letter = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false, raw = false }) => {
+// producer / magazine narrow by those company names (company pages).
+export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], excludeGenres = [], year = '', fromYear = 0, toYear = 0, format = '', status = '', studio = '', producer = '', magazine = '', rating = '', letter = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false, raw = false }) => {
   const needle = foldTitle(String(q).trim());
   const docs = getDocs();
 
   // Candidates matching the text (every title when the text is empty).
   const matched = [];
+  const rel = new Map();
   for (const doc of docs) {
     if (type !== 'all' && doc.kind !== type) continue;
     if (sfw && doc.sensitive) continue;
     const relevance = needle ? scoreDoc(doc, needle) : 1;
-    if (relevance > 0) matched.push({ ...doc, relevance });
+    if (relevance > 0) {
+      matched.push(doc);
+      if (needle) rel.set(doc, relevance);
+    }
   }
+  // Typo tolerance is the costly part, so it only runs when plain matching finds few titles.
+  if (needle.length >= 4 && matched.length < 8) {
+    for (const doc of docs) {
+      if ((type !== 'all' && doc.kind !== type) || (sfw && doc.sensitive) || rel.has(doc)) continue;
+      const relevance = scoreDoc(doc, needle, true);
+      if (relevance > 0) { matched.push(doc); rel.set(doc, relevance); }
+    }
+  }
+  const relevanceOf = (doc) => rel.get(doc) ?? 1;
 
   // Facets describe what the text matched, before the other filters narrow it.
-  const count = (values) => [...values.reduce((map, v) => map.set(v, (map.get(v) || 0) + 1), new Map())];
-  const facets = {
-    genres: count(matched.flatMap((d) => d.item.genres || [])).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([value, n]) => ({ value, n })),
-    years: count(matched.map((d) => String(d.item.year || '')).filter(Boolean)).sort((a, b) => b[0].localeCompare(a[0])).map(([value, n]) => ({ value, n })),
-    formats: count(matched.map((d) => d.item.format).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
-    statuses: count(matched.map((d) => d.status).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
-    studios: count(matched.flatMap((d) => d.studios || [])).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 80).map(([value, n]) => ({ value, n })),
-    ratings: count(matched.map((d) => d.rating).filter(Boolean)).sort((a, b) => b[1] - a[1]).map(([value, n]) => ({ value, n })),
-  };
+  // The no-text case (the whole catalog) is cached until the index is rebuilt.
+  let facets;
+  if (needle) facets = buildFacets(matched);
+  else {
+    const facetKey = `${type}|${sfw}`;
+    facets = cache.facets.get(facetKey);
+    if (!facets) { facets = buildFacets(matched); cache.facets.set(facetKey, facets); }
+  }
 
   const included = [...(genre ? [genre] : []), ...genres].map(foldTitle);
   const excluded = excludeGenres.map(foldTitle);
@@ -182,13 +318,15 @@ export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], e
   const filtered = matched.filter((doc) => {
     const docYear = Number(doc.item.year) || 0;
     return (
-      included.every((g) => doc.genres.includes(g))
-      && !excluded.some((g) => doc.genres.includes(g))
+      included.every((g) => doc.g.includes(g))
+      && !excluded.some((g) => doc.g.includes(g))
       && (!from || (docYear && docYear >= from))
       && (!to || (docYear && docYear <= to))
       && (!format || doc.item.format === format)
       && (!status || doc.status === status)
       && (!studio || (doc.studios || []).includes(studio))
+      && (!producer || (doc.producers || []).includes(producer))
+      && (!magazine || (doc.magazines || []).includes(magazine))
       && (!rating || doc.rating === rating)
       && (!letter || doc.letter === letter)
       && (!minScore || (doc.item.sampleScore ?? 0) >= minScore)
@@ -196,9 +334,15 @@ export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], e
   });
 
   const order = SORTS[sort];
-  filtered.sort((a, b) => (order && sort ? order(a, b) : (b.relevance - a.relevance) || SORTS.score(a, b)));
+  filtered.sort((a, b) => (order && sort ? order(a, b) : (relevanceOf(b) - relevanceOf(a)) || SORTS.score(a, b)));
 
   const total = filtered.length;
   const start = (page - 1) * limit;
-  return { items: filtered.slice(start, start + limit).map((doc) => (raw ? { ...toRow(doc, doc.relevance), doc } : toRow(doc, doc.relevance))), total, page, pages: Math.max(1, Math.ceil(total / limit)), facets };
+  return {
+    items: filtered.slice(start, start + limit).map((doc) => (raw ? { ...toRow(doc, relevanceOf(doc)), doc } : toRow(doc, relevanceOf(doc)))),
+    total,
+    page,
+    pages: Math.max(1, Math.ceil(total / limit)),
+    facets,
+  };
 };

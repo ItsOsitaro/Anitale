@@ -56,6 +56,7 @@ export const api = {
   }),
   // Queue 25: manga management.
   mangaList: () => request('GET', '/api/manga'),
+  mangaPage: (q, page) => request('GET', `/api/admin/manga?q=${encodeURIComponent(q)}&page=${page}&limit=20`),
   mangaRemove: (slug) => request('DELETE', `/api/admin/manga/${encodeURIComponent(slug)}`),
   mangaUpdate: (slug, patch) => request('PATCH', `/api/admin/manga/${encodeURIComponent(slug)}`, patch),
   mangaRefresh: (slug) => request('POST', `/api/admin/manga/${encodeURIComponent(slug)}/refresh`),

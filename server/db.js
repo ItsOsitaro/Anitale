@@ -175,6 +175,31 @@ if (!mangaStatusColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN publication_stat
 const mangaChaptersColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('manga') WHERE name = 'chapters'").get();
 if (!mangaChaptersColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN chapters INTEGER`);
 
+// Migration (scale): popularity column. The public site only ships the most
+// popular titles ("core") to the browser; everything else is served on demand.
+// Anime members come from the statistics JSON via triggers; manga stores it on insert.
+const MEMBERS_EXPR = (src) => `CAST(REPLACE(COALESCE(json_extract(${src}.statistics, '$.members'), '0'), ',', '') AS INTEGER)`;
+if (!db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('anime') WHERE name = 'members'").get().n) {
+  db.exec('ALTER TABLE anime ADD COLUMN members INTEGER NOT NULL DEFAULT 0');
+  db.exec(`UPDATE anime SET members = ${MEMBERS_EXPR('anime')} WHERE statistics IS NOT NULL`);
+}
+if (!db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('manga') WHERE name = 'members'").get().n) {
+  db.exec('ALTER TABLE manga ADD COLUMN members INTEGER NOT NULL DEFAULT 0');
+}
+db.exec(`
+CREATE TRIGGER IF NOT EXISTS trg_anime_members_ins AFTER INSERT ON anime BEGIN
+  UPDATE anime SET members = ${MEMBERS_EXPR('new')} WHERE id = new.id;
+END;
+CREATE TRIGGER IF NOT EXISTS trg_anime_members_upd AFTER UPDATE OF statistics ON anime BEGIN
+  UPDATE anime SET members = ${MEMBERS_EXPR('new')} WHERE id = new.id;
+END;
+CREATE INDEX IF NOT EXISTS idx_anime_members ON anime(members DESC);
+CREATE INDEX IF NOT EXISTS idx_manga_members ON manga(members DESC, score DESC);
+CREATE INDEX IF NOT EXISTS idx_anime_updated ON anime(updated_at);
+CREATE INDEX IF NOT EXISTS idx_manga_updated ON manga(updated_at);
+CREATE INDEX IF NOT EXISTS idx_entries_title ON user_entries(media_type, slug);
+`);
+
 // Migration: per-user session token version (security: revoke issued site-user
 // cookies when a password changes or the account is deleted).
 const tokenVersionColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('users') WHERE name = 'token_version'").get();

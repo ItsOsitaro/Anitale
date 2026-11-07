@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSiteLang } from '@/i18n';
-import { useCatalog, useMangaCatalog } from '../catalog-context.jsx';
+import { useCatalog, useEnsureTitles, useMangaCatalog } from '../catalog-context.jsx';
 import { mediaHref } from '../catalog.js';
 
 // Extra detail for a title (characters, relations, recommendations, trailer, themes) from
@@ -92,6 +92,7 @@ export function Characters({ data }) {
 function TitleLink({ type, id, name, image }) {
   const anime = useCatalog();
   const manga = useMangaCatalog();
+  useEnsureTitles(type === 'manga' ? 'manga' : 'anime', [], [id]);
   const local = (type === 'manga' ? manga : anime).find((entry) => entry.malId === id);
   const body = (
     <>

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useSiteLang } from '@/i18n';
-import { useCatalog, useMangaCatalog } from '@/catalog-context.jsx';
+import { useCatalog, useEnsureTitles, useMangaCatalog } from '@/catalog-context.jsx';
 import { mediaHref } from '@/catalog.js';
 
 // Watch / reading order of a franchise, built on demand from the title's relations.
@@ -13,6 +13,7 @@ export default function WatchOrder({ mediaType, malId, currentTitle }) {
   const catalog = mediaType === 'manga' ? manga : anime;
   const [open, setOpen] = useState(false);
   const [state, setState] = useState({ status: 'idle', found: 0 });
+  useEnsureTitles(mediaType, [], (state.items || []).map((entry) => entry.id));
 
   useEffect(() => { setOpen(false); setState({ status: 'idle', found: 0 }); }, [mediaType, malId]);
 

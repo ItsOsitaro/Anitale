@@ -23,12 +23,20 @@ for (const level of ['error', 'warn']) {
 const safe = (fn, fallback = null) => { try { return fn(); } catch { return fallback; } };
 const count = (sql) => safe(() => db.prepare(sql).get().n, 0);
 const fileSize = (file) => safe(() => fs.statSync(file).size, 0);
-const dirStats = (dir) => safe(() => {
-  const names = fs.readdirSync(dir);
-  let bytes = 0;
-  for (const name of names.slice(0, 20000)) bytes += fileSize(path.join(dir, name));
-  return { files: names.length, bytes };
-}, { files: 0, bytes: 0 });
+// Folder size scans are slow with 100k+ files, so each result is kept for 10 minutes.
+const statsCache = new Map();
+const dirStats = (dir) => {
+  const hit = statsCache.get(dir);
+  if (hit && Date.now() - hit.at < 600_000) return hit.value;
+  const value = safe(() => {
+    const names = fs.readdirSync(dir);
+    let bytes = 0;
+    for (const name of names.slice(0, 20000)) bytes += fileSize(path.join(dir, name));
+    return { files: names.length, bytes };
+  }, { files: 0, bytes: 0 });
+  statsCache.set(dir, { at: Date.now(), value });
+  return value;
+};
 
 const meminfo = () => safe(() => {
   const text = fs.readFileSync('/proc/meminfo', 'utf8');

@@ -275,20 +275,51 @@ export const registerSeoRoutes = (app) => {
   app.get('/anime/:idOrSlug{/:title}', itemPage('anime'));
   app.get('/manga/:idOrSlug{/:title}', itemPage('manga'));
 
-  app.get('/sitemap.xml', (req, res) => {
-    const origin = originOf(req);
-    const rows = [
-      ...db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem).map((item) => ({ type: 'anime', slug: item.slug, mal_id: item.malId, updated_at: item.updatedAt, item })),
-      ...db.prepare('SELECT * FROM manga ORDER BY id ASC').all().map(mangaRowToItem).map((item) => ({ type: 'manga', slug: item.slug, mal_id: item.malId, updated_at: item.updatedAt, item })),
-    ].filter((row) => !isSensitiveItem(row.item));
-    const lastmod = (value) => {
-      const date = new Date(String(value || '').replace(' ', 'T') + (String(value || '').includes('Z') ? '' : 'Z'));
-      return Number.isNaN(date.getTime()) ? '' : `<lastmod>${date.toISOString().slice(0, 10)}</lastmod>`;
-    };
-    const fixed = ['/', ...Object.keys(DISCOVERY)].map((p) => `<url><loc>${escapeHtml(origin + p)}</loc></url>`);
-    const items = rows.map((row) => `<url><loc>${escapeHtml(`${origin}/${row.type}/${row.mal_id ?? row.slug}`)}</loc>${lastmod(row.updated_at)}</url>`);
+  // The sitemap is an index plus pages of at most 40,000 titles (search engines cap a file at 50,000).
+  // Sensitive titles are left out in SQL, so 150k rows are never loaded into memory; each page is cached.
+  const SITEMAP_PAGE = 40000;
+  const sensitiveSql = (table) => `(genres LIKE '%"hentai"%' OR genres LIKE '%"ecchi"%' OR genres LIKE '%"erotica"%'${table === 'anime' ? " OR information LIKE '%Rx - Hentai%'" : ''})`;
+  const sitemapCache = new Map();
+  const cached = (key, build) => {
+    const hit = sitemapCache.get(key);
+    if (hit && Date.now() - hit.at < 600_000) return hit.xml;
+    const xml = build();
+    if (sitemapCache.size > 20) sitemapCache.clear();
+    sitemapCache.set(key, { at: Date.now(), xml });
+    return xml;
+  };
+  const sendXml = (res, xml) => {
     res.setHeader('Content-Type', 'application/xml; charset=utf-8');
     res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600');
-    res.send(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${[...fixed, ...items].join('\n')}\n</urlset>\n`);
+    res.send(xml);
+  };
+  const lastmod = (value) => {
+    const date = new Date(String(value || '').replace(' ', 'T') + (String(value || '').includes('Z') ? '' : 'Z'));
+    return Number.isNaN(date.getTime()) ? '' : `<lastmod>${date.toISOString().slice(0, 10)}</lastmod>`;
+  };
+  const SET_OPEN = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n';
+
+  app.get('/sitemap.xml', (req, res) => {
+    const origin = originOf(req);
+    sendXml(res, cached(`index|${origin}`, () => {
+      const pages = (table) => Math.ceil(db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE NOT ${sensitiveSql(table)}`).get().n / SITEMAP_PAGE);
+      const entries = ['/sitemap-pages.xml'];
+      for (const table of ['anime', 'manga']) for (let i = 1; i <= pages(table); i += 1) entries.push(`/sitemap-${table}-${i}.xml`);
+      return `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${entries.map((p) => `<sitemap><loc>${escapeHtml(origin + p)}</loc></sitemap>`).join('\n')}\n</sitemapindex>\n`;
+    }));
+  });
+  app.get('/sitemap-pages.xml', (req, res) => {
+    const origin = originOf(req);
+    sendXml(res, cached(`pages|${origin}`, () => `${SET_OPEN}${['/', ...Object.keys(DISCOVERY)].map((p) => `<url><loc>${escapeHtml(origin + p)}</loc></url>`).join('\n')}\n</urlset>\n`));
+  });
+  app.get('/sitemap-:table-:page.xml', (req, res, next) => {
+    const { table } = req.params;
+    const page = Number(req.params.page);
+    if (!['anime', 'manga'].includes(table) || !Number.isInteger(page) || page < 1) { next(); return; }
+    const origin = originOf(req);
+    sendXml(res, cached(`${table}|${page}|${origin}`, () => {
+      const rows = db.prepare(`SELECT slug, mal_id, updated_at FROM ${table} WHERE NOT ${sensitiveSql(table)} ORDER BY id ASC LIMIT ? OFFSET ?`).all(SITEMAP_PAGE, (page - 1) * SITEMAP_PAGE);
+      return `${SET_OPEN}${rows.map((row) => `<url><loc>${escapeHtml(`${origin}/${table}/${row.mal_id ?? row.slug}`)}</loc>${lastmod(row.updated_at)}</url>`).join('\n')}\n</urlset>\n`;
+    }));
   });
 };

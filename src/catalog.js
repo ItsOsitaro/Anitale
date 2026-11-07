@@ -14,7 +14,7 @@ const fetchJson = async (url) => {
 // hydrate instantly from the stored copy without re-parsing 240 KB of JSON.
 const CATALOG_CACHE_KEYS = {
   '/api/anime?lite=1': 'malCatalogCacheAnimeLite',
-  '/api/manga': 'malCatalogCacheManga',
+  '/api/manga?lite=1': 'malCatalogCacheMangaLite',
 };
 
 const fetchJsonCached = async (url) => {
@@ -37,14 +37,23 @@ const fetchJsonCached = async (url) => {
   return data;
 };
 
+// Cover path + cache-buster; shared by the core list and titles fetched on demand.
+export const normalizeAnime = (item) => ({
+  ...item,
+  image: item.image ? `${baseUrl.replace(/\/$/, '')}${item.image}?v=${encodeURIComponent(item.updatedAt || '')}` : PLACEHOLDER,
+});
+
+// A /api/search/full row as a card item for the grids and lists.
+export const rowToCard = (row) => {
+  const card = { slug: row.slug, malId: row.malId, title: row.title, titleFa: row.titleFa, year: row.year, format: row.format, sampleScore: row.score, genres: row.genres || [], image: row.image };
+  return row.kind === 'manga' ? { ...card, image: row.image || PLACEHOLDER } : normalizeAnime(card);
+};
+
 const fromApi = async () => {
   try { localStorage.removeItem('malCatalogCacheAnime'); } catch { /* old full-catalog cache, no longer used */ }
   const items = await fetchJsonCached('/api/anime?lite=1');
   if (!Array.isArray(items)) throw new Error('Unexpected API response');
-  return items.map((item) => ({
-    ...item,
-    image: item.image ? `${baseUrl.replace(/\/$/, '')}${item.image}?v=${encodeURIComponent(item.updatedAt || '')}` : PLACEHOLDER,
-  }));
+  return items.map(normalizeAnime);
 };
 
 const fromStaticFiles = async () => {
@@ -83,7 +92,8 @@ export const loadAnimeCatalog = async () => {
 
 export const loadMangaCatalog = async () => {
   try {
-    const items = await fetchJsonCached('/api/manga');
+    try { localStorage.removeItem('malCatalogCacheManga'); } catch { /* old full cache */ }
+    const items = await fetchJsonCached('/api/manga?lite=1');
     if (!Array.isArray(items)) throw new Error('Unexpected API response');
     return items;
   } catch (error) {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useSiteLang } from './i18n.js';
-import { useCatalog, useMangaCatalog } from './catalog-context.jsx';
+import { useCatalog, useEnsureTitles, useMangaCatalog } from './catalog-context.jsx';
 import { mediaHref } from './catalog.js';
 import { FavoriteButton } from './components/Favorites.jsx';
 
@@ -35,6 +35,7 @@ function Cover({ src, alt }) {
 function MediaChip({ entry, note }) {
   const anime = useCatalog();
   const manga = useMangaCatalog();
+  useEnsureTitles(entry.type === 'manga' ? 'manga' : 'anime', [], [entry.id]);
   const local = (entry.type === 'manga' ? manga : anime).find((item) => item.malId === entry.id);
   const body = (
     <>

@@ -56,6 +56,31 @@ export const mangaRowToItem = (row) => ({
 });
 
 export const listManga = () => db.prepare('SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id ORDER BY m.id ASC').all().map(mangaRowToItem);
+
+// "Core" catalog: what the browser loads in one go. Most popular titles, plus anything
+// hand-made (no MAL id) and, for anime, anything on the weekly schedule.
+export const CORE_SIZE = Number(process.env.CORE_CATALOG_SIZE) || 3000;
+export const coreAnimeRows = () => db.prepare(
+  "SELECT * FROM anime WHERE mal_id IS NULL OR airing_day != '' OR id IN (SELECT id FROM anime ORDER BY members DESC, id ASC LIMIT ?) ORDER BY id ASC",
+).all(CORE_SIZE);
+export const listMangaCore = () => db.prepare(
+  'SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id WHERE m.mal_id IS NULL OR m.id IN (SELECT id FROM manga ORDER BY members DESC, score DESC, id ASC LIMIT ?) ORDER BY m.id ASC',
+).all(CORE_SIZE).map(mangaRowToItem);
+
+// Batch lookup for lists/relations: titles by slug or MAL id (max 100 per call).
+export const animeRowsBy = ({ slugs = [], malIds = [] }) => {
+  const out = [];
+  if (slugs.length) out.push(...db.prepare(`SELECT * FROM anime WHERE slug IN (${slugs.map(() => '?').join(',')})`).all(...slugs));
+  if (malIds.length) out.push(...db.prepare(`SELECT * FROM anime WHERE mal_id IN (${malIds.map(() => '?').join(',')})`).all(...malIds));
+  return out;
+};
+export const mangaItemsBy = ({ slugs = [], malIds = [] }) => {
+  const out = [];
+  const base = 'SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id';
+  if (slugs.length) out.push(...db.prepare(`${base} WHERE m.slug IN (${slugs.map(() => '?').join(',')})`).all(...slugs));
+  if (malIds.length) out.push(...db.prepare(`${base} WHERE m.mal_id IN (${malIds.map(() => '?').join(',')})`).all(...malIds));
+  return out.map(mangaRowToItem);
+};
 export const getMangaBySlug = (slug) => db.prepare('SELECT * FROM manga WHERE slug = ?').get(slug);
 export const getMangaByMalId = (malId) => (malId ? db.prepare('SELECT * FROM manga WHERE mal_id = ?').get(malId) : undefined);
 export const countManga = () => db.prepare('SELECT COUNT(*) AS n FROM manga').get().n;
@@ -67,7 +92,7 @@ const mangaCols = [
   'title', 'category', 'year', 'format', 'score', 'publication_status', 'chapters', 'genres', 'synopsis',
 ];
 const updateMangaStmt = db.prepare(
-  `UPDATE manga SET ${mangaCols.map((c) => `${c}=@${c}`).join(', ')}, mal_id=@malId, cover=@cover, updated_at=datetime('now') WHERE id=@id`,
+  `UPDATE manga SET ${mangaCols.map((c) => `${c}=@${c}`).join(', ')}, mal_id=@malId, cover=@cover, members=COALESCE(@members, members), updated_at=datetime('now') WHERE id=@id`,
 );
 export const updateManga = (id, item, { malId, score = null, cover }) => {
   updateMangaStmt.run({
@@ -75,7 +100,7 @@ export const updateManga = (id, item, { malId, score = null, cover }) => {
     title: item.title, category: item.category || '', year: item.year || '', format: item.format || 'Manga',
     score, publication_status: item.publicationStatus || '', chapters: item.chapters ?? null,
     genres: JSON.stringify(item.genres || []), synopsis: JSON.stringify(item.synopsis ?? ''),
-    malId, cover,
+    malId, cover, members: item.members ? Number(item.members) : null,
   });
   return db.prepare('SELECT * FROM manga WHERE id = ?').get(id);
 };
@@ -83,13 +108,13 @@ export const updateManga = (id, item, { malId, score = null, cover }) => {
 // Seeded rows pass plain seed data; bulk-imported rows additionally carry
 // malId / score / cover. INSERT OR IGNORE keeps seed re-runs idempotent;
 // the bulk path checks mal_id + slug uniqueness before calling this.
-export const insertManga = (item, { malId = null, score = null, cover = '', titleFa = '', publicationStatus = '', chapters = null } = {}) => {
+export const insertManga = (item, { malId = null, score = null, cover = '', titleFa = '', publicationStatus = '', chapters = null, members = 0 } = {}) => {
   db.prepare(
-    'INSERT INTO manga (slug, title, title_fa, category, year, format, genres, synopsis, mal_id, score, cover, publication_status, chapters) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO manga (slug, title, title_fa, category, year, format, genres, synopsis, mal_id, score, cover, publication_status, chapters, members) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   ).run(
     item.slug, item.title, item.titleFa || titleFa || '', item.category || '', item.year || '', item.format || 'Manga',
     JSON.stringify(item.genres || []), JSON.stringify(item.synopsis ?? ''),
-    malId, score, cover, publicationStatus, chapters,
+    malId, score, cover, publicationStatus, chapters, Number(members) || 0,
   );
   return db.prepare('SELECT * FROM manga WHERE slug = ?').get(item.slug);
 };

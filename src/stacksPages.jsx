@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Heart } from 'lucide-react';
 import { useSiteLang } from './i18n.js';
 import { useUser, userApi } from './user.jsx';
-import { useCatalog, useMangaCatalog, withMangaImages } from './catalog-context.jsx';
+import { useCatalog, useEnsureTitles, useMangaCatalog, withMangaImages } from './catalog-context.jsx';
 import { mediaHref } from './catalog.js';
 import { coverUrl } from './lib/cover';
 import { formatNumber } from './lib/digits.js';
@@ -115,8 +115,22 @@ function Editor({ stack, onChange, onDeleted }) {
   };
   const key = (i) => `${i.mediaType}:${i.slug}`;
   const has = new Set(stack.items.map(key));
-  const needle = q.trim().toLowerCase();
-  const hits = needle.length < 2 ? [] : maps.all.filter((i) => !has.has(key(i)) && [i.title, i.titleFa].some((n) => n && String(n).toLowerCase().includes(needle))).slice(0, 8);
+  useEnsureTitles('anime', stack.items.filter((i) => i.mediaType === 'anime').map((i) => i.slug));
+  useEnsureTitles('manga', stack.items.filter((i) => i.mediaType === 'manga').map((i) => i.slug));
+  // Title search goes to the server: the browser only holds the popular core of the catalog.
+  const needle = q.trim();
+  const [found, setFound] = useState([]);
+  useEffect(() => {
+    if (needle.length < 2) { setFound([]); return undefined; }
+    let alive = true;
+    const timer = setTimeout(() => {
+      fetch(`/api/search?q=${encodeURIComponent(needle)}&sfw=1`).then((r) => r.json())
+        .then((data) => { if (alive) setFound((data.items || []).map((h) => ({ mediaType: h.kind, slug: h.slug, title: h.title }))); })
+        .catch(() => { if (alive) setFound([]); });
+    }, 250);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [needle]);
+  const hits = found.filter((i) => !has.has(key(i)));
   const move = (idx, d) => {
     const items = [...stack.items]; const j = idx + d;
     if (j < 0 || j >= items.length) return;
@@ -180,6 +194,8 @@ export function StackView() {
     return () => { alive = false; };
   }, [id, user.me?.username]);
   const d = state.data;
+  useEnsureTitles('anime', (d?.items || []).filter((i) => i.mediaType === 'anime').map((i) => i.slug));
+  useEnsureTitles('manga', (d?.items || []).filter((i) => i.mediaType === 'manga').map((i) => i.slug));
   useEffect(() => { if (d) document.title = `${d.title} · ${t('siteName')}`; }, [d, t]);
   if (state.status === 'loading') return <main className="stacks-shell" aria-busy="true"><p className="extras-muted" role="status">{t('extrasLoading')}</p></main>;
   if (state.status !== 'ready') return <main className="stacks-shell"><h1>{t('stackMissing')}</h1><Link to="/stacks">{t('stacksTitle')}</Link></main>;

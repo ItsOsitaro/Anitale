@@ -1,5 +1,5 @@
 import rateLimit from 'express-rate-limit';
-import { getDocs, searchCatalog } from './search.js';
+import { fullItemOf, findDoc, getDocs, searchCatalog } from './search.js';
 
 // Public read-only API: /api/v1. No key, rate limited per IP, sensitive titles never included,
 // `fields` picks the properties, ETag (Express) + Cache-Control let clients revalidate cheaply.
@@ -98,7 +98,7 @@ export const registerApiV1 = (app) => {
       sort: forceSort || (sortOk.includes(req.query.sort) ? req.query.sort : ''), page, limit, sfw: true, raw: true,
     });
     const origin = originOf(req);
-    done(res, { items: result.items.map((r) => pickFields(full(r.doc, origin), fields)), total: result.total, page: result.page, pages: result.pages, limit });
+    done(res, { items: result.items.map((r) => pickFields(full({ ...r.doc, item: fullItemOf(r.doc) }, origin), fields)), total: result.total, page: result.page, pages: result.pages, limit });
   };
   app.get('/api/v1/anime', listHandler('anime'));
   app.get('/api/v1/manga', listHandler('manga'));
@@ -110,9 +110,9 @@ export const registerApiV1 = (app) => {
     if (!fields) { bad(res, `Unknown fields. Allowed: ${FIELDS[kind].join(', ')}`); return; }
     const key = String(req.params.id || '');
     const asMal = /^\d+$/.test(key) ? Number(key) : null;
-    const doc = getDocs().find((d) => d.kind === kind && !d.sensitive && (d.item.slug === key || (asMal != null && d.item.malId === asMal)));
-    if (!doc) { res.status(404).json({ error: 'Not found' }); return; }
-    done(res, pickFields(full(doc, originOf(req)), fields));
+    const doc = findDoc(kind, key);
+    if (!doc || doc.sensitive) { res.status(404).json({ error: 'Not found' }); return; }
+    done(res, pickFields(full({ ...doc, item: fullItemOf(doc) }, originOf(req)), fields));
   };
   app.get('/api/v1/anime/:id', oneHandler('anime'));
   app.get('/api/v1/manga/:id', oneHandler('manga'));
@@ -123,7 +123,7 @@ export const registerApiV1 = (app) => {
     const limit = Math.min(20, Math.max(1, Number.parseInt(req.query.limit, 10) || 10));
     const origin = originOf(req);
     const result = searchCatalog({ q, type: 'all', limit, sfw: true, raw: true });
-    done(res, { items: result.items.map((r) => pickFields(full(r.doc, origin), DEFAULT_LIST)), total: result.total });
+    done(res, { items: result.items.map((r) => pickFields(full({ ...r.doc, item: fullItemOf(r.doc) }, origin), DEFAULT_LIST)), total: result.total });
   });
 
   app.get('/api/v1/schedule', (req, res) => {
@@ -134,7 +134,7 @@ export const registerApiV1 = (app) => {
     for (const doc of getDocs()) {
       if (doc.kind !== 'anime' || doc.sensitive) continue;
       const day = String(doc.item.airingDay || '').toLowerCase();
-      if (days[day]) days[day].push(pickFields(full(doc, origin), fields));
+      if (days[day]) days[day].push(pickFields(full({ ...doc, item: fullItemOf(doc) }, origin), fields));
     }
     done(res, { days }, 600);
   });

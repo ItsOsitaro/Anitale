@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useSiteLang } from '@/i18n';
 import { useUser, userApi } from '@/user.jsx';
-import { useCatalog, useMangaCatalog } from '@/catalog-context.jsx';
+import { useCatalog, useEnsureTitles, useMangaCatalog } from '@/catalog-context.jsx';
 import { mediaHref } from '@/catalog.js';
 import { getShowSensitive } from '@/lib/catalog-rules.js';
 
@@ -120,6 +120,7 @@ export default function Recommendations({ mediaType, slug }) {
   const manga = useMangaCatalog();
   const catalog = mediaType === 'manga' ? manga : anime;
   const [items, setItems] = useState(null);
+  useEnsureTitles(mediaType, (items || []).map((rec) => rec.other));
   const me = user.me?.username || null;
 
   const load = useCallback(async () => {

@@ -4,7 +4,7 @@ import { Link, Navigate, useNavigate, useParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSiteLang } from './i18n.js';
-import { useCatalog, useMangaCatalog, withMangaImages } from './catalog-context.jsx';
+import { useCatalog, useEnsureTitles, useMangaCatalog, withMangaImages } from './catalog-context.jsx';
 import { mediaHref } from './catalog.js';
 import { useUser, userApi } from './user.jsx';
 import FollowListSheet from '@/components/FollowListSheet';
@@ -297,6 +297,8 @@ export function UserDashboard() {
   const isMobile = useIsMobile();
   const user = useUser();
   const { animeBySlug, mangaBySlug } = useEntryCatalogs();
+  useEnsureTitles('anime', user.entries.anime.map((entry) => entry.slug));
+  useEnsureTitles('manga', user.entries.manga.map((entry) => entry.slug));
   const [tab, setTab] = useState('anime');
   const [statusFilter, setStatusFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState('');
@@ -531,6 +533,8 @@ export function ListMatches() {
   const user = useUser();
   const { animeBySlug, mangaBySlug } = useEntryCatalogs();
   const [matches, setMatches] = useState(null);
+  useEnsureTitles('anime', (matches || []).filter((m) => m.mediaType === 'anime').map((m) => m.slug));
+  useEnsureTitles('manga', (matches || []).filter((m) => m.mediaType === 'manga').map((m) => m.slug));
   useEffect(() => {
     if (!user.me) { setMatches(null); return undefined; }
     let alive = true;
@@ -659,6 +663,8 @@ export function UserPublicProfile() {
   const user = useUser();
   const { animeBySlug, mangaBySlug } = useEntryCatalogs();
   const [data, setData] = useState(null);
+  useEnsureTitles('anime', [...(data?.entries?.anime || []).map((entry) => entry.slug), ...(data?.favorites?.anime || []).map((f) => f.slug || f.ref).filter(Boolean)]);
+  useEnsureTitles('manga', [...(data?.entries?.manga || []).map((entry) => entry.slug), ...(data?.favorites?.manga || []).map((f) => f.slug || f.ref).filter(Boolean)]);
   const [notFound, setNotFound] = useState(false);
   const [loadFailed, setLoadFailed] = useState(false);
   const [tab, setTab] = useState('anime');

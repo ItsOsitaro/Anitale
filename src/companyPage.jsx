@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { useSiteLang } from './i18n.js';
-import { useVisibleCatalog, useVisibleMangaCatalog } from './catalog-context.jsx';
-import { membersOf } from './lib/catalog-rules.js';
+import { normalizeAnime } from './catalog.js';
+import { useShowSensitive } from './lib/catalog-rules.js';
 import { AnimeGrid } from './App.jsx';
 import { formatNumber } from './lib/digits.js';
 
@@ -17,27 +17,37 @@ export const companyNames = (item, kind) => {
 };
 export const companyHref = (kind, name) => `/${kind}/${encodeURIComponent(name)}`;
 
-const SORTS = {
-  popular: (a, b) => membersOf(b) - membersOf(a),
-  score: (a, b) => (Number(b.sampleScore) || 0) - (Number(a.sampleScore) || 0),
-  newest: (a, b) => (parseInt(b.year, 10) || 0) - (parseInt(a.year, 10) || 0),
-};
+// Company pages ask the server (it indexes every title); the browser only holds the popular core.
+const SORT_PARAM = { popular: 'pop', score: 'score', newest: 'new' };
+const SORTS = SORT_PARAM;
 
 export default function CompanyPage({ kind }) {
   const { name: raw } = useParams();
   const name = useMemo(() => { try { return decodeURIComponent(raw || ''); } catch { return raw || ''; } }, [raw]);
   const { t, lang } = useSiteLang();
-  const anime = useVisibleCatalog();
-  const manga = useVisibleMangaCatalog();
+  const showSensitive = useShowSensitive();
   const [params, setParams] = useSearchParams();
   const sort = SORTS[params.get('sort')] ? params.get('sort') : 'popular';
   const page = Math.max(1, Number(params.get('page')) || 1);
-  const source = kind === 'magazine' ? manga : anime;
-  const items = useMemo(() => {
-    const needle = name.toLowerCase();
-    return source.filter((item) => companyNames(item, kind).some((n) => n.toLowerCase() === needle)).sort(SORTS[sort]);
-  }, [source, kind, name, sort]);
-  const pages = Math.max(1, Math.ceil(items.length / PER_PAGE));
+  const [state, setState] = useState({ items: [], total: 0, pages: 1, loading: true });
+  useEffect(() => {
+    let alive = true;
+    setState((s) => ({ ...s, loading: true }));
+    const query = new URLSearchParams({ type: kind === 'magazine' ? 'manga' : 'anime', [kind]: name, sort: SORT_PARAM[sort], page: String(page), limit: String(PER_PAGE) });
+    if (!showSensitive) query.set('sfw', '1');
+    fetch(`/api/search/full?${query}`).then((r) => r.json()).then((data) => {
+      if (!alive) return;
+      const placeholder = normalizeAnime({}).image;
+      const items = (data.items || []).map((row) => {
+        const card = { slug: row.slug, malId: row.malId, title: row.title, year: row.year, format: row.format, sampleScore: row.score, genres: row.genres || [], image: row.image };
+        return kind === 'magazine' ? { ...card, image: row.image || placeholder } : normalizeAnime(card);
+      });
+      setState({ items, total: data.total || 0, pages: data.pages || 1, loading: false });
+    }).catch(() => { if (alive) setState({ items: [], total: 0, pages: 1, loading: false }); });
+    return () => { alive = false; };
+  }, [kind, name, sort, page, showSensitive]);
+  const items = state.items;
+  const pages = state.pages;
   const current = Math.min(page, pages);
   useEffect(() => { document.title = `${name} · ${t('siteName')}`; }, [name, t]);
   const set = (patch) => { const next = new URLSearchParams(params); Object.entries(patch).forEach(([k, v]) => (v == null ? next.delete(k) : next.set(k, v))); setParams(next); };
@@ -48,7 +58,7 @@ export default function CompanyPage({ kind }) {
       <p className="company-kind">{kindLabel}</p>
       <h1 dir="auto">{name}</h1>
       <div className="company-bar">
-        <span>{t('companyCount', { n: formatNumber(items.length, lang) })}</span>
+        <span>{t('companyCount', { n: formatNumber(state.total, lang) })}</span>
         <label>
           {t('dashSortLabel')}{' '}
           <select value={sort} onChange={(e) => set({ sort: e.target.value === 'popular' ? null : e.target.value, page: null })}>
@@ -58,10 +68,12 @@ export default function CompanyPage({ kind }) {
           </select>
         </label>
       </div>
-      {items.length === 0 ? (
+      {state.loading && items.length === 0 ? (
+        <p className="extras-muted" role="status">{t('extrasLoading')}</p>
+      ) : items.length === 0 ? (
         <p className="extras-muted">{t('companyEmpty')} <Link to={kind === 'magazine' ? '/manga' : '/anime'}>{t('browseAll')}</Link></p>
       ) : (
-        <AnimeGrid items={items.slice((current - 1) * PER_PAGE, current * PER_PAGE)} />
+        <AnimeGrid items={items} />
       )}
       {pages > 1 && (
         <div className="topchars-pager">

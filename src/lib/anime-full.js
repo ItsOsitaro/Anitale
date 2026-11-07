@@ -1,18 +1,21 @@
-// Full title record (/api/anime/:slug). The catalog list is lite, so the detail
-// page needs this; hovering a card starts the request early and the page reuses it.
+// Full title record. The catalog lists are lite, so the detail page needs this; hovering a
+// card starts the request early and the page reuses it.
 const cache = new Map();
 
-export function fetchAnimeFull(slug) {
+export function fetchTitleFull(type, slug) {
   if (!slug) return Promise.resolve(null);
-  if (!cache.has(slug)) {
-    const request = fetch(`/api/anime/${encodeURIComponent(slug)}`)
+  const key = `${type}:${slug}`;
+  if (!cache.has(key)) {
+    const request = fetch(`/api/title/${type}/${encodeURIComponent(slug)}`)
       .then((res) => (res.ok ? res.json() : null))
       .catch(() => null)
       .then((data) => {
-        if (!data) cache.delete(slug);
+        if (!data) cache.delete(key);
         return data;
       });
-    cache.set(slug, request);
+    cache.set(key, request);
   }
-  return cache.get(slug);
+  return cache.get(key);
 }
+
+export const fetchAnimeFull = (slug) => fetchTitleFull('anime', slug);

@@ -15,7 +15,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import NumberTicker from '@/components/tarhak/NumberTicker.jsx';
 const AdminApp = lazy(() => import('./admin/AdminApp.jsx'));
 import { loadAnimeCatalog, loadMangaCatalog, buildSchedule, mediaHref, foldTitle, currentWeekday, WEEKDAY_ORDER } from './catalog.js';
-import { CatalogContext, MangaCatalogContext, useCatalog, useMangaCatalog, useVisibleCatalog, useVisibleMangaCatalog, withMangaImages } from './catalog-context.jsx';
+import { CatalogContext, MangaCatalogContext, useCatalog, useMangaCatalog, useResolvedTitle, useVisibleCatalog, useVisibleMangaCatalog, withMangaImages } from './catalog-context.jsx';
 import { getShowSensitive, isSensitive, rankKey, setShowSensitive, useShowSensitive } from './lib/catalog-rules.js';
 import { useUser, UserProvider } from './user.jsx';
 import { useTitleExtras, hasAny, FranchiseNav, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from './components/TitleExtras.jsx';
@@ -45,7 +45,7 @@ import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
 import IntroStrip from './components/IntroStrip.jsx';
 import { formatNumber, formatScore, toPersianDigits } from '@/lib/digits.js';
-import { fetchAnimeFull } from '@/lib/anime-full.js';
+import { fetchAnimeFull, fetchTitleFull } from '@/lib/anime-full.js';
 import { infoLabel, infoValue as infoValueFa } from '@/lib/info-labels.js';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
@@ -796,6 +796,7 @@ function CatalogControls({ query, onQueryChange, genre, onGenreChange, genres, c
         </select>
       </label>
       <span className="catalog-count">{t('titlesCount', { n: count })}</span>
+      <span className="catalog-note">{t('catalogCoreNote')}</span>
     </div>
   );
 }
@@ -1437,17 +1438,14 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   const { lang, t } = useSiteLang();
   const { idOrSlug } = useParams();
   const animeCatalog = useCatalog();
-  const mangaCatalog = useMangaCatalog();
-  const catalog = mediaType === 'manga' ? mangaCatalog : animeCatalog;
   const visibleAnime = useVisibleCatalog();
   const visibleManga = useVisibleMangaCatalog();
   const showSensitive = useShowSensitive();
   // MAL-style /anime/136/Hunter_x_Hunter resolves by MyAnimeList id; plain /anime/{slug}
-  // (legacy links and entries without an id) resolves by slug.
-  const idMatch = /^(\d+)$/.exec(idOrSlug || '');
-  let item = null;
-  if (idMatch) item = catalog.find((entry) => String(entry.malId) === idMatch[1]) || null;
-  if (!item) item = catalog.find((entry) => entry.slug === idOrSlug) || null;
+  // (legacy links and entries without an id) resolves by slug. Titles outside the core
+  // catalog are fetched from the server (`loading` until it answers).
+  const { item: foundItem, loading: titleLoading } = useResolvedTitle(mediaType, idOrSlug);
+  let item = foundItem;
   const resolved = item;
   // The catalog list is lite (no links / alternative titles / full synopsis);
   // anime detail pages pull those from /api/anime/:slug and merge them in.
@@ -1457,17 +1455,23 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   useEffect(() => {
     setFull(null);
     setFullSettled(false);
-    if (!resolvedSlug || mediaType !== 'anime') return undefined;
+    if (!resolvedSlug) return undefined;
     let cancelled = false;
-    fetchAnimeFull(resolvedSlug)
+    fetchTitleFull(mediaType, resolvedSlug)
       .then((data) => { if (!cancelled && data?.slug === resolvedSlug) setFull(data); })
       .finally(() => { if (!cancelled) setFullSettled(true); });
     return () => { cancelled = true; };
   }, [resolvedSlug, mediaType]);
   if (item && full) {
-    item = { ...item, synopsis: full.synopsis, availableAt: full.availableAt, alternativeTitles: full.alternativeTitles, streamingPlatforms: full.streamingPlatforms };
+    item = mediaType === 'manga'
+      ? { ...item, synopsis: full.synopsis, serialization: full.serialization ?? item.serialization }
+      : { ...item, synopsis: full.synopsis, availableAt: full.availableAt, alternativeTitles: full.alternativeTitles, streamingPlatforms: full.streamingPlatforms };
   }
   const detailSource = item;
+  const mangaImage = useMemo(
+    () => (mediaType === 'manga' && resolved ? withMangaImages([resolved], animeCatalog)[0].image : ''),
+    [mediaType, resolved, animeCatalog],
+  );
   // Rank among the titles the visitor can see (weighted score, see lib/catalog-rules.js).
   const ranked = resolved ? (mediaType === 'manga' ? visibleManga : visibleAnime).find((entry) => entry.slug === resolved.slug) : null;
   item = {
@@ -1479,11 +1483,11 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
     synopsis: synopsisText(detailSource, lang),
     // Persian text that is still an unreviewed machine translation gets a small note.
     synopsisAuto: lang === 'fa' && Boolean(detailSource?.synopsis?.auto && detailSource.synopsis.fa),
-    detailLoading: mediaType === 'anime' && !fullSettled,
-    ...(mediaType === 'manga'
-      ? { image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item }
-      : {}),
+    detailLoading: !fullSettled,
+    ...(mediaType === 'manga' && item?.slug ? { image: mangaImage } : {}),
   };
+
+  if (!resolved && titleLoading) return <CatalogSkeleton />;
 
   if (resolved && isSensitive(resolved) && !showSensitive) {
     return <SensitiveGate mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} />;

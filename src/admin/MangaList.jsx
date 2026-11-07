@@ -4,7 +4,7 @@ import { api, runBulkJob } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 
-const PAGE_SIZE = 20; // client-side pager — the manga endpoint returns every row at once
+// Server-side pager: the table can hold 100k+ rows, so only one page is fetched at a time.
 
 // Queue 25/27: manga management mirrors the anime list — same toolbar
 // (search, count, update-all, add action) and the same table structure.
@@ -14,6 +14,7 @@ export default function MangaList() {
   const [debounced, setDebounced] = useState('');
   const [page, setPage] = useState(1);
   const [rows, setRows] = useState(null);
+  const [meta, setMeta] = useState({ total: 0, pages: 1, withMalId: 0 });
   const [error, setError] = useState('');
   const [busy, setBusy] = useState('');
   const [busyAll, setBusyAll] = useState(false);
@@ -29,21 +30,14 @@ export default function MangaList() {
   const load = useCallback(() => {
     // alive-guard: a stale response must not overwrite a newer one.
     let active = true;
-    api.mangaList().then((items) => { if (active) { setRows(items || []); setError(''); } }).catch((err) => { if (active) setError(errText(err, t)); });
+    api.mangaPage(debounced, page).then((data) => { if (active) { setRows(data.items || []); setMeta({ total: data.total, pages: data.pages, withMalId: data.withMalId }); setError(''); } }).catch((err) => { if (active) setError(errText(err, t)); });
     return () => { active = false; };
-  }, [t]);
+  }, [t, debounced, page]);
   useEffect(load, [load]);
 
-  const shown = useMemo(() => {
-    const needle = debounced.toLowerCase();
-    return (rows || []).filter((row) => {
-      if (!needle) return true;
-      return `${row.title} ${row.titleFa || ''} ${row.slug}`.toLowerCase().includes(needle);
-    });
-  }, [rows, debounced]);
-
-  const pages = Math.max(1, Math.ceil(shown.length / PAGE_SIZE));
-  const pageRows = shown.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+  const shown = rows || [];
+  const pages = meta.pages;
+  const pageRows = shown;
 
   // Human text for one change ({field, from, to}) — same report as the anime list.
   const changeText = (change) => {
@@ -85,7 +79,7 @@ export default function MangaList() {
 
   // Re-fetch every manga that stores a MyAnimeList id (same flow as the anime list).
   const refreshAllRows = async () => {
-    const count = (rows || []).filter((row) => row.malId).length;
+    const count = meta.withMalId;
     if (count === 0) { toast(t('mangaUpdateNothing'), 'error'); return; }
     if (!window.confirm(t('mangaConfirmUpdateAll', { n: count }))) return;
     setBusyAll(true);
@@ -155,8 +149,8 @@ export default function MangaList() {
     <section>
       <div className="adm-toolbar">
         <input className="adm-search" type="search" dir="auto" placeholder={t('mangaSearch')} aria-label={t('mangaSearch')} value={query} onChange={(e) => setQuery(e.target.value)} />
-        {rows && <span className="adm-muted">{t('mangaTotal', { n: shown.length })}</span>}
-        <button className="adm-btn" type="button" disabled={busyAll || !rows?.some((x) => x.malId)} title={t('mangaUpdateAllHint')} onClick={refreshAllRows}>
+        {rows && <span className="adm-muted">{t('mangaTotal', { n: meta.total })}</span>}
+        <button className="adm-btn" type="button" disabled={busyAll || !meta.withMalId} title={t('mangaUpdateAllHint')} onClick={refreshAllRows}>
           {busyAll ? `${t('refreshing')}${bulkProgress ? ` ${bulkProgress.done}/${bulkProgress.total}` : ''}` : t('mangaUpdateAll')}
         </button>
         <Link className="adm-btn adm-primary adm-push" to="/admin/bulk-import?type=manga">+ {t('mangaNew')}</Link>

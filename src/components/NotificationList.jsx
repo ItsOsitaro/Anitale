@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { mediaHref } from '@/catalog';
-import { useCatalog, useMangaCatalog, withMangaImages } from '@/catalog-context';
+import { useCatalog, useEnsureTitles, useMangaCatalog, withMangaImages } from '@/catalog-context';
 import { displayTitle } from '@/home-data';
 import { useSiteLang } from '@/i18n';
 import { coverUrl } from '@/lib/cover';
@@ -21,6 +21,8 @@ export default function NotificationList({ items, onNavigate }) {
   const { t, lang } = useSiteLang();
   const anime = useCatalog();
   const manga = useMangaCatalog();
+  useEnsureTitles('anime', items.filter((row) => row.slug && row.mediaType === 'anime').map((row) => row.slug));
+  useEnsureTitles('manga', items.filter((row) => row.slug && row.mediaType === 'manga').map((row) => row.slug));
   const bySlug = useMemo(() => ({
     anime: new Map((anime || []).map((item) => [item.slug, item])),
     manga: new Map(withMangaImages(manga || [], anime || []).map((item) => [item.slug, item])),

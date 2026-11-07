@@ -2,8 +2,9 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
 import { Search, X } from 'lucide-react';
-import { foldTitle, mediaHref } from '@/catalog';
-import { useVisibleCatalog, useVisibleMangaCatalog, withMangaImages } from '@/catalog-context';
+import { mediaHref, rowToCard } from '@/catalog';
+import { useVisibleCatalog } from '@/catalog-context';
+import { useShowSensitive } from '@/lib/catalog-rules';
 import { displayTitle } from '@/home-data';
 import { useSiteLang } from '@/i18n';
 import { coverUrl } from '@/lib/cover';
@@ -28,29 +29,27 @@ const FOCUSABLE = 'button:not([disabled]), input:not([disabled]), a[href]';
 export default function MobileSearchOverlay({ open, onClose }) {
   const { t, lang } = useSiteLang();
   const anime = useVisibleCatalog();
-  const manga = useVisibleMangaCatalog();
+  const showSensitive = useShowSensitive();
   const [query, setQuery] = useState('');
   const [recent, setRecent] = useState(readRecent);
   const navigate = useNavigate();
   const dialogRef = useRef(null);
   const inputRef = useRef(null);
 
-  const entries = useMemo(() => {
-    const mangaItems = withMangaImages(manga, anime);
-    return [
-      ...anime.map((item) => ({ item, mediaType: 'anime' })),
-      ...mangaItems.map((item) => ({ item, mediaType: 'manga' })),
-    ];
-  }, [anime, manga]);
-
   const trimmed = query.trim();
-  const results = useMemo(() => {
-    if (!trimmed) return [];
-    const needle = foldTitle(trimmed);
-    return entries
-      .filter(({ item }) => foldTitle(`${item.title} ${item.titleFa || ''} ${item.category || ''} ${(item.genres || []).join(' ')}`).includes(needle))
-      .slice(0, 40);
-  }, [entries, trimmed]);
+  // The server searches every title; the browser only holds the popular core.
+  const [results, setResults] = useState([]);
+  useEffect(() => {
+    if (!trimmed) { setResults([]); return undefined; }
+    let alive = true;
+    const timer = setTimeout(() => {
+      fetch(`/api/search/full?q=${encodeURIComponent(trimmed)}&limit=40${showSensitive ? '' : '&sfw=1'}`)
+        .then((r) => r.json())
+        .then((data) => { if (alive) setResults((data.items || []).map((r) => ({ item: rowToCard(r), mediaType: r.kind }))); })
+        .catch(() => { if (alive) setResults([]); });
+    }, 250);
+    return () => { alive = false; clearTimeout(timer); };
+  }, [trimmed, showSensitive]);
 
   const popular = useMemo(
     () => [...anime].sort((a, b) => (b.weightedScore ?? b.sampleScore ?? 0) - (a.weightedScore ?? a.sampleScore ?? 0)).slice(0, 5).map((item) => ({ item, mediaType: 'anime' })),
