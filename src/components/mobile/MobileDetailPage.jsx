@@ -142,6 +142,11 @@ export default function MobileDetailPage({
     { label: t('rankedLabel'), value: rankOf(item.rank || item.statistics?.ranked) },
     { label: t('popularity'), value: rankOf(item.statistics?.popularity) },
   ];
+  const infoOf = (label) => (item.information || []).find((row) => String(row.label).toLowerCase() === label)?.value || '';
+  const epsRaw = infoOf('episodes') || infoOf('chapters');
+  const epsNum = num(epsRaw);
+  const epsText = epsNum ? `${formatNumber(epsNum, lang)} ${mediaType === 'manga' ? t('chaptersUnit') : t('episodesUnit')}` : '';
+  const statusLabel = listStatuses.find((entry) => entry.id === currentStatus)?.label || '';
   const synonyms = alternativeTitles.synonyms?.join(lang === 'fa' ? '، ' : ', ');
   const hasAlt = synonyms || alternativeTitles.japanese || alternativeTitles.english || item.titleFa;
   const longSynopsis = (item.synopsis || '').length > 220;
@@ -171,11 +176,20 @@ export default function MobileDetailPage({
               {item.format && <span>{item.format}</span>}
               {item.format && item.year && <span aria-hidden="true">·</span>}
               {item.year && <span dir="ltr">{formatNumber(item.year, lang, { useGrouping: false })}</span>}
+              {epsText && <><span aria-hidden="true">·</span><span>{epsText}</span></>}
             </p>
           </div>
         </div>
         {shareNote && <p className="mobile-detail__note" role="status">{shareNote}</p>}
       </header>
+
+      {item.genres?.length > 0 && (
+        <ul className="mobile-detail__chips" aria-label={t('genresLabel')}>
+          {item.genres.map((genre) => (
+            <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genre}</Link></li>
+          ))}
+        </ul>
+      )}
 
       <div className="mobile-detail__stats" aria-label={t('statistics')}>
         {stats.map((stat) => (
@@ -218,7 +232,7 @@ export default function MobileDetailPage({
                 </button>
               )}
             </section>
-            {item.genres?.length > 0 && Object.entries(splitGenres(item.genres)).filter(([, list]) => list.length).map(([kind, list]) => (
+            {item.genres?.length > 0 && Object.entries(splitGenres(item.genres)).filter(([kind, list]) => kind !== 'genre' && list.length).map(([kind, list]) => (
               <section key={kind}>
                 <h2 className="mobile-detail__h">{t(kind === 'genre' ? 'genresLabel' : kind === 'theme' ? 'themesLabel' : 'demographicLabel')}</h2>
                 <div className="mobile-detail__genres">
@@ -363,7 +377,10 @@ export default function MobileDetailPage({
           onClick={onToggleSaved}
         >
           {isSaved ? <Check width={20} height={20} aria-hidden="true" /> : <Plus width={20} height={20} aria-hidden="true" />}
-          <span>{isSaved ? t('inList') : t('addToList')}</span>
+          <span className="mobile-actionbar__label">
+            {isSaved ? t('inList') : t('addToList')}
+            {isSaved && statusLabel && <small>{statusLabel}</small>}
+          </span>
         </button>
         <QuickEpisode mediaType={mediaType} item={item} compact className="mobile-actionbar__quick" />
         <FavoriteButton kind={mediaType} refId={item.slug} compact className="mobile-actionbar__fav" />

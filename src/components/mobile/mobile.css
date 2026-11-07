@@ -2692,3 +2692,33 @@
 }
 
 .mdash__import { display: block; margin: 0 16px 14px; padding: 10px 14px; border-radius: 12px; text-align: center; font-weight: 700; font-size: 14px; background: color-mix(in oklch, var(--primary) 10%, transparent); }
+
+@media (max-width: 820px) {
+  /* Detail: room for both fixed bars, genre chips under the hero, shorter clamp. */
+  .mobile-detail { padding-bottom: calc(176px + env(safe-area-inset-bottom)); }
+  .mobile-detail__synopsis.is-clamped { -webkit-line-clamp: 4; line-clamp: 4; }
+  .mobile-detail__chips {
+    display: flex;
+    gap: 8px;
+    margin: 14px 0 0;
+    padding: 0 16px 2px;
+    list-style: none;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .mobile-detail__chips::-webkit-scrollbar { display: none; }
+  .mobile-detail__chips a {
+    display: inline-flex;
+    align-items: center;
+    min-height: 32px;
+    padding-inline: 14px;
+    border-radius: 999px;
+    white-space: nowrap;
+    background: var(--secondary);
+    color: var(--secondary-foreground);
+    font-size: 12.5px;
+    font-weight: 700;
+  }
+  .mobile-actionbar__label { display: grid; line-height: 1.25; text-align: center; }
+  .mobile-actionbar__label small { font-size: 11.5px; font-weight: 500; opacity: 0.85; }
+}

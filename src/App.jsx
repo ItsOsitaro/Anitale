@@ -1033,8 +1033,11 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const isSaved = user.entries[mediaType].some((entry) => entry.slug === item.slug);
   const savedEntry = user.entries[mediaType].find((entry) => entry.slug === item.slug) || null;
   const related = animeCatalog
-    .filter((entry) => entry.slug !== item.slug && entry.genres.some((entryGenre) => item.genres.includes(entryGenre)))
-    .slice(0, 5);
+    .map((entry) => ({ entry, shared: entry.slug === item.slug ? 0 : entry.genres.filter((entryGenre) => item.genres.includes(entryGenre)).length }))
+    .filter((row) => row.shared > 0)
+    .sort((a, b) => b.shared - a.shared || (b.entry.sampleScore || 0) - (a.entry.sampleScore || 0))
+    .slice(0, 6)
+    .map((row) => row.entry);
   const extras = useTitleExtras(mediaType, item.malId);
   const alternativeTitles = item.alternativeTitles || {};
   const romajiTitle = alternativeTitles.romaji || '';
@@ -1143,6 +1146,15 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     numericOf(item.statistics?.favorites) ? { label: t('favoritesLabel'), value: formatNumber(numericOf(item.statistics.favorites), lang) } : null,
   ].filter(Boolean);
 
+  const sectionNav = [
+    { id: 'detailSynopsis', label: t('synopsis'), show: true },
+    { id: 'detailCharacters', label: t('charactersVA'), show: hasAny(extras, 'characters') },
+    { id: 'detailMedia', label: t('mediaSection'), show: Boolean(item.malId) },
+    { id: 'detailRelatedEntries', label: t('relatedEntries'), show: hasAny(extras, 'relations') },
+    { id: 'detailReviews', label: t('reviewsTitle'), show: true },
+    { id: 'relatedHeading', label: t('relatedAnime'), show: related.length > 0 },
+  ].filter((entry) => entry.show);
+
   const toggleSaved = () => {
     user.toggle(mediaType, item.slug);
   };
@@ -1192,42 +1204,6 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
           <div className="anime-detail-layout">
             <aside className="detail-sidebar panel">
               <figure className="detail-cover"><img src={coverUrl(item.image, 720)} alt={item.title} /></figure>
-              <Button
-                className={`detail-list-button${isSaved ? ' is-saved' : ''}`}
-                type="button"
-                aria-pressed={isSaved}
-                onClick={toggleSaved}
-              >
-                {isSaved ? t('inList') : t('addToList')}
-              </Button>
-              <FavoriteButton kind={mediaType} refId={item.slug} className="detail-fav" />
-              <QuickEpisode mediaType={mediaType} item={item} className="detail-quick-ep" />
-              {isSaved && (
-                <div className="detail-status-picker" role="radiogroup" aria-label={t('listStatusAria')}>
-                  {listStatuses.map((status) => (
-                    <button
-                      key={status.id}
-                      type="button"
-                      role="radio"
-                      aria-checked={(savedEntry?.status || 'watching') === status.id}
-                      className={`status-pill${(savedEntry?.status || 'watching') === status.id ? ' is-active' : ''}`}
-                      onClick={() => user.setStatus(mediaType, item.slug, status.id)}
-                    >
-                      {status.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              <div className="detail-share-row">
-                <Button className="detail-share-button" variant="outline" size="sm" type="button" onClick={shareTitle}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                    <path d="m8.6 13.4 6.8 4M15.4 6.6l-6.8 4" />
-                  </svg>
-                  {t('shareTitle')}
-                </Button>
-                {shareNote && <span className="detail-share-note" role="status">{shareNote}</span>}
-              </div>
               <SuggestEdit item={item} mediaType={mediaType} />
               <div className="detail-sidebar-sections">
                 {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english || item.titleFa) && (
@@ -1282,6 +1258,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
 
             <div className="detail-main-column">
               <section className="anime-profile">
+                <div className="detail-hero-backdrop" aria-hidden="true"><img src={coverUrl(item.image, 480)} alt="" /></div>
                 <div className="detail-copy">
                   <h1 dir="auto">{item.title}</h1>
                   {romajiTitle && romajiTitle !== item.title && (
@@ -1299,6 +1276,44 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                       ))}
                     </ul>
                   )}
+<div className="detail-hero-actions">
+              <Button
+                className={`detail-list-button${isSaved ? ' is-saved' : ''}`}
+                type="button"
+                aria-pressed={isSaved}
+                onClick={toggleSaved}
+              >
+                {isSaved ? t('inList') : t('addToList')}
+              </Button>
+              <FavoriteButton kind={mediaType} refId={item.slug} className="detail-fav" />
+              <QuickEpisode mediaType={mediaType} item={item} className="detail-quick-ep" />
+              {isSaved && (
+                <div className="detail-status-picker" role="radiogroup" aria-label={t('listStatusAria')}>
+                  {listStatuses.map((status) => (
+                    <button
+                      key={status.id}
+                      type="button"
+                      role="radio"
+                      aria-checked={(savedEntry?.status || 'watching') === status.id}
+                      className={`status-pill${(savedEntry?.status || 'watching') === status.id ? ' is-active' : ''}`}
+                      onClick={() => user.setStatus(mediaType, item.slug, status.id)}
+                    >
+                      {status.label}
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="detail-share-row">
+                <Button className="detail-share-button" variant="outline" size="sm" type="button" onClick={shareTitle}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
+                    <path d="m8.6 13.4 6.8 4M15.4 6.6l-6.8 4" />
+                  </svg>
+                  {t('shareTitle')}
+                </Button>
+                {shareNote && <span className="detail-share-note" role="status">{shareNote}</span>}
+              </div>
+                </div>
                   {heroStats.length > 0 && (
                     <dl className="detail-stat-strip">
                       {heroStats.map((stat) => (
@@ -1312,11 +1327,18 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 </div>
               </section>
 
+              <nav className="detail-section-nav" aria-label={t('detailSectionsNav')}>
+                {sectionNav.map((entry) => <a key={entry.id} href={`#${entry.id}`}>{entry.label}</a>)}
+              </nav>
+
               <div className="detail-section-grid">
                 <DetailSection id="detailSynopsis" title={t('synopsis')}>
                   <p className="detail-synopsis" dir="auto">{item.synopsis}</p>
                   {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
                 </DetailSection>
+                {hasAny(extras, 'characters') && (
+                  <DetailSection id="detailCharacters" title={t('charactersVA')}><Characters data={extras.data} /></DetailSection>
+                )}
                 {hasAny(extras, 'trailer') && (
                   <DetailSection id="detailTrailer" title={t('trailerTitle')}><Trailer data={extras.data} /></DetailSection>
                 )}
@@ -1326,9 +1348,6 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 {extras.status === 'loading' && <p className="extras-muted" role="status">{t('extrasLoading')}</p>}
                 {hasAny(extras, 'relations') && (
                   <DetailSection id="detailRelatedEntries" title={t('relatedEntries')}><Relations data={extras.data} /><WatchOrder mediaType={mediaType} malId={item.malId} /></DetailSection>
-                )}
-                {hasAny(extras, 'characters') && (
-                  <DetailSection id="detailCharacters" title={t('charactersVA')}><Characters data={extras.data} /></DetailSection>
                 )}
                 {hasAny(extras, 'staff') && (
                   <DetailSection id="detailStaff" title={t('staffSection')}><Staff data={extras.data} /></DetailSection>
