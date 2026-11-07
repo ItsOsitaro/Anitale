@@ -82,7 +82,7 @@ function EpisodePage({ page, malId, seen, onMark, onMore, t, lang }) {
           );
         })}
       </ol>
-      {collapsed && <button type="button" className="media-more" onClick={() => setExpanded(true)}>{t('mediaShowAllEpisodes')} ({formatNumber(items.length, lang)})</button>}
+      {collapsed && <button type="button" className="media-more" onClick={() => setExpanded(true)}>{t('mediaShowAllEpisodes')}</button>}
       {!collapsed && hasNext && onMore && <button type="button" className="media-more" onClick={onMore}>{t('mediaMoreEpisodes')}</button>}
     </>
   );

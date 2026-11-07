@@ -15,6 +15,7 @@ import Rail from './Rail';
 import { cn } from 'cn';
 import { coverUrl } from '@/lib/cover';
 import { formatNumber, formatScore } from '@/lib/digits.js';
+import { infoLabel, infoValue } from '@/lib/info-labels.js';
 import CommunitySection from '../CommunitySection';
 import { hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
 
@@ -22,14 +23,15 @@ const TAB_IDS = ['summary', 'media', 'reviews', 'info', 'team', 'related'];
 const TAB_KEYS = { summary: 'mdSummary', media: 'mediaSection', reviews: 'mdReviews', info: 'information', team: 'staffSection', related: 'mdRelated' };
 
 function FactGrid({ rows }) {
+  const { lang } = useSiteLang();
   const visible = rows.filter((row) => row.value);
   if (visible.length === 0) return null;
   return (
     <dl className="mobile-facts">
       {visible.map((row) => (
         <div key={row.label} className="mobile-facts__cell">
-          <dt>{row.label}</dt>
-          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : row.value}</dd>
+          <dt>{infoLabel(row.label, lang)}</dt>
+          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : infoValue(row.label, row.value, lang)}</dd>
         </div>
       ))}
     </dl>
@@ -147,7 +149,7 @@ export default function MobileDetailPage({
   const epsNum = num(epsRaw);
   const epsText = epsNum ? `${formatNumber(epsNum, lang)} ${mediaType === 'manga' ? t('chaptersUnit') : t('episodesUnit')}` : '';
   const statusLabel = listStatuses.find((entry) => entry.id === currentStatus)?.label || '';
-  const synonyms = alternativeTitles.synonyms?.join(lang === 'fa' ? '، ' : ', ');
+  const synonyms = (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ');
   const hasAlt = synonyms || alternativeTitles.japanese || alternativeTitles.english || item.titleFa;
   const longSynopsis = (item.synopsis || '').length > 220;
 
@@ -224,9 +226,11 @@ export default function MobileDetailPage({
           <>
             <section>
               <h2 className="mobile-detail__h">{t('synopsis')}</h2>
-              <p className={cn('mobile-detail__synopsis', !expanded && longSynopsis && 'is-clamped')} dir="auto">{item.synopsis}</p>
+              {item.detailLoading
+                ? <div className="synopsis-skeleton" role="status" aria-label={t('extrasLoading')}><i /><i /><i /><i /></div>
+                : <p className={cn('mobile-detail__synopsis', !expanded && longSynopsis && 'is-clamped')} dir="auto">{item.synopsis}</p>}
               {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
-              {longSynopsis && (
+              {longSynopsis && !item.detailLoading && (
                 <button type="button" className="mobile-detail__more" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
                   {expanded ? t('mdLess') : t('more')}
                 </button>

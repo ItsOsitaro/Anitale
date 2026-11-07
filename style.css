@@ -4483,3 +4483,20 @@ small { font-size: max(12px, 0.8em); }
 .detail-hero-actions .detail-fav { margin: 0; }
 .detail-hero-actions .detail-fav .fav-button { width: auto; min-height: 46px; }
 .detail-hero-actions .detail-share-button { min-height: 46px; }
+.detail-section-nav a.is-active { background: var(--secondary); color: var(--primary-text); }
+
+/* Skeleton while the full title record loads (avoids the short->long text jump). */
+.synopsis-skeleton { display: grid; gap: 12px; max-width: 72ch; padding-block: 6px; }
+.synopsis-skeleton i {
+  display: block;
+  height: 14px;
+  border-radius: 7px;
+  background: linear-gradient(90deg, var(--muted) 25%, color-mix(in oklch, var(--muted) 55%, var(--card)) 50%, var(--muted) 75%);
+  background-size: 200% 100%;
+  animation: synopsis-shimmer 1.4s ease-in-out infinite;
+}
+@keyframes synopsis-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+@media (prefers-reduced-motion: reduce) { .synopsis-skeleton i { animation: none; } }
+/* Characters: last row stretches so no ragged orphan cells. */
+.extras-chars { display: flex; flex-wrap: wrap; }
+.extras-chars li { flex: 1 1 230px; min-width: 0; }

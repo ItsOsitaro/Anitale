@@ -45,6 +45,7 @@ import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
 import IntroStrip from './components/IntroStrip.jsx';
 import { formatNumber, formatScore, toPersianDigits } from '@/lib/digits.js';
+import { infoLabel, infoValue } from '@/lib/info-labels.js';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
@@ -1012,12 +1013,13 @@ function DetailSection({ id, title, children, className = 'detail-content-sectio
 }
 
 function SidebarDataList({ rows }) {
+  const { lang } = useSiteLang();
   return (
     <dl className="sidebar-data-list">
       {rows.filter((row) => row.value).map((row) => (
         <div key={row.label}>
-          <dt>{row.label}</dt>
-          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : row.value}</dd>
+          <dt>{infoLabel(row.label, lang)}</dt>
+          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : infoValue(row.label, row.value, lang)}</dd>
         </div>
       ))}
     </dl>
@@ -1154,6 +1156,20 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     { id: 'detailReviews', label: t('reviewsTitle'), show: true },
     { id: 'relatedHeading', label: t('relatedAnime'), show: related.length > 0 },
   ].filter((entry) => entry.show);
+  const navKey = sectionNav.map((entry) => entry.id).join('|');
+  const [activeSection, setActiveSection] = useState('');
+  useEffect(() => {
+    if (isMobile || typeof IntersectionObserver === 'undefined') return undefined;
+    const ids = navKey.split('|').filter(Boolean);
+    const visible = new Set();
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach((entry) => (entry.isIntersecting ? visible.add(entry.target.id) : visible.delete(entry.target.id)));
+      const first = ids.find((id) => visible.has(id));
+      if (first) setActiveSection(first);
+    }, { rootMargin: '-140px 0px -60% 0px' });
+    ids.forEach((id) => { const node = document.getElementById(id); if (node) observer.observe(node); });
+    return () => observer.disconnect();
+  }, [navKey, isMobile]);
 
   const toggleSaved = () => {
     user.toggle(mediaType, item.slug);
@@ -1209,7 +1225,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english || item.titleFa) && (
                   <DetailSection id="detailAlternativeTitles" title={t('alternativeTitles')} className="detail-sidebar-section">
                     <SidebarDataList rows={[
-                      { label: t('synonyms'), value: alternativeTitles.synonyms?.join(lang === 'fa' ? '، ' : ', ') },
+                      { label: t('synonyms'), value: (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ') },
                       { label: t('japaneseTitle'), value: alternativeTitles.japanese },
                       { label: t('englishTitle'), value: alternativeTitles.english },
                       { label: t('persianTitle'), value: item.titleFa },
@@ -1328,12 +1344,14 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
               </section>
 
               <nav className="detail-section-nav" aria-label={t('detailSectionsNav')}>
-                {sectionNav.map((entry) => <a key={entry.id} href={`#${entry.id}`}>{entry.label}</a>)}
+                {sectionNav.map((entry) => <a key={entry.id} href={`#${entry.id}`} className={activeSection === entry.id ? 'is-active' : undefined} aria-current={activeSection === entry.id ? 'true' : undefined}>{entry.label}</a>)}
               </nav>
 
               <div className="detail-section-grid">
                 <DetailSection id="detailSynopsis" title={t('synopsis')}>
-                  <p className="detail-synopsis" dir="auto">{item.synopsis}</p>
+                  {item.detailLoading
+                    ? <div className="synopsis-skeleton" role="status" aria-label={t('extrasLoading')}><i /><i /><i /><i /><i style={{ width: '60%' }} /></div>
+                    : <p className="detail-synopsis" dir="auto">{item.synopsis}</p>}
                   {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
                 </DetailSection>
                 {hasAny(extras, 'characters') && (
@@ -1419,15 +1437,18 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   // The catalog list is lite (no links / alternative titles / full synopsis);
   // anime detail pages pull those from /api/anime/:slug and merge them in.
   const [full, setFull] = useState(null);
+  const [fullSettled, setFullSettled] = useState(false);
   const resolvedSlug = resolved?.slug;
   useEffect(() => {
     setFull(null);
+    setFullSettled(false);
     if (!resolvedSlug || mediaType !== 'anime') return undefined;
     let cancelled = false;
     fetch(`/api/anime/${encodeURIComponent(resolvedSlug)}`)
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => { if (!cancelled && data?.slug === resolvedSlug) setFull(data); })
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setFullSettled(true); });
     return () => { cancelled = true; };
   }, [resolvedSlug, mediaType]);
   if (item && full) {
@@ -1445,6 +1466,7 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
     synopsis: synopsisText(detailSource, lang),
     // Persian text that is still an unreviewed machine translation gets a small note.
     synopsisAuto: lang === 'fa' && Boolean(detailSource?.synopsis?.auto && detailSource.synopsis.fa),
+    detailLoading: mediaType === 'anime' && !fullSettled,
     ...(mediaType === 'manga'
       ? { image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item }
       : {}),
