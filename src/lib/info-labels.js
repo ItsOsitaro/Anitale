@@ -1,4 +1,5 @@
 import { toPersianDigits } from '@/lib/digits.js';
+import { genreLabel } from '@/lib/genre-kinds.js';
 
 // Persian labels (and a few stable values) for the "Information" rows that
 // come from the data source in English. Unknown labels/values pass through.
@@ -73,6 +74,7 @@ export function infoValue(label, value, lang) {
   if (lang !== 'fa' || typeof value !== 'string') return value;
   if (['unknown', 'not available', 'tbd'].includes(value.trim().toLowerCase())) return 'نامشخص';
   if (['episodes', 'chapters', 'volumes'].includes(String(label).trim().toLowerCase()) && /^\d+$/.test(value.trim())) return toPersianDigits(value.trim());
+  if (['genres', 'themes', 'demographic', 'ژانرها', 'تم‌ها', 'مخاطب'].includes(String(label).trim().toLowerCase())) return value.split(/\s*,\s*/).map((name) => genreLabel(name, 'fa')).join('، ');
   const byLabel = faValueByLabel(String(label).trim().toLowerCase(), value);
   if (byLabel) return byLabel;
   const map = VALUES[String(label).trim().toLowerCase()];

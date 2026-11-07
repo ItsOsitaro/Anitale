@@ -4500,3 +4500,13 @@ small { font-size: max(12px, 0.8em); }
 /* Characters: last row stretches so no ragged orphan cells. */
 .extras-chars { display: flex; flex-wrap: wrap; }
 .extras-chars li { flex: 1 1 230px; min-width: 0; }
+
+/* Previous / next pointer + list progress in the title hero */
+.franchise-nav { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 12px 0 0; font-size: 13.5px; color: var(--muted-foreground); }
+.franchise-nav b { font-weight: 700; color: var(--foreground); }
+.franchise-nav a { color: var(--primary-text); font-weight: 600; }
+.detail-progress { margin-block-start: 16px; max-width: 360px; display: grid; gap: 6px; }
+.detail-progress__bar { height: 6px; border-radius: 999px; background: var(--muted); overflow: hidden; }
+.detail-progress__bar span { display: block; height: 100%; border-radius: inherit; background: var(--primary); }
+.detail-progress small { font-size: 12.5px; color: var(--muted-foreground); }
+@media (max-width: 820px) { .mobile-detail__panel .franchise-nav { margin: 0; } }

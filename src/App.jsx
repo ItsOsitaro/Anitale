@@ -1,4 +1,4 @@
-import { splitGenres, splitInfoRows } from '@/lib/genre-kinds';
+import { genreLabel, splitGenres, splitInfoRows } from '@/lib/genre-kinds';
 import { FavoriteButton } from '@/components/Favorites';
 import WatchOrder from '@/components/WatchOrder';
 import React, { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
@@ -18,7 +18,7 @@ import { loadAnimeCatalog, loadMangaCatalog, buildSchedule, mediaHref, foldTitle
 import { CatalogContext, MangaCatalogContext, useCatalog, useMangaCatalog, useVisibleCatalog, useVisibleMangaCatalog, withMangaImages } from './catalog-context.jsx';
 import { getShowSensitive, isSensitive, rankKey, setShowSensitive, useShowSensitive } from './lib/catalog-rules.js';
 import { useUser, UserProvider } from './user.jsx';
-import { useTitleExtras, hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from './components/TitleExtras.jsx';
+import { useTitleExtras, hasAny, FranchiseNav, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from './components/TitleExtras.jsx';
 import { synopsisText, selectHomePicks, getCurrentSeasonInfo, getItemSeasonInfo } from './home-data.js';
 import { ThemeProvider, useTheme } from './theme-context.jsx';
 import { AuthPage, UserDashboard, UserPublicProfile } from './userPages.jsx';
@@ -45,7 +45,8 @@ import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
 import IntroStrip from './components/IntroStrip.jsx';
 import { formatNumber, formatScore, toPersianDigits } from '@/lib/digits.js';
-import { infoLabel, infoValue } from '@/lib/info-labels.js';
+import { fetchAnimeFull } from '@/lib/anime-full.js';
+import { infoLabel, infoValue as infoValueFa } from '@/lib/info-labels.js';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
@@ -375,7 +376,7 @@ function AnimeCard({ item, rank }) {
   return (
     <article className="anime-card">
       {rank && <span className="card-rank">{padRank(rank, lang)}</span>}
-      <Link className="anime-cover" to={href} aria-label={`${t(isManga ? 'breadcrumbManga' : 'breadcrumbAnime')}: ${title}`}>
+      <Link className="anime-cover" to={href} aria-label={`${t(isManga ? 'breadcrumbManga' : 'breadcrumbAnime')}: ${title}`} onPointerEnter={isManga ? undefined : () => fetchAnimeFull(item.slug)} onFocus={isManga ? undefined : () => fetchAnimeFull(item.slug)}>
         <img src={coverUrl(item.image, 360)} alt={title} loading="lazy" />
       </Link>
       <div className="anime-info">
@@ -758,10 +759,10 @@ function CatalogControls({ query, onQueryChange, genre, onGenreChange, genres, c
             const groups = splitGenres(genres);
             const labelOf = { genre: t('genresLabel'), theme: t('themesLabel'), demographic: t('demographicLabel') };
             const filled = Object.entries(groups).filter(([, list]) => list.length);
-            if (filled.length <= 1) return genres.map((item) => <option value={item} key={item}>{item}</option>);
+            if (filled.length <= 1) return genres.map((item) => <option value={item} key={item}>{genreLabel(item, lang)}</option>);
             return filled.map(([kind, list]) => (
               <optgroup key={kind} label={labelOf[kind]}>
-                {list.map((item) => <option value={item} key={item}>{item}</option>)}
+                {list.map((item) => <option value={item} key={item}>{genreLabel(item, lang)}</option>)}
               </optgroup>
             ));
           })()}
@@ -1019,7 +1020,7 @@ function SidebarDataList({ rows }) {
       {rows.filter((row) => row.value).map((row) => (
         <div key={row.label}>
           <dt>{infoLabel(row.label, lang)}</dt>
-          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : infoValue(row.label, row.value, lang)}</dd>
+          <dd>{row.links ? row.links.map((l, i) => <span key={l.to}>{i > 0 && ', '}<Link to={l.to} className="info-link">{l.text}</Link></span>) : infoValueFa(row.label, row.value, lang)}</dd>
         </div>
       ))}
     </dl>
@@ -1029,7 +1030,9 @@ function SidebarDataList({ rows }) {
 function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const { lang, t } = useSiteLang();
   const isMobile = useIsMobile();
-  const animeCatalog = useVisibleCatalog();
+  const visibleAnimeCatalog = useVisibleCatalog();
+  const visibleMangaCatalog = useVisibleMangaCatalog();
+  const animeCatalog = mediaType === 'manga' ? visibleMangaCatalog : visibleAnimeCatalog;
   const user = useUser();
   const me = user.me;
   const isSaved = user.entries[mediaType].some((entry) => entry.slug === item.slug);
@@ -1133,7 +1136,11 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
       ? `${formatNumber(numericOf(episodesRaw) ?? episodesRaw, lang)} ${mediaType === 'manga' ? t('chaptersUnit') : t('episodesUnit')}`
       : null,
     statusText(infoValue('status')),
+    /^currently airing/i.test(infoValue('status')) && infoValue('broadcast')
+      ? infoValueFa('broadcast', infoValue('broadcast'), lang) : null,
   ].filter(Boolean);
+  const progressTotal = numericOf(episodesRaw) || 0;
+  const progressNow = Math.max(0, Math.min(progressTotal, Number(savedEntry?.progress) || 0));
   const scoreValue = numericOf(item.statistics?.score) ?? (item.sampleScore > 0 ? item.sampleScore : null);
   const heroStats = [
     scoreValue ? {
@@ -1154,7 +1161,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     { id: 'detailMedia', label: t('mediaSection'), show: Boolean(item.malId) },
     { id: 'detailRelatedEntries', label: t('relatedEntries'), show: hasAny(extras, 'relations') },
     { id: 'detailReviews', label: t('reviewsTitle'), show: true },
-    { id: 'relatedHeading', label: t('relatedAnime'), show: related.length > 0 },
+    { id: 'relatedHeading', label: t(mediaType === 'manga' ? 'relatedManga' : 'relatedAnime'), show: related.length > 0 },
   ].filter((entry) => entry.show);
   const navKey = sectionNav.map((entry) => entry.id).join('|');
   const [activeSection, setActiveSection] = useState('');
@@ -1198,6 +1205,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         romajiTitle={romajiTitle}
         isSaved={isSaved}
         currentStatus={savedEntry?.status || 'watching'}
+        progress={savedEntry?.progress || 0}
         listStatuses={listStatuses}
         onToggleSaved={toggleSaved}
         onSetStatus={(statusId) => user.setStatus(mediaType, item.slug, statusId)}
@@ -1274,7 +1282,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
 
             <div className="detail-main-column">
               <section className="anime-profile">
-                <div className="detail-hero-backdrop" aria-hidden="true"><img src={coverUrl(item.image, 480)} alt="" /></div>
+                <div className="detail-hero-backdrop" aria-hidden="true"><img src={coverUrl(item.image, 720)} alt="" /></div>
                 <div className="detail-copy">
                   <h1 dir="auto">{item.title}</h1>
                   {romajiTitle && romajiTitle !== item.title && (
@@ -1285,10 +1293,11 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                       {heroFacts.map((fact) => <span key={fact}>{fact}</span>)}
                     </p>
                   )}
+                  {hasAny(extras, 'relations') && <FranchiseNav data={extras.data} mediaType={mediaType} />}
                   {item.genres?.length > 0 && (
                     <ul className="detail-genre-chips" aria-label={t('genresLabel')}>
                       {item.genres.map((genre) => (
-                        <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genre}</Link></li>
+                        <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genreLabel(genre, lang)}</Link></li>
                       ))}
                     </ul>
                   )}
@@ -1330,6 +1339,12 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 {shareNote && <span className="detail-share-note" role="status">{shareNote}</span>}
               </div>
                 </div>
+                  {progressTotal > 0 && savedEntry && (
+                    <div className="detail-progress" role="img" aria-label={`${formatNumber(progressNow, lang)} / ${formatNumber(progressTotal, lang)}`}>
+                      <div className="detail-progress__bar"><span style={{ width: `${Math.min(100, (progressNow / progressTotal) * 100)}%` }} /></div>
+                      <small>{formatNumber(progressNow, lang)} {t('progressOf')} {formatNumber(progressTotal, lang)} {mediaType === 'manga' ? t('chaptersUnit') : t('episodesUnit')}</small>
+                    </div>
+                  )}
                   {heroStats.length > 0 && (
                     <dl className="detail-stat-strip">
                       {heroStats.map((stat) => (
@@ -1387,7 +1402,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
           </div>
 
           <section className="related-section" aria-labelledby="relatedHeading">
-            <h2 id="relatedHeading">{t('relatedAnime')}</h2>
+            <h2 id="relatedHeading">{t(mediaType === 'manga' ? 'relatedManga' : 'relatedAnime')}</h2>
             <AnimeGrid items={related} />
           </section>
         </main>
@@ -1444,10 +1459,8 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
     setFullSettled(false);
     if (!resolvedSlug || mediaType !== 'anime') return undefined;
     let cancelled = false;
-    fetch(`/api/anime/${encodeURIComponent(resolvedSlug)}`)
-      .then((res) => (res.ok ? res.json() : null))
+    fetchAnimeFull(resolvedSlug)
       .then((data) => { if (!cancelled && data?.slug === resolvedSlug) setFull(data); })
-      .catch(() => {})
       .finally(() => { if (!cancelled) setFullSettled(true); });
     return () => { cancelled = true; };
   }, [resolvedSlug, mediaType]);

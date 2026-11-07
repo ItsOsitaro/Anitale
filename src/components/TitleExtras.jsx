@@ -119,6 +119,21 @@ export function Relations({ data }) {
   );
 }
 
+// One-line "previous / next" pointer for a series, from the relations data.
+export function FranchiseNav({ data, mediaType }) {
+  const { t } = useSiteLang();
+  const pick = (name) => (data?.relations || []).find((group) => group.relation === name)?.entries?.find((e) => e.type === mediaType);
+  const prev = pick('Prequel');
+  const next = pick('Sequel');
+  if (!prev && !next) return null;
+  return (
+    <p className="franchise-nav">
+      {prev && <span><b>{t('franchisePrev')}</b> <TitleLink type={prev.type} id={prev.id} name={prev.name} /></span>}
+      {next && <span><b>{t('franchiseNext')}</b> <TitleLink type={next.type} id={next.id} name={next.name} /></span>}
+    </p>
+  );
+}
+
 export function Recommendations({ data, mediaType }) {
   if (!data.recommendations?.length) return null;
   return (

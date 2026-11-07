@@ -1,6 +1,7 @@
-import { splitGenres } from '@/lib/genre-kinds';
+import { genreLabel, splitGenres } from '@/lib/genre-kinds';
 import MediaTabs from '@/components/MediaTabs';
 import SuggestEdit from '@/components/SuggestEdit';
+import { FranchiseNav } from '../TitleExtras.jsx';
 import { QuickEpisode } from '@/components/QuickEpisode';
 import { FavoriteButton } from '../Favorites';
 import WatchOrder from '../WatchOrder';
@@ -109,7 +110,7 @@ function StatusSheet({ open, onClose, statuses, current, onPick, onRemove }) {
 
 export default function MobileDetailPage({
   item, mediaType, related, extras, informationRows, statisticsRows, alternativeTitles, romajiTitle,
-  isSaved, currentStatus, listStatuses, onToggleSaved, onSetStatus, onShare, shareNote,
+  isSaved, currentStatus, progress, listStatuses, onToggleSaved, onSetStatus, onShare, shareNote,
 }) {
   const { t, lang } = useSiteLang();
   const navigate = useNavigate();
@@ -188,7 +189,7 @@ export default function MobileDetailPage({
       {item.genres?.length > 0 && (
         <ul className="mobile-detail__chips" aria-label={t('genresLabel')}>
           {item.genres.map((genre) => (
-            <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genre}</Link></li>
+            <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genreLabel(genre, lang)}</Link></li>
           ))}
         </ul>
       )}
@@ -224,6 +225,7 @@ export default function MobileDetailPage({
       <div className="mobile-detail__panel" role="tabpanel" id={`md-panel-${tab}`} aria-labelledby={`md-tab-${tab}`} key={tab}>
         {tab === 'summary' && (
           <>
+            {hasAny(extras, 'relations') && <FranchiseNav data={extras.data} mediaType={mediaType} />}
             <section>
               <h2 className="mobile-detail__h">{t('synopsis')}</h2>
               {item.detailLoading
@@ -240,7 +242,7 @@ export default function MobileDetailPage({
               <section key={kind}>
                 <h2 className="mobile-detail__h">{t(kind === 'genre' ? 'genresLabel' : kind === 'theme' ? 'themesLabel' : 'demographicLabel')}</h2>
                 <div className="mobile-detail__genres">
-                  {list.map((g) => <span key={g} className="mobile-detail__genre">{g}</span>)}
+                  {list.map((g) => <span key={g} className="mobile-detail__genre">{genreLabel(g, lang)}</span>)}
                 </div>
               </section>
             ))}
@@ -383,7 +385,7 @@ export default function MobileDetailPage({
           {isSaved ? <Check width={20} height={20} aria-hidden="true" /> : <Plus width={20} height={20} aria-hidden="true" />}
           <span className="mobile-actionbar__label">
             {isSaved ? t('inList') : t('addToList')}
-            {isSaved && statusLabel && <small>{statusLabel}</small>}
+            {isSaved && statusLabel && <small>{statusLabel}{epsNum && Number(progress) > 0 ? ` · ${formatNumber(Math.min(Number(progress), epsNum), lang)}/${formatNumber(epsNum, lang)}` : ''}</small>}
           </span>
         </button>
         <QuickEpisode mediaType={mediaType} item={item} compact className="mobile-actionbar__quick" />

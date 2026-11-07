@@ -28,7 +28,7 @@ export function QuickEpisode({ mediaType = 'anime', item, compact = false, class
   const label = t(mediaType === 'manga' ? 'quickPlusChapter' : 'quickPlusEpisode');
   return (
     <button type="button" className={`quick-ep${compact ? ' is-compact' : ''} ${className}`} onClick={bump} disabled={busy} aria-label={`${label} (${formatNumber(done, lang)} → ${formatNumber(next, lang)})`}>
-      <Plus width={compact ? 18 : 16} height={compact ? 18 : 16} aria-hidden="true" />
+      {compact && <Plus width={18} height={18} aria-hidden="true" />}
       <span>{compact ? '+۱' : label}</span>
     </button>
   );

@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { X } from 'lucide-react';
 import { useSiteLang } from '@/i18n';
-import { splitGenres } from '@/lib/genre-kinds';
+import { genreLabel, splitGenres } from '@/lib/genre-kinds';
 import { formatNumber } from '@/lib/digits.js';
 import { cn } from 'cn';
 
@@ -131,14 +131,14 @@ export default function FilterSheet({
             <h3 className="filter-sheet__label">{t('genreLabel')}</h3>
             <div className="filter-sheet__chips">
               {chip(genre === 'All', () => onGenreChange('All'), t('mcAll'), 'All')}
-              {filledKinds.length <= 1 && genres.map((g) => chip(genre === g, () => onGenreChange(g), g, g))}
+              {filledKinds.length <= 1 && genres.map((g) => chip(genre === g, () => onGenreChange(g), genreLabel(g, lang), g))}
             </div>
           </section>
           {filledKinds.length > 1 && filledKinds.map(([kind, list]) => (
             <section className="filter-sheet__group" key={kind}>
               <h3 className="filter-sheet__label">{kindLabel[kind]}</h3>
               <div className="filter-sheet__chips">
-                {list.map((g) => chip(genre === g, () => onGenreChange(g), g, g))}
+                {list.map((g) => chip(genre === g, () => onGenreChange(g), genreLabel(g, lang), g))}
               </div>
             </section>
           ))}

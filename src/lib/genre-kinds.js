@@ -53,3 +53,27 @@ export const splitInfoRows = (rows = []) => {
   }
   return out;
 };
+
+// Persian display names. Only the label is translated: the English name stays
+// the stored/filter value everywhere (URLs, DB, search params).
+const FA = {
+  action: 'اکشن', adventure: 'ماجراجویی', 'avant garde': 'آوانگارد', 'award winning': 'برنده جایزه', 'boys love': 'عاشقانه پسرانه',
+  comedy: 'کمدی', drama: 'درام', fantasy: 'فانتزی', 'girls love': 'عاشقانه دخترانه', gourmet: 'آشپزی', horror: 'ترسناک',
+  mystery: 'معمایی', romance: 'عاشقانه', 'sci-fi': 'علمی‌تخیلی', 'slice of life': 'برشی از زندگی', sports: 'ورزشی',
+  supernatural: 'ماورایی', suspense: 'تعلیقی', ecchi: 'اچی', erotica: 'اروتیکا', hentai: 'هنتای',
+  'adult cast': 'شخصیت‌های بزرگسال', anthropomorphic: 'انسان‌نما', cgdct: 'دختربچه‌های بامزه', childcare: 'مراقبت از کودک',
+  'combat sports': 'ورزش‌های رزمی', crossdressing: 'تغییر جنسیت ظاهری', delinquents: 'بزهکاران', detective: 'کارآگاهی',
+  educational: 'آموزشی', 'gag humor': 'طنز', gore: 'خشن و خونین', harem: 'حرمسرا', 'high stakes game': 'بازی پرمخاطره',
+  historical: 'تاریخی', 'idols (female)': 'آیدل (دختر)', 'idols (male)': 'آیدل (پسر)', isekai: 'ایسکای', iyashikei: 'ایاشی‌کی',
+  'love polygon': 'چندضلعی عشقی', 'love status quo': 'عشق بدون پیشرفت', 'magical sex shift': 'تغییر جنسیت جادویی',
+  'mahou shoujo': 'دختر جادویی', 'martial arts': 'هنرهای رزمی', mecha: 'مکا', medical: 'پزشکی', memoir: 'خاطرات', military: 'نظامی',
+  music: 'موسیقی', mythology: 'اساطیری', 'organized crime': 'جرم سازمان‌یافته', 'otaku culture': 'فرهنگ اوتاکو', parody: 'پارودی',
+  'performing arts': 'هنرهای نمایشی', pets: 'حیوانات خانگی', psychological: 'روان‌شناختی', racing: 'مسابقه‌ای',
+  reincarnation: 'تناسخ', 'reverse harem': 'حرمسرای معکوس', 'romantic subtext': 'زیرمتن عاشقانه', samurai: 'سامورایی',
+  school: 'مدرسه‌ای', showbiz: 'هنر و سرگرمی', space: 'فضایی', 'strategy game': 'بازی استراتژیک', 'super power': 'ابرقدرت',
+  survival: 'بقا', 'team sports': 'ورزش‌های تیمی', 'time travel': 'سفر در زمان', 'urban fantasy': 'فانتزی شهری',
+  vampire: 'خون‌آشام', 'video game': 'بازی ویدیویی', villainess: 'شرور زن', 'visual arts': 'هنرهای تجسمی', workplace: 'محیط کار',
+  josei: 'جوسی', kids: 'کودکان', seinen: 'سینن', shoujo: 'شوجو', shounen: 'شونن',
+};
+
+export const genreLabel = (name, lang) => (lang === 'fa' ? FA[String(name || '').trim().toLowerCase()] || name : name);

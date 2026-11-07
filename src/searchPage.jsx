@@ -7,7 +7,7 @@ import { displayTitle } from './home-data.js';
 import { coverUrl } from '@/lib/cover';
 import { useShowSensitive } from './lib/catalog-rules.js';
 import SensitiveToggle from './components/SensitiveToggle.jsx';
-import { genreKind } from './lib/genre-kinds.js';
+import { genreKind, genreLabel } from './lib/genre-kinds.js';
 
 const PARAMS = ['q', 'type', 'genre', 'xgenre', 'year', 'from', 'to', 'format', 'status', 'studio', 'rating', 'letter', 'min', 'sort', 'page'];
 const FILTER_KEYS = ['genre', 'xgenre', 'year', 'from', 'to', 'format', 'status', 'studio', 'rating', 'letter', 'min'];
@@ -170,7 +170,7 @@ export default function SearchPage() {
                   aria-label={`${genre.value}${state === 'in' ? ` — ${t('searchGenreInclude')}` : state === 'out' ? ` — ${t('searchGenreExclude')}` : ''}`}
                   onClick={() => cycleGenre(genre.value)}
                 >
-                  {state === 'out' ? '−' : state === 'in' ? '+' : ''}<span dir="auto">{genre.value}</span><small>{genre.n}</small>
+                  {state === 'out' ? '−' : state === 'in' ? '+' : ''}<span dir="auto">{genreLabel(genre.value, lang)}</span><small>{genre.n}</small>
                 </button>
               );
             })}
