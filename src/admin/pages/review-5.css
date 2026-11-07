@@ -1,0 +1,113 @@
+/* Review pass 5: reviews, recommendations, suggestions, missing titles. Existing tokens, logical properties only. */
+
+/* The global input rule forces width:100%; checkboxes need their own size or they squash neighbours. */
+.admin-root input.rv-check { width: 18px; height: 18px; min-height: 0; padding: 0; flex: none; accent-color: var(--accent); cursor: pointer; }
+.admin-root input.rv-check:disabled { cursor: not-allowed; }
+.rv-selall { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--ink-2); cursor: pointer; min-height: 32px; }
+
+/* Tables (reviews / recommendations): wide text column, compact numeric columns, one-line actions */
+.rv-table td { vertical-align: top; }
+.rv-table .rv-text { min-width: 260px; width: 44%; max-width: none; }
+.rv-table .rv-num { width: 1%; white-space: nowrap; text-align: center; }
+.rv-table th.rv-num { text-align: center; }
+.rv-table .rv-date { white-space: nowrap; color: var(--ink-2); font-size: .84rem; }
+.rv-table .adm-actions { flex-wrap: nowrap; }
+.rv-user { display: inline-block; max-width: 16ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: bottom; }
+.rv-title { display: grid; gap: 4px; min-width: 150px; max-width: 280px; }
+.rv-title a { font-weight: 650; overflow-wrap: anywhere; }
+.rv-slug { font-size: .74rem; color: var(--ink-2); overflow-wrap: anywhere; }
+.rv-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.rv-chips .adm-chip { margin: 0; }
+.rv-gone { color: var(--ink-2); font-style: italic; }
+.rv-pair { display: grid; gap: 6px; min-width: 190px; max-width: 320px; }
+.rv-pair-item { display: grid; gap: 1px; }
+.rv-pair-arrow { color: var(--ink-2); font-size: .8rem; }
+.rv-score { font-variant-numeric: tabular-nums; }
+.rv-score.is-mid { background: var(--panel-2); color: var(--ink); border-color: var(--line); }
+.rv-len { font-size: .74rem; color: var(--ink-2); margin-inline-start: 6px; }
+.rv-table .adm-more-menu { inset-inline-end: 0; }
+.rv-table-wrap { overflow-x: auto; overflow-y: visible; }
+.adm-more > summary:focus-visible, .adm-more-menu :focus-visible, .cm-link:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.rv-hint { margin: 0 0 10px; font-size: .8rem; color: var(--ink-2); }
+.rv-csv[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+
+/* Suggestions */
+.sg-card { overflow: hidden; }
+.sg-card.is-old { border-inline-start: 3px solid var(--warn); }
+.sg-title { overflow-wrap: anywhere; min-width: 0; }
+.sg-diff { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sg-diff > div { min-width: 0; padding: 8px 10px; border-radius: var(--r-sm); overflow-wrap: anywhere; white-space: pre-wrap; line-height: 1.8; }
+.sg-diff > div > strong { display: block; margin-block-end: 2px; font-size: .78rem; color: var(--ink-2); }
+.sg-diff > div > p { margin: 0; }
+.sg-diff .sg-old { background: var(--panel-2); }
+.sg-diff .cm-new { background: var(--ok-soft); }
+.sg-empty-val { color: var(--ink-2); font-style: italic; }
+.sg-report { padding: 8px 10px; border-radius: var(--r-sm); background: var(--warn-soft); overflow-wrap: anywhere; white-space: pre-wrap; line-height: 1.8; margin: 0; }
+.sg-reasonline { margin: 8px 0 0; padding: 8px 10px; border-radius: var(--r-sm); background: var(--danger-soft); overflow-wrap: anywhere; }
+.sg-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block-start: 12px; }
+.sg-reject { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-block-start: 12px; }
+.sg-reject .adm-search { flex: 1; min-width: 200px; max-width: none; }
+.sg-toolbar { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin-block-end: 12px; }
+.sg-toolbar .adm-search { flex: 1 1 260px; }
+.sg-date { display: inline-flex; gap: 8px; flex-wrap: wrap; font-size: .8rem; }
+.sg-genres-line { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 4px 0; }
+.sg-genres-line .adm-chip { margin: 0; }
+.sg-wait { background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+
+/* Missing titles */
+.mt-row { display: flex; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r-md); }
+.mt-row > input { flex: none; }
+.mt-main { flex: 1; min-width: 0; display: grid; gap: 3px; }
+.mt-main strong { overflow-wrap: anywhere; }
+.mt-meta { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: center; font-size: .8rem; color: var(--ink-2); }
+.mt-meta .adm-chip { margin: 0; }
+.mt-fail { color: var(--danger); font-size: .8rem; }
+.mt-acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.mt-acts .adm-btn { min-height: 32px; padding: 4px 10px; font-size: .84rem; }
+.mt-list { list-style: none; margin: 12px 0 0; padding: 0; display: grid; gap: 8px; }
+.mt-list li.is-picked { border-color: var(--accent); background: var(--accent-soft); }
+.mt-list li.is-failed { border-color: color-mix(in oklab, var(--danger) 45%, var(--line)); }
+.mt-list li:hover { border-color: var(--ink-3); }
+
+@media (max-width: 820px) {
+  .sg-diff { grid-template-columns: 1fr; }
+}
+@media (max-width: 700px) {
+  .rv-table .rv-text { width: auto; min-width: 0; }
+  .rv-table .rv-num { width: auto; text-align: start; white-space: normal; }
+  .rv-table .adm-actions { flex-wrap: wrap; }
+  .rv-title, .rv-pair { max-width: none; }
+  .rv-user { max-width: none; }
+  .mt-row { flex-wrap: wrap; }
+  .mt-acts { width: 100%; }
+  .mt-acts .adm-btn { flex: 1; }
+  .sg-toolbar .adm-search { flex-basis: 100%; }
+}
+
+/* Tighter columns so the actions column never falls off the edge of a 1280px window */
+.rv-table th, .rv-table td { padding-inline: 10px; }
+.rv-table .rv-text { min-width: 220px; width: 40%; }
+.rv-title { min-width: 140px; max-width: 210px; }
+.rv-title a { display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.rv-slug { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rv-user { max-width: 12ch; }
+.rv-pair { gap: 2px; }
+.rv-pair-arrow { line-height: 1; text-align: start; padding-inline-start: 2px; }
+@media (max-width: 700px) { .mt-bulk { position: static; } }
+@media (max-width: 700px) {
+  /* Label above value so long review text gets the full card width */
+  .rv-table td[data-th] { flex-direction: column; align-items: stretch; gap: 2px; }
+  .rv-table td[data-th]::before { width: auto; }
+  .rv-table td.cm-check { flex-direction: row; }
+}
+@media (max-width: 700px) {
+  .rv-table td.rv-num, .rv-table td.rv-date { flex-direction: row; align-items: center; gap: 12px; }
+  .rv-table td.rv-num::before, .rv-table td.rv-date::before { width: 96px; }
+  .rv-table td > .rv-user, .rv-table td > .adm-chip { align-self: flex-start; }
+  .rv-title { min-width: 0; }
+}
+@media (max-width: 700px) {
+  .rv-table .rv-text { width: auto; min-width: 0; }
+  .rv-title, .rv-pair { max-width: none; width: 100%; }
+  .rv-user { max-width: none; }
+}

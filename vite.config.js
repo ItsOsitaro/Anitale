@@ -6,7 +6,7 @@ import tailwindcss from '@tailwindcss/vite';
 
 // Forward the browser's real host so the API can verify same-origin writes.
 const api = {
-  target: 'http://127.0.0.1:3000',
+  target: process.env.API_TARGET || 'http://127.0.0.1:3000',
   configure: (proxy) => {
     proxy.on('proxyReq', (proxyReq, req) => proxyReq.setHeader('x-forwarded-host', req.headers.host));
   },

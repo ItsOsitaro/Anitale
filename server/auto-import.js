@@ -26,10 +26,17 @@ const CHUNK = 5;
 const RUN_EVERY_MS = 22 * 3600 * 1000;
 let running = false;
 
+const HISTORY_KEEP = 8;
+const readJson = (key, fallback) => {
+  try { return JSON.parse(getSetting(key, '') || 'null') ?? fallback; } catch { return fallback; }
+};
+
 export const getAutoImportState = () => {
-  let last = null;
-  try { last = JSON.parse(getSetting('autoimport.last', '') || 'null'); } catch { last = null; }
-  return { enabled: getSetting('autoimport.enabled', '0') === '1', running, last };
+  const last = readJson('autoimport.last', null);
+  const enabled = getSetting('autoimport.enabled', '0') === '1';
+  // When the hourly scheduler will next start a run (only meaningful while switched on).
+  const nextRunAt = enabled && !running ? new Date(Math.max(Date.now(), (last?.at ? Date.parse(last.at) : 0) + RUN_EVERY_MS)).toISOString() : null;
+  return { enabled, running, last, history: readJson('autoimport.history', []), nextRunAt, maxPerRun: MAX_NEW_PER_TABLE };
 };
 
 export const setAutoImportEnabled = (on) => setSetting('autoimport.enabled', on ? '1' : '0');
@@ -44,11 +51,13 @@ const callBulk = async (bulk, body) => {
 export const runAutoImport = async (bulk) => {
   if (running) return getAutoImportState().last;
   running = true;
-  const report = { at: new Date().toISOString(), anime: 0, manga: 0, failed: 0, error: '' };
+  const startedMs = Date.now();
+  const report = { at: new Date().toISOString(), anime: 0, manga: 0, failed: 0, seen: 0, error: '', seconds: 0 };
   try {
     for (const mediaType of ['anime', 'manga']) {
       const ids = await idsFor(mediaType);
       const known = new Set(db.prepare(`SELECT mal_id FROM ${mediaType} WHERE mal_id IS NOT NULL`).all().map((r) => r.mal_id));
+      report.seen += ids.length;
       const fresh = ids.filter((id) => !known.has(id)).slice(0, MAX_NEW_PER_TABLE);
       for (let i = 0; i < fresh.length; i += CHUNK) {
         try {
@@ -67,7 +76,11 @@ export const runAutoImport = async (bulk) => {
     console.error(`[auto-import] ${error.message}`);
   } finally {
     running = false;
-    setSetting('autoimport.last', JSON.stringify(report));
+    report.seconds = Math.round((Date.now() - startedMs) / 1000);
+    try {
+      setSetting('autoimport.last', JSON.stringify(report));
+      setSetting('autoimport.history', JSON.stringify([report, ...readJson('autoimport.history', [])].slice(0, HISTORY_KEEP)));
+    } catch (error) { console.error(`[auto-import] could not save the report: ${error.message}`); }
   }
   console.log(`[auto-import] anime +${report.anime}, manga +${report.manga}, failed ${report.failed}`);
   return report;

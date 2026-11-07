@@ -175,6 +175,22 @@ if (!mangaStatusColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN publication_stat
 const mangaChaptersColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('manga') WHERE name = 'chapters'").get();
 if (!mangaChaptersColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN chapters INTEGER`);
 
+// Extra admin accounts (the owner lives in server/.env). Permissions: JSON { area: 'view' | 'edit' }.
+db.exec(`
+CREATE TABLE IF NOT EXISTS admins (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  username TEXT NOT NULL UNIQUE COLLATE NOCASE,
+  password_hash TEXT NOT NULL,
+  label TEXT NOT NULL DEFAULT '',
+  permissions TEXT NOT NULL DEFAULT '{}',
+  active INTEGER NOT NULL DEFAULT 1,
+  token_version INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_login TEXT,
+  created_by TEXT NOT NULL DEFAULT ''
+);
+`);
+
 // Migration (scale): popularity column. The public site only ships the most
 // popular titles ("core") to the browser; everything else is served on demand.
 // Anime members come from the statistics JSON via triggers; manga stores it on insert.

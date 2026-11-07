@@ -1,0 +1,85 @@
+/* Review pass 2: anime list, anime form, title import, tag input. */
+
+/* ---- Anime list ---- */
+.al-wrap { transition: opacity .15s; }
+.al-wrap.is-loading { opacity: .55; pointer-events: none; }
+.al-total { font-variant-numeric: tabular-nums; }
+.al-slug { font-size: .82rem; overflow-wrap: anywhere; }
+.al-nomal { margin-block-start: 4px; background: var(--warn-soft); color: var(--warn); border-color: transparent; }
+.al-meta { display: none; }
+.al-title { max-width: 440px; }
+.al-title strong { overflow-wrap: anywhere; }
+.al-wrap .adm-empty { display: grid; gap: 10px; justify-items: center; }
+.adm-pager span { font-variant-numeric: tabular-nums; text-align: center; }
+.al-wrap .adm-more > summary:focus-visible, .al-wrap .adm-more-menu :focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+@media (max-width: 720px) {
+  .adm-toolbar .adm-search { flex: 1 1 100%; }
+  .adm-toolbar .adm-push { margin-inline-start: 0; }
+  .adm-filters { flex-wrap: nowrap; overflow-x: auto; padding-block-end: 4px; scrollbar-width: thin; }
+  .adm-filters .adm-fchip { flex: none; }
+  .adm-table.al-table tr { display: grid; grid-template-columns: 56px 1fr; column-gap: 12px; row-gap: 4px; align-items: start; }
+  .adm-table.al-table td { padding: 0; }
+  .adm-table.al-table td.al-cover { grid-row: 1 / span 3; }
+  .adm-table.al-table td.al-title { display: block; grid-column: 2; }
+  .adm-table.al-table td.al-col { display: none; }
+  .adm-table.al-table td.al-actions { grid-column: 1 / -1; margin-block-start: 6px; padding-block-start: 8px; border-block-start: 1px solid var(--line); }
+  .adm-table.al-table td.al-actions::before { display: none; }
+  .adm-table.al-table .adm-thumb { width: 56px; height: 78px; }
+  .al-meta { display: block; margin-block-start: 4px; font-size: .84rem; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .adm-table.al-table .adm-actions { flex-wrap: nowrap; }
+  .adm-table.al-table .adm-actions > .adm-btn { flex: 1; text-align: center; }
+  .adm-pager { flex-wrap: wrap; }
+  .adm-pager span { order: -1; flex: 1 1 100%; }
+  .adm-pager .adm-btn { flex: 1; }
+}
+.adm-table a.adm-btn.adm-primary { color: var(--on-accent); }
+.adm-table a.adm-btn.adm-primary:hover { color: var(--on-accent); }
+
+/* ---- Anime form ---- */
+.adm-import .imp-search input { padding-inline: 36px !important; }
+.af-import { margin-block-end: 8px; }
+.af-import > summary {
+  cursor: pointer; padding: 10px 14px; border: 1px solid var(--line-2); border-radius: var(--r-md); background: var(--panel);
+  font-weight: 650; font-size: .92rem; color: var(--accent-text); list-style-position: inside;
+}
+.af-import > summary:hover { border-color: var(--ink-3); }
+.af-import > summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.af-import[open] > summary { margin-block-end: 8px; }
+.af-jump { position: sticky; inset-block-start: 58px; z-index: 6; margin-inline: -4px; padding: 8px 4px; background: color-mix(in oklab, var(--surface) 88%, transparent); backdrop-filter: blur(8px); flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+.af-jump a { flex: none; }
+.af-jump a[aria-current="true"] { background: var(--accent-soft); border-color: var(--accent); color: var(--accent-text); }
+.af-jump a:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.adm-card[id^="sec-"] { scroll-margin-block-start: 120px; }
+.af-fileinfo { margin-block: 4px; font-size: .82rem; overflow-wrap: anywhere; }
+.af-savestate { align-self: center; font-size: .84rem; color: var(--warn); font-weight: 650; }
+.af-delete { margin-inline-start: auto; }
+.adm-inline { flex-wrap: wrap; }
+.adm-inline input { flex: 1 1 160px; min-width: 0; }
+@media (max-width: 720px) {
+  .adm-savebar { flex-wrap: wrap; }
+  .adm-savebar .adm-btn { flex: 1 1 auto; }
+  .af-savestate { order: -1; flex: 1 1 100%; }
+  .af-head .adm-h1 { font-size: 1.35rem; }
+}
+.af-file { position: absolute; inline-size: 1px; block-size: 1px; opacity: 0; overflow: hidden; }
+.af-file:focus-visible + label { outline: 2px solid var(--focus); outline-offset: 2px; }
+.adm-cover-row { border-radius: var(--r-md); transition: background .15s; }
+.adm-cover-row.is-drag { background: var(--accent-soft); outline: 2px dashed var(--accent); outline-offset: 6px; }
+
+/* ---- Title import ---- */
+.adm-import .imp-clear { min-inline-size: 30px; min-block-size: 30px; }
+.imp-recent-clear { border-style: dashed !important; }
+.imp-results { max-block-size: 440px; overflow-y: auto; }
+.imp-results .imp-link { white-space: nowrap; }
+.adm-import .imp-note { color: var(--accent-text); }
+
+/* ---- Tag input ---- */
+.adm-tag { transition: background .12s; }
+.adm-tag button { min-inline-size: 24px; min-block-size: 24px; border-radius: var(--r-full); }
+.adm-tag button:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.adm-tags { cursor: text; }
+.imp-search input { text-overflow: ellipsis; }
+.tag-clear { margin-inline-start: 8px; border: 0; background: transparent; color: var(--accent-text); font: inherit; font-size: .8rem; font-weight: 650; cursor: pointer; text-decoration: underline; }
+.tag-clear:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tag-full { align-self: center; padding-inline: 6px; font-size: .82rem; }
+.adm-tags.is-full { border-style: dashed; }

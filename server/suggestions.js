@@ -102,8 +102,28 @@ export const registerSuggestionRoutes = (app, { requireSiteUser, requireAdmin, c
 
   app.get('/api/admin/suggestions', requireAdmin, (req, res) => {
     const status = ['pending', 'approved', 'rejected'].includes(req.query.status) ? req.query.status : 'pending';
-    const rows = db.prepare(`SELECT s.*, u.username FROM edit_suggestions s JOIN users u ON u.id = s.user_id WHERE s.status = ? ORDER BY s.id ${status === 'pending' ? 'ASC' : 'DESC'} LIMIT 100`).all(status);
-    res.json({ items: rows.map((r) => shape(r, { username: r.username, current: currentFor(r) })) });
+    const where = ['s.status = ?'];
+    const args = [status];
+    if (['synopsis', 'title', 'genres', 'report'].includes(req.query.kind)) { where.push('s.kind = ?'); args.push(req.query.kind); }
+    const q = String(req.query.q || '').trim().slice(0, 100);
+    if (q) {
+      where.push("(u.username LIKE ? ESCAPE '!' OR s.slug LIKE ? ESCAPE '!' OR s.payload LIKE ? ESCAPE '!')");
+      const like = `%${q.replace(/[%_!]/g, '!$&')}%`;
+      args.push(like, like, like);
+    }
+    const limit = Math.min(50, Math.max(1, Number.parseInt(req.query.limit, 10) || 100));
+    const page = Math.max(1, Number.parseInt(req.query.page, 10) || 1);
+    const from = 'FROM edit_suggestions s JOIN users u ON u.id = s.user_id WHERE ' + where.join(' AND ');
+    const total = db.prepare('SELECT COUNT(*) AS n ' + from).get(...args).n;
+    // sort=new|old overrides the default (oldest first while pending, newest first otherwise).
+    const oldFirst = req.query.sort === 'old' || (req.query.sort !== 'new' && status === 'pending');
+    const rows = db.prepare('SELECT s.*, u.username ' + from + ' ORDER BY s.id ' + (oldFirst ? 'ASC' : 'DESC') + ' LIMIT ? OFFSET ?').all(...args, limit, (page - 1) * limit);
+    const counts = { pending: 0, approved: 0, rejected: 0 };
+    for (const r of db.prepare('SELECT status, COUNT(*) AS n FROM edit_suggestions GROUP BY status').all()) counts[r.status] = r.n;
+    // Per-type counts for the current tab (ignores the type filter itself so every chip keeps its number).
+    const kindCounts = {};
+    for (const r of db.prepare('SELECT kind, COUNT(*) AS n FROM edit_suggestions WHERE status = ? GROUP BY kind').all(status)) kindCounts[r.kind] = r.n;
+    res.json({ items: rows.map((r) => shape(r, { username: r.username, current: currentFor(r) })), total, page, pages: Math.max(1, Math.ceil(total / limit)), counts, kindCounts });
   });
 
   const load = (req) => {

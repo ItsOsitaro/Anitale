@@ -1,0 +1,84 @@
+/* Styles added by review pass 3: manga list + airing schedule. */
+
+/* Manga list */
+.manga-title-cell { min-inline-size: 220px; }
+.manga-title-cell strong { overflow-wrap: anywhere; }
+.manga-slug-line { display: flex; align-items: center; gap: 8px; margin-block-start: 4px; min-width: 0; }
+.manga-slug { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-inline-size: 300px; font-size: .82rem; }
+.manga-slug-line .adm-chip { margin: 0; flex: none; }
+.manga-cover-cell { inline-size: 64px; }
+.manga-missing { color: var(--ink-3); }
+.adm-table td.manga-missing { color: var(--ink-2); opacity: .7; }
+.manga-actions { flex-wrap: nowrap; align-items: center; }
+.manga-actions .adm-more > summary { display: inline-flex; align-items: center; justify-content: center; cursor: pointer; min-inline-size: 36px; }
+.manga-total { font-variant-numeric: tabular-nums; }
+.manga-dirty { margin-inline-end: auto; align-self: center; }
+.manga-editor-actions { align-items: center; }
+.adm-pager { flex-wrap: wrap; }
+.adm-table tr.manga-edit-row:hover > td { background: color-mix(in oklab, var(--panel-2) 70%, transparent); }
+.manga-editor input[aria-invalid="true"]:focus { outline-color: var(--danger); }
+.adm-fchip:focus-visible, .adm-more > summary:focus-visible, .adm-sc-x:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.adm-sort select { padding-inline-end: 28px; }
+.adm-table-wrap { overflow-y: visible; }
+/* The row menu must not be clipped by the scrolling table wrapper */
+.adm-table-wrap:has(.adm-more[open]) { overflow: visible; }
+
+@media (max-width: 700px) {
+  .manga-title-cell, .manga-cover-cell { display: block; inline-size: auto; min-inline-size: 0; }
+  .manga-slug { max-inline-size: 60vw; }
+  .manga-cover-cell { padding-block-end: 0; }
+  .manga-actions .adm-btn { flex: 1 1 auto; }
+  .manga-actions .adm-more { flex: none; }
+  .manga-editor-actions { inline-size: 100%; }
+}
+
+/* Airing schedule */
+.adm-schedule-item { min-block-size: 36px; transition: border-color .15s, background-color .15s; }
+.adm-schedule-item:hover { border-color: var(--ink-3); }
+.adm-schedule-item select { cursor: pointer; }
+.adm-schedule-item select:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+.adm-schedule-title { flex: 1; min-width: 0; max-width: none; }
+.adm-sc-x {
+  flex: none; inline-size: 24px; block-size: 24px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: 50%; background: transparent; color: var(--ink-2); font-size: 1rem; line-height: 1; cursor: pointer;
+}
+.adm-sc-x:hover:not(:disabled) { background: var(--danger-soft); color: var(--danger); }
+.adm-sc-x:disabled { opacity: .4; cursor: not-allowed; }
+.adm-schedule-empty { border: 1px dashed var(--line-2); border-radius: var(--r-sm); background: transparent; }
+.adm-schedule-day header .adm-muted { font-variant-numeric: tabular-nums; }
+.adm-schedule-day.is-today header h3 { color: var(--accent-text); }
+.adm-schedule-day { transition: border-color .15s; }
+.adm-schedule-unscheduled { padding-block-start: 14px; border-block-start: 1px solid var(--line); }
+.adm-schedule .adm-empty .adm-btn { margin-inline-start: 8px; }
+@media (max-width: 700px) {
+  .adm-schedule-grid { grid-template-columns: 1fr; }
+  .adm-schedule-item select { flex: none; max-width: 48%; }
+  .adm-sc-x { inline-size: 36px; block-size: 36px; }
+}
+
+/* Cover file missing: show the empty dashed box instead of the browser's broken-image icon */
+img.adm-thumb.is-broken { opacity: .35; object-fit: none; border: 1px dashed var(--ink-3); }
+
+/* Day columns are narrow: stack each item (title on top, day picker + remove below) instead of squeezing one row */
+.adm-schedule-grid { grid-template-columns: repeat(auto-fill, minmax(215px, 1fr)); align-items: start; }
+.adm-schedule-day .adm-schedule-item { flex-wrap: wrap; align-items: stretch; gap: 6px; padding: 8px; }
+.adm-schedule-day .adm-schedule-title {
+  flex: 1 1 100%; white-space: normal; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; line-height: 1.5;
+}
+.adm-schedule-day .adm-schedule-item select { flex: 1 1 0; max-width: none; min-width: 0; min-height: 30px; font-size: 12px; }
+.adm-schedule-day .adm-sc-x { align-self: center; }
+@media (max-width: 700px) {
+  .adm-schedule .adm-toolbar .adm-search { flex: 1 1 100%; }
+  .adm-schedule .adm-toolbar .adm-push { margin-inline-start: 0; }
+}
+
+/* English (ltr) admin inside an <html dir="rtl"> document: the rtl drawer rule above leaked and left the
+   closed sidebar covering the right of the phone screen. Re-assert the ltr offsets. */
+@media (max-width: 959px) {
+  .admin-root[dir=ltr] .adm-sidebar { transform: translateX(-110%); }
+  .admin-root[dir=ltr][data-nav-open] .adm-sidebar { transform: translateX(0); }
+}
+@media (max-width: 700px) {
+  .manga-slug-line { flex-wrap: wrap; }
+  .manga-slug { flex: 1 1 100%; max-inline-size: 100%; }
+}

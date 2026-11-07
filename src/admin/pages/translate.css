@@ -1,0 +1,72 @@
+/* Styles for the translate admin pages (Translation, review queue, airing schedule). */
+
+/* Shared note banner */
+.adm-tr-note {
+  margin: 0 0 14px; padding: 10px 14px; border-radius: var(--r-sm);
+  background: var(--warn-soft); color: var(--warn); border: 1px solid color-mix(in oklab, var(--warn) 30%, transparent);
+  font-weight: 650; font-size: .9rem;
+}
+.adm-tr-note.is-run { background: var(--accent-soft); color: var(--accent-text); border-color: color-mix(in oklab, var(--accent) 35%, transparent); }
+
+/* Translation page */
+.adm-tr-stats { grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); align-items: stretch; }
+.adm-tr-link { color: inherit; text-decoration: none; }
+.adm-tr-link:hover span { color: var(--accent-text); }
+.adm-tr-refresh { align-self: center; justify-self: start; }
+.adm-tr-skel { padding: 0; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); margin-block-end: 20px; }
+.adm-tr-skel i { height: 66px; }
+.adm-tr-scope { align-self: center; }
+.adm-tr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.adm-tr-panel {
+  display: grid; gap: 10px; align-content: start; padding: 16px;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel);
+}
+.adm-tr-panel h3 { margin: 0; font-size: 1rem; font-weight: 750; }
+.adm-tr-panel p { margin: 0; }
+.adm-tr-check { display: flex; align-items: center; gap: 8px; font-weight: 650; cursor: pointer; }
+.adm-tr-check input { inline-size: 18px; block-size: 18px; accent-color: var(--accent); }
+.adm-tr-hint { font-size: .82rem; }
+.adm-tr-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.adm-tr-result { margin-block-start: 16px; }
+.adm-tr-result .adm-table td[dir='ltr'] { text-align: start; overflow-wrap: anywhere; }
+.adm-tr-result .adm-chip { max-inline-size: 36ch; white-space: normal; overflow-wrap: anywhere; }
+.adm-fchip:disabled { opacity: .55; cursor: not-allowed; }
+
+/* Review queue */
+.adm-rv-filters { justify-content: space-between; }
+.adm-rv-filters .adm-filters { margin: 0; }
+.adm-rv-search { flex: 1; min-inline-size: 200px; max-inline-size: 360px; }
+.adm-rv-bulk { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-block-end: 14px; }
+.adm-rv-open { font-size: .82rem; font-weight: 650; }
+.adm-rv-count { display: flex; justify-content: space-between; gap: 8px; margin: 4px 0 0; font-size: .8rem; }
+.adm-rv-more { display: flex; align-items: center; justify-content: center; gap: 12px; flex-wrap: wrap; }
+.adm-rv-empty { display: grid; gap: 12px; justify-items: center; }
+.adm-rv-empty p { margin: 0; }
+.adm-rv-skel { block-size: 190px; }
+.adm-rv-card:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+@media (max-width: 640px) {
+  .adm-rv-card { padding: 12px; }
+  .adm-rv-actions .adm-btn { flex: 1 1 auto; min-block-size: 40px; }
+  .adm-rv-skip { margin-inline-start: 0; }
+  .adm-rv-search { max-inline-size: none; }
+}
+
+/* Airing schedule */
+.adm-schedule-day.is-today { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.adm-schedule-day header { gap: 6px; }
+.adm-schedule-day header h3 { margin-inline-end: auto; }
+.adm-schedule-title { color: var(--ink); text-decoration: none; }
+.adm-schedule-title:hover { color: var(--accent-text); text-decoration: underline; }
+.adm-schedule-item[aria-busy='true'] { opacity: .6; }
+.adm-sc-add {
+  display: grid; gap: 8px; margin-block-end: 16px; padding: 14px;
+  border: 1px dashed var(--line-2); border-radius: var(--r-md); background: var(--panel);
+}
+.adm-sc-add p { margin: 0; }
+.adm-sc-add .adm-schedule-list .adm-schedule-title { max-width: none; flex: 1; min-width: 0; }
+.adm-schedule-unscheduled .adm-btn { margin-block-start: 10px; }
+.adm-schedule .adm-toolbar .adm-search { flex: 1; min-inline-size: 180px; }
+@media (max-width: 640px) {
+  .adm-schedule-item { flex-wrap: wrap; }
+  .adm-schedule-item select { max-width: none; }
+}

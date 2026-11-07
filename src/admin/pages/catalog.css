@@ -1,0 +1,33 @@
+/* Styles for the catalog admin pages (manga list, anime form, tag input). */
+
+/* Manga list */
+.manga-is-loading { opacity: .6; transition: opacity .15s; pointer-events: none; }
+.manga-editor label:has(input[aria-invalid="true"]) input { border-color: var(--danger); }
+.manga-field-err, .adm-field-err { color: var(--danger); font-size: .82rem; font-weight: 600; }
+.adm-table .adm-chip { margin-block-start: 4px; font-size: .74rem; }
+.adm-error .adm-btn { margin-inline-start: 10px; min-height: 30px; padding: 3px 10px; }
+.adm-empty .adm-btn { margin-inline-start: 8px; }
+
+/* Anime form */
+.af-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-block-end: 6px; }
+.af-head .adm-h1 { margin: 0; }
+.af-view { margin-inline-start: auto; min-height: 34px; }
+.af-dirty { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
+.af-auto { align-self: flex-start; }
+.af-readonly { margin-block-end: 12px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel-2); border: 1px solid var(--line); }
+.af-jump { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 10px 14px; }
+.af-jump a {
+  padding: 4px 12px; border-radius: var(--r-full); border: 1px solid var(--line-2); background: var(--panel);
+  color: var(--ink-2); font-size: .84rem; font-weight: 650; text-decoration: none;
+}
+.af-jump a:hover { border-color: var(--ink-3); color: var(--ink); }
+.adm-card[id^="sec-"] { scroll-margin-block-start: 76px; }
+.adm-field.has-error input, .adm-field.has-error textarea, .adm-field.has-error select,
+.adm-inline input[aria-invalid="true"] { border-color: var(--danger); }
+fieldset.adm-card:disabled { opacity: .85; }
+
+/* Tag input */
+.adm-tags.is-disabled { background: var(--panel-2); }
+.tag-count { font-weight: 500; }
+.adm-tag { max-width: 100%; overflow-wrap: anywhere; }
+.adm-tags:focus-within { outline: 2px solid var(--focus); outline-offset: 1px; }

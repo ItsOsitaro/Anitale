@@ -1,0 +1,74 @@
+/* Styles added by review pass 6. */
+
+/* ---- Site users ---- */
+.cm-avatar {
+  display: inline-grid; place-items: center; inline-size: 30px; block-size: 30px; border-radius: 50%;
+  color: #fff; font-size: .82rem; font-weight: 800; box-shadow: inset 0 0 0 2px oklch(1 0 0 / .28);
+}
+.cm-u-avatar { inline-size: 44px; }
+.cm-u-name { min-inline-size: 240px; }
+.cm-u-mail { display: flex; align-items: center; gap: 6px; flex-wrap: nowrap; margin-block-start: 2px; font-size: .8rem; }
+.cm-u-mail > span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-inline-size: 24ch; }
+.cm-u-mail .adm-chip { margin: 0; }
+.cm-u-counts { white-space: nowrap; }
+.adm-chip.cm-zero { opacity: .55; }
+.cm-clamp { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-inline-size: 38ch; overflow-wrap: anywhere; }
+.cm-u-actions .adm-actions { flex-wrap: nowrap; }
+.adm-users-table tbody tr:not(.cm-detail-row):hover > td { background: var(--panel-2); }
+.adm-users-table tr.is-selected > td { box-shadow: inset 0 -1px 0 transparent; }
+.cm-detail-row > td { background: var(--panel-2); border-inline-start: 3px solid var(--accent); }
+.cm-hint.is-bad { color: var(--danger); }
+.cm-status { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
+.adm-sort select { inline-size: auto; min-inline-size: 130px; }
+input[aria-invalid='true'] { border-color: var(--danger); }
+@media (max-width: 700px) {
+  .adm-users-table tbody tr:not(.cm-detail-row) {
+    display: grid; grid-template-columns: auto 1fr; column-gap: 12px; align-items: center;
+  }
+  .adm-users-table .cm-u-avatar { grid-row: 1; grid-column: 1; inline-size: auto; padding: 0; }
+  .adm-users-table .cm-u-name { grid-row: 1; grid-column: 2; display: block; min-inline-size: 0; }
+  .adm-users-table .cm-u-mail { max-inline-size: none; }
+  .adm-users-table td[data-th] { grid-column: 1 / -1; }
+  .adm-users-table .cm-u-bio { align-items: flex-start; }
+  .adm-users-table .cm-clamp { max-inline-size: none; text-align: end; }
+  .adm-users-table .cm-u-actions { justify-content: flex-end; }
+  .adm-users-table .cm-u-actions::before { display: none; }
+}
+
+/* ---- Translation page ---- */
+.admin-root .adm-tr-check input[type='checkbox'] { inline-size: 18px; block-size: 18px; min-block-size: 0; padding: 0; flex: none; }
+.adm-tr-check { justify-content: flex-start; }
+.adm-tr-cover { display: grid; gap: 6px; margin-block-end: 16px; }
+.adm-tr-cover p { margin: 0; font-size: .84rem; }
+.adm-tr-bar { display: flex; block-size: 10px; border-radius: var(--r-full); background: var(--panel-2); border: 1px solid var(--line); overflow: hidden; }
+.adm-tr-bar i { display: block; block-size: 100%; transition: inline-size .3s ease; }
+.adm-tr-bar .is-done { background: var(--ok); }
+.adm-tr-bar .is-pending { background: var(--warn); }
+.adm-tr-stats .adm-tr-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.adm-tr-stats .adm-tr-link:hover { border-color: var(--accent); }
+@media (prefers-reduced-motion: reduce) { .adm-tr-bar i { transition: none; } }
+
+/* ---- Review queue ---- */
+.adm-rv-filters { align-items: center; }
+.admin-root .adm-rv-search { flex: 1 1 200px; inline-size: auto; max-inline-size: 360px; }
+.adm-rv-filters .adm-sort { margin-inline-start: auto; }
+.adm-rv-card:hover { border-color: var(--ink-3); }
+.adm-rv-fa { resize: none; overflow-y: auto; }
+.adm-rv-en { max-block-size: 420px; }
+.adm-rv-count { align-items: center; flex-wrap: wrap; }
+.adm-rv-card { scroll-margin-block-start: 72px; }
+@media (max-width: 640px) {
+  .adm-rv-filters .adm-sort { margin-inline-start: 0; }
+  .adm-rv-title { flex-basis: 100%; }
+  .adm-rv-en { max-block-size: 160px; }
+  .adm-rv-filters { gap: 8px; }
+  .adm-rv-filters > .adm-btn, .adm-rv-bulk > .adm-btn { flex: 1 1 auto; }
+  .adm-rv-filters .adm-sort { flex: 1 1 200px; }
+  .adm-rv-filters .adm-sort select { flex: 1; inline-size: 100%; }
+}
+.cm-fieldset + .adm-actions { margin-block-start: 14px; }
+.adm-tr-result .adm-stats { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+@media (max-width: 640px) {
+  .adm-tr-stats { grid-template-columns: repeat(2, 1fr); }
+  .adm-tr-stats .adm-tr-refresh { grid-column: 1 / -1; justify-self: stretch; }
+}

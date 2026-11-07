@@ -1,0 +1,57 @@
+/* Styles for the community admin pages (reviews, recommendations, suggestions, site users). */
+.cm-stale { opacity: .6; transition: opacity .15s ease; }
+.cm-readonly { margin-block: 0 12px; padding: 8px 12px; border-radius: var(--r-sm); background: var(--panel-2); }
+.cm-errbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.cm-check { width: 40px; text-align: center; }
+.cm-check input, .cm-selall input { width: 18px; height: 18px; accent-color: var(--accent); cursor: pointer; }
+.cm-selall { display: inline-flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--ink-2); cursor: pointer; }
+.adm-table tr.is-selected > td { background: var(--accent-soft); }
+.cm-link { margin-inline-start: 8px; padding: 0; border: 0; background: none; color: var(--accent-text); font: inherit; font-size: .84rem; font-weight: 650; cursor: pointer; }
+.cm-link:hover { text-decoration: underline; }
+.cm-pair { display: inline-block; overflow-wrap: anywhere; }
+a.adm-btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
+.adm-actions .adm-more > summary { cursor: pointer; }
+
+/* Bulk bar */
+.cm-bulk {
+  position: sticky; inset-block-start: 8px; z-index: 15; display: flex; align-items: center; flex-wrap: wrap; gap: 12px;
+  margin-block-end: 12px; padding: 10px 14px; border-radius: var(--r-md);
+  background: var(--panel); border: 1px solid var(--accent); box-shadow: var(--shadow);
+}
+.cm-bulk > .adm-actions { flex: 1; min-width: 0; }
+.cm-bulk .sg-reject { margin: 0; flex: 1; }
+
+/* Suggestion cards */
+.sg-card { padding: 14px; margin-block-end: 12px; }
+.sg-card.is-selected { border-color: var(--accent); }
+.sg-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-block-end: 10px; }
+.sg-head input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+.sg-date { margin-inline-start: auto; font-size: .8rem; }
+.cm-new { padding: 8px 10px; border-radius: var(--r-sm); background: var(--ok-soft); }
+.cm-genres p { margin: 6px 0; }
+.cm-genres .adm-chip { margin-inline-end: 6px; }
+.cm-presets { display: flex; flex-wrap: wrap; gap: 6px; flex-basis: 100%; }
+.sg-reject .adm-search { flex: 1; min-width: 200px; }
+
+/* Site users */
+.cm-create { padding: 16px; margin-block-end: 14px; }
+.cm-create-title { margin: 0 0 10px; font-size: 1rem; }
+.cm-fieldset { border: 0; padding: 0; margin: 0; min-width: 0; }
+.cm-hint { margin: 4px 0 8px; font-size: .82rem; }
+.cm-pass { display: flex; gap: 6px; align-items: stretch; }
+.cm-pass input { flex: 1; min-width: 0; }
+.cm-summary { display: flex; flex-wrap: wrap; gap: 6px; margin-block-end: 12px; }
+.cm-entries-head { display: grid; gap: 8px; margin-block-end: 8px; }
+.cm-entries-head .adm-filters { margin: 0; }
+.cm-entry-scroll { max-height: 320px; overflow-y: auto; padding-inline-end: 4px; }
+.cm-entry-scroll .adm-entry-slug { color: var(--accent-text); text-decoration: none; }
+.cm-entry-scroll .adm-entry-slug:hover { text-decoration: underline; }
+.cm-loading { padding: 8px 16px; }
+
+@media (max-width: 700px) {
+  .cm-bulk { inset-block-start: 4px; }
+  .cm-check { width: auto; text-align: start; }
+  .sg-date { margin-inline-start: 0; flex-basis: 100%; }
+  .cm-pass { flex-wrap: wrap; }
+}
+@media (prefers-reduced-motion: reduce) { .cm-stale { transition: none; } }

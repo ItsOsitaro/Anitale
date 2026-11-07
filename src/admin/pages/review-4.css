@@ -1,0 +1,76 @@
+/* Review pass 4: quick add, bulk add, auto import. Existing tokens only; logical properties. */
+
+/* ---- shared card layout (the plain adm-card-* classes have no styles) ---- */
+.imp-card-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: 8px 12px; margin-block-end: 12px; }
+.imp-card-title { margin: 0 0 4px; font-size: 1.1rem; }
+.imp-card-sub { margin: 0; color: var(--ink-2); font-size: .88rem; line-height: 1.7; max-width: 70ch; }
+.imp-card-head .adm-chip { margin-inline-end: 0; }
+.imp-card-body > :first-child { margin-block-start: 0; }
+.imp-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 4px; }
+.imp-panel { margin-block-start: 14px; padding: 12px 14px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel-2); }
+.imp-panel-title { margin: 0 0 4px; font-size: .95rem; }
+.imp-panel .adm-error { margin-block-end: 0; }
+.imp-stat { background: var(--panel); }
+.adm-chip.is-live { background: var(--accent-soft); color: var(--accent-text); border-color: transparent; }
+.imp-note.is-live { color: var(--accent-text); }
+.imp-note.is-live::before { content: ''; display: inline-block; width: 8px; height: 8px; margin-inline-end: 8px; border-radius: 50%; background: var(--accent); animation: imp-pulse 1.4s ease-in-out infinite; }
+@keyframes imp-pulse { 50% { opacity: .3; } }
+@media (prefers-reduced-motion: reduce) { .imp-note.is-live::before { animation: none; } }
+.imp-history { margin-block-start: 12px; font-size: .86rem; }
+.imp-history summary { cursor: pointer; color: var(--ink-2); padding-block: 4px; }
+.imp-history summary:hover { color: var(--ink); }
+.imp-history summary:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; border-radius: var(--r-sm); }
+.imp-history ul { list-style: none; margin: 6px 0 0; padding: 0; border: 1px solid var(--line); border-radius: var(--r-md); overflow: hidden; }
+.imp-history li { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px 12px; padding: 7px 12px; background: var(--panel); border-block-end: 1px solid var(--line); }
+.imp-history li:last-child { border-block-end: 0; }
+.imp-history li.is-bad span:last-child { color: var(--danger); }
+.adm-error { overflow-wrap: anywhere; }
+
+/* ---- quick add ---- */
+.adm-import .imp-tools select { width: auto; min-width: 120px; flex: 0 0 auto; }
+.adm-import .imp-tools .adm-btn { flex: 0 0 auto; }
+.imp-recent .imp-recent-clear { padding: 3px 9px; }
+.imp-recent button:focus-visible, .imp-clear:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.imp-results .adm-thumb { flex: 0 0 auto; }
+.imp-title { display: block; overflow-wrap: anywhere; }
+.imp-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-block-start: 3px; color: var(--ink-2); font-size: .8rem; font-variant-numeric: tabular-nums; }
+.imp-meta .adm-chip { margin: 0; }
+.imp-rowerr { display: block; }
+.imp-results { transition: opacity .15s; }
+.imp-results.is-stale { opacity: .55; pointer-events: none; }
+.imp-skel.is-rows i { height: 76px; }
+.imp-results li:focus-within { border-color: var(--accent); }
+.imp-acts .adm-btn { min-width: 84px; }
+
+/* ---- bulk add ---- */
+.imp-bulk > section { margin-block-start: 18px; padding-block-start: 16px; border-block-start: 1px solid var(--line); }
+.imp-bulk > .bulk-tabs + section { margin-block-start: 0; padding-block-start: 0; border-block-start: 0; }
+.imp-bulk .adm-inline input[type=number] { min-width: 120px; max-width: 160px; }
+.imp-bulk .adm-inline input[list] { min-width: 160px; }
+.imp-bulk .adm-inline { align-items: flex-end; }
+.imp-bulk .adm-inline label > input, .imp-bulk .adm-inline label > select { flex: 0 0 auto; }
+.imp-bulk .bulk-candidate-list li.is-picked { background: var(--accent-soft); }
+.imp-bulk .bulk-candidate-list label { flex-wrap: wrap; }
+.imp-bulk .bulk-candidate-list label > span[dir=auto] { flex: 1 1 200px; min-width: 0; overflow-wrap: anywhere; }
+.imp-bulk .bulk-backfill h3 { margin: 0 0 4px; font-size: 1.02rem; }
+.imp-bulk .bulk-tabs button:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.imp-bulk .bulk-log li { flex-wrap: wrap; }
+.imp-bulk .bulk-log .bulk-log-title { flex: 1 1 140px; }
+
+@media (max-width: 640px) {
+  .adm-import .imp-tools select { flex: 1 1 100%; }
+  .adm-import .imp-tools .adm-btn[type=submit] { flex: 1 1 100%; }
+  .imp-actions .adm-btn { flex: 1 1 auto; }
+  .imp-bulk .adm-inline label { flex: 1 1 120px; }
+  .imp-bulk .adm-inline input[type=number], .imp-bulk .adm-inline select, .imp-bulk .adm-inline input[list] { max-width: none; width: 100%; }
+  .imp-bulk .adm-inline .adm-btn { flex: 1 1 auto; }
+  .imp-bulk .bulk-candidate-meta { margin-inline-start: 0; }
+}
+.imp-bulk .bulk-tabs { margin-block-start: 12px; }
+.bulk-output:empty { display: none; }
+.bulk-output h3 { margin: 0 0 8px; font-size: 1.02rem; }
+.imp-bulk > .bulk-output { padding-block-start: 16px; border-block-start: 1px solid var(--line); }
+.imp-facts { display: flex; flex-wrap: wrap; gap: 2px 0; }
+.imp-facts span:not(:last-child)::after { content: ''; display: inline-block; width: 1px; height: 1em; margin-inline: 10px; vertical-align: -2px; background: var(--line-2); }
+.imp-facts .is-ok { color: var(--ok); }
+.imp-stats { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }

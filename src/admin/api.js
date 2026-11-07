@@ -23,7 +23,9 @@ const request = async (method, url, body) => {
   try { data = await response.json(); } catch { /* empty body */ }
   if (!response.ok) {
     if (response.status === 401 && !url.includes('/auth/')) window.dispatchEvent(new Event('admin-unauthorized'));
-    throw new ApiError(data?.error || response.statusText, response.status, data);
+    if (response.status === 403 && !url.includes('/auth/')) window.dispatchEvent(new Event('admin-forbidden'));
+    // A proxy error page (502/503/504) has no JSON body: give it a readable message instead of an empty one.
+    throw new ApiError(data?.error || response.statusText || `HTTP ${response.status}`, response.status, data);
   }
   return data;
 };
@@ -32,7 +34,14 @@ export const api = {
   me: () => request('GET', '/api/auth/me'),
   login: (username, password) => request('POST', '/api/auth/login', { username, password }),
   logout: () => request('POST', '/api/auth/logout'),
-  list: (q, page) => request('GET', `/api/admin/anime?q=${encodeURIComponent(q)}&page=${page}&limit=15`),
+  list: (q, page, sort = 'updated', filter = '') => request('GET', `/api/admin/anime?q=${encodeURIComponent(q)}&page=${page}&limit=15&sort=${sort}&filter=${filter}`),
+  overview: () => request('GET', '/api/admin/overview'),
+  adminsList: () => request('GET', '/api/admin/admins'),
+  adminsCreate: (body) => request('POST', '/api/admin/admins', body),
+  adminsUpdate: (id, body) => request('PATCH', `/api/admin/admins/${id}`, body),
+  adminsRemove: (id) => request('DELETE', `/api/admin/admins/${id}`),
+  changeOwnPassword: (current, next) => request('POST', '/api/admin/me/password', { current, next }),
+  log: () => request('GET', '/api/admin/log'),
   get: (slug) => request('GET', `/api/anime/${encodeURIComponent(slug)}`),
   create: (payload) => request('POST', '/api/anime', payload),
   update: (slug, payload) => request('PUT', `/api/anime/${encodeURIComponent(slug)}`, payload),

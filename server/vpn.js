@@ -79,6 +79,7 @@ const targets = () => (process.env.VPN_CHECK_URL
   ]);
 
 export const testVpn = async () => {
+  if (!child) throw fail('The VPN is not running, so there is nothing to test.', 409);
   const agent = new ProxyAgent({ uri: PROXY_URL, connectTimeout: 30_000 });
   const results = await Promise.all(targets().map(async ({ name, url }) => {
     const started = Date.now();
@@ -97,6 +98,32 @@ export const testVpn = async () => {
 };
 
 const metaOf = (kind) => { try { return JSON.parse(getSetting(`vpn.meta.${kind}`, '') || 'null'); } catch { return null; } };
+// The admin page only needs to recognise the server, never to read it in full: keep the first/last characters.
+const maskHost = (host) => {
+  const h = String(host || '');
+  if (h.length <= 6) return '***';
+  const dot = h.lastIndexOf('.');
+  const tail = dot > 0 && h.length - dot <= 6 ? h.slice(dot) : h.slice(-2);
+  return `${h.slice(0, 2)}***${tail}`;
+};
+const publicMeta = (meta) => (meta ? { ...meta, address: maskHost(meta.address) } : meta);
+// Only one change at a time: two admins clicking "apply" together would fight over the same Xray process.
+let busy = false;
+const exclusive = async (work) => {
+  if (busy) throw fail('Another VPN change is still running. Wait a moment and try again.', 409);
+  busy = true;
+  try { return await work(); } finally { busy = false; }
+};
+const MAX_CONFIG_CHARS = 20_000;
+const checkInput = (kind, input) => {
+  const text = String(input || '');
+  if (!text.trim()) throw fail('The config is empty.', 400);
+  if (text.length > MAX_CONFIG_CHARS) throw fail('The config is too long.', 400);
+  if (kind === 'v2ray' && !/^(vless|vmess|trojan):\/\//i.test(text.trim())) throw fail('Paste a link that starts with vless://, vmess:// or trojan://.', 400);
+  if (kind === 'v2ray' && /\s/.test(text.trim())) throw fail('Paste one single link: it must not contain spaces or line breaks.', 400);
+  if (kind === 'wireguard' && !/\[Interface\]/i.test(text)) throw fail('This does not look like a WireGuard config (no [Interface] section).', 400);
+  if (kind === 'wireguard' && !/\[Peer\]/i.test(text)) throw fail('This WireGuard config has no [Peer] section.', 400);
+};
 const activeKind = () => { const kind = getSetting('vpn.active', ''); return KINDS.includes(kind) ? kind : ''; };
 
 // Older versions kept a single v2ray config in config.json: adopt it as the v2ray profile.
@@ -112,7 +139,7 @@ const migrate = () => {
 export const vpnStatus = () => {
   migrate();
   const profiles = {};
-  for (const kind of KINDS) profiles[kind] = { configured: fs.existsSync(profilePath(kind)), meta: metaOf(kind) };
+  for (const kind of KINDS) profiles[kind] = { configured: fs.existsSync(profilePath(kind)), meta: publicMeta(metaOf(kind)) };
   return { installed: installed(), running: Boolean(child), active: activeKind(), profiles, error: child ? '' : lastError };
 };
 
@@ -156,23 +183,24 @@ const runConfig = async (kind, configText, info, { save }) => {
 const assertKind = (kind) => { if (!KINDS.includes(kind)) throw fail('Unknown VPN type.', 400); };
 
 // Save a new/changed config for `kind` ('v2ray' link or 'wireguard' .conf text) and switch to it.
-export const applyVpn = async (kind, input) => {
+export const applyVpn = (kind, input) => exclusive(async () => {
   assertKind(kind);
+  checkInput(kind, input);
   migrate();
   if (!installed()) throw fail(`Xray is not installed at ${BIN()}.`, 400);
   let built;
   try { built = kind === 'wireguard' ? buildWireguardConfig(input) : buildXrayConfig(input); } catch (error) { throw fail(error.message, 400); }
   return runConfig(kind, JSON.stringify(built.config, null, 2), built.info, { save: true });
-};
+});
 
 // Switch to an already-saved profile (fast path between v2ray and WireGuard).
-export const activateVpn = async (kind) => {
+export const activateVpn = (kind) => exclusive(async () => {
   assertKind(kind);
   migrate();
   if (!installed()) throw fail(`Xray is not installed at ${BIN()}.`, 400);
   if (!fs.existsSync(profilePath(kind))) throw fail('Nothing is saved for this VPN type yet.', 400);
   return runConfig(kind, fs.readFileSync(profilePath(kind), 'utf8'), metaOf(kind) || {}, { save: false });
-};
+});
 
 // Stop the proxy but keep the saved profiles.
 export const turnOffVpn = async () => {

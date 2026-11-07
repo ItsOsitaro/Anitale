@@ -1,0 +1,75 @@
+/* Styles added by review pass 7 (health, VPN, activity log, login). Tokens only. */
+
+/* shared: a checkbox must not inherit the full-width text-input look */
+.admin-root .sys-switch input[type="checkbox"], .admin-root .sys-remember input[type="checkbox"] { width: 16px; height: 16px; min-height: 16px; padding: 0; flex: none; }
+.sys-switch { white-space: nowrap; }
+
+/* login */
+.adm-login .sys-remember { display: flex; align-items: center; gap: 8px; font-size: .86rem; color: var(--ink-2); cursor: pointer; }
+.adm-login .sys-peek { min-width: 52px; }
+.adm-login .sys-back { padding-block: 6px; color: var(--ink-2); text-decoration: underline; text-underline-offset: 3px; }
+.adm-login .sys-back:hover { color: var(--accent-text); }
+.adm-login .sys-back:focus-visible, .adm-login .sys-peek:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.adm-login .adm-error { margin: 0; padding: 10px 12px; }
+.adm-login .adm-primary:disabled { cursor: not-allowed; }
+
+/* health */
+.adm-health-tile > strong, .adm-health-tile > small, .adm-health-tile > span { justify-self: start; max-width: 100%; }
+.adm-health-tile > small { overflow-wrap: anywhere; }
+.sys-warns a { color: inherit; font-weight: 650; text-decoration: underline; }
+.sys-warns a:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.adm-health-errors li { display: grid; gap: 6px; }
+.sys-err-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.sys-err-head time { color: var(--ink-2); font-size: .8rem; margin-inline-start: auto; font-variant-numeric: tabular-nums; }
+.adm-health-errors code { color: var(--ink); }
+.adm-health-list li > strong { min-width: 90px; }
+.sys-err-tools .adm-fchip b { margin-inline-start: 4px; }
+.sys-meter { box-shadow: inset 0 0 0 1px var(--line); }
+
+/* vpn */
+.adm-card-head .sys-vpn-status { margin-inline-start: auto; }
+.sys-vpn-meta { margin: 0 0 10px; display: grid; gap: 4px; font-size: .86rem; }
+.sys-vpn-meta > div { display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
+.sys-vpn-meta dt { color: var(--ink-2); min-width: 120px; }
+.sys-vpn-meta dd { margin: 0; word-break: break-all; text-align: start; }
+.sys-proto { display: inline-block; margin-inline-start: 8px; font-weight: 400; color: var(--ink-2); font-size: .8rem; }
+.sys-okline { color: var(--ok); margin: 0; }
+/* Firefox has no text-security: blur the secret there instead of showing it */
+@supports not (-webkit-text-security: disc) {
+  .sys-vpn-area textarea.is-hidden { filter: blur(5px); }
+  .sys-vpn-area textarea.is-hidden:focus { filter: none; }
+}
+.sys-vpn-area textarea:read-only { background: var(--panel-2); cursor: default; }
+
+/* activity log */
+.sys-log-filters { grid-template-columns: repeat(auto-fit, minmax(118px, 1fr)); }
+.sys-log-quick { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 16px; }
+.sys-when time { display: grid; gap: 2px; white-space: nowrap; }
+.sys-when .sys-time { color: var(--ink-2); font-size: .8rem; }
+.sys-log-path { overflow-wrap: anywhere; word-break: normal; }
+.sys-ms { display: inline-block; margin-inline-start: 6px; }
+.sys-log-row.is-fail td:first-child { box-shadow: inset 3px 0 0 var(--danger); }
+.adm-empty .adm-btn { margin-block-start: 8px; }
+
+@media (max-width: 640px) {
+  .sys-log-filters .adm-field:first-child { grid-column: 1 / -1; }
+  .sys-when time { display: inline; }
+  .sys-when .sys-time::before { content: " · "; }
+  .sys-log-foot { justify-content: center; }
+  .sys-vpn-meta dt { min-width: 0; }
+  .adm-card-head .sys-vpn-status { margin-inline-start: 0; }
+}
+
+/* vpn header: title block takes the row, status sits at its end instead of wrapping under */
+.adm-card-head:has(.sys-vpn-status) > div:first-child { flex: 1 1 340px; min-width: 0; }
+.sys-proto { margin-inline-start: 16px; }
+.adm-card-head:has(.sys-vpn-status) { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 16px; justify-content: space-between; }
+@media (max-width: 640px) {
+  .sys-log-filters { grid-template-columns: 1fr 1fr; }
+  .sys-log-row.is-fail td:first-child { box-shadow: none; }
+  .sys-log-row.is-fail { box-shadow: inset 3px 0 0 var(--danger); border-radius: var(--r-sm); }
+}
+@media (max-width: 640px) {
+  .sys-log-row td[data-th] { flex-wrap: wrap; }
+  .sys-log-path { flex: 1 1 60%; min-width: 0; text-align: end; }
+}

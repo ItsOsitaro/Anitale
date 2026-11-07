@@ -46,19 +46,39 @@ const parseCookies = (header = '') => Object.fromEntries(
   }),
 );
 
-export const currentUser = (req) => {
+// The signed-in admin: { username, owner, permissions, id } or null. An extra admin's cookie is
+// re-checked against the table on every request (disabled / deleted / password reset = signed out).
+export const currentAdmin = (req) => {
   const payload = readToken(parseCookies(req.headers.cookie)[COOKIE]);
-  if (payload?.kind !== 'admin' || !process.env.ADMIN_USER || !safeEqual(payload.u, process.env.ADMIN_USER)) return null;
-  return payload.u;
+  if (payload?.kind !== 'admin') return null;
+  if (process.env.ADMIN_USER && safeEqual(payload.u, process.env.ADMIN_USER)) return { username: payload.u, owner: true, permissions: {}, id: 0 };
+  const row = adminRow(payload.u);
+  if (!row || !row.active || Number(row.token_version) !== Number(payload.v ?? 0)) return null;
+  let permissions = {};
+  try { permissions = JSON.parse(row.permissions); } catch { /* bad JSON = no permissions */ }
+  return { username: row.username, owner: false, permissions, id: row.id };
 };
+
+export const currentUser = (req) => currentAdmin(req)?.username ?? null;
 
 export const isAuthConfigured = () => Boolean(process.env.ADMIN_USER && process.env.ADMIN_PASSWORD_HASH);
 
+export const isOwner = (username) => Boolean(process.env.ADMIN_USER) && safeEqual(String(username || '').toLowerCase(), process.env.ADMIN_USER.toLowerCase());
+const adminRow = (username) => db.prepare('SELECT * FROM admins WHERE username = ? COLLATE NOCASE').get(String(username || ''));
+// Compared against when the username is unknown, so a wrong name and a wrong password take equally long.
+const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
+
+// Returns false, or { username, owner, version } for the owner (env) or an active extra admin.
 export const verifyCredentials = async (username, password) => {
-  if (!isAuthConfigured()) return false;
-  const userOk = safeEqual(username, process.env.ADMIN_USER);
-  const passOk = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH);
-  return userOk && passOk;
+  if (isAuthConfigured() && isOwner(username)) {
+    const passOk = await bcrypt.compare(password, process.env.ADMIN_PASSWORD_HASH);
+    return passOk ? { username: process.env.ADMIN_USER, owner: true, version: 0 } : false;
+  }
+  const row = adminRow(username);
+  const passOk = await bcrypt.compare(password, row?.password_hash || DUMMY_HASH);
+  if (!row || !row.active || !passOk) return false;
+  db.prepare("UPDATE admins SET last_login = datetime('now') WHERE id = ?").run(row.id);
+  return { username: row.username, owner: false, version: row.token_version };
 };
 
 // Cookie security flags: non-loopback requests always get Secure (HTTPS-only).
@@ -73,8 +93,8 @@ const secureFlag = (req) => {
   return local ? '' : '; Secure';
 };
 
-export const setSession = (req, res, user) => {
-  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user, 'admin', {}, ADMIN_TTL_SECONDS)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ADMIN_TTL_SECONDS}${secureFlag(req)}`);
+export const setSession = (req, res, user, extra = {}) => {
+  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user, 'admin', extra, ADMIN_TTL_SECONDS)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ADMIN_TTL_SECONDS}${secureFlag(req)}`);
 };
 
 export const clearSession = (req, res) => {

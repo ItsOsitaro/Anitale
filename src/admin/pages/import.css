@@ -1,0 +1,53 @@
+/* Styles for the import admin pages. Existing tokens only; logical properties (RTL-safe). */
+.imp-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; justify-content: space-between; margin-block-end: 6px; }
+.imp-head h2 { margin: 0; }
+.imp-tools { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-block: 10px; }
+.imp-search { position: relative; flex: 1 1 220px; min-width: 0; }
+.imp-search input { width: 100%; padding-inline-end: 34px; }
+.imp-clear {
+  position: absolute; inset-inline-end: 4px; inset-block-start: 50%; translate: 0 -50%;
+  border: 0; background: transparent; color: var(--ink-2); font-size: 1.1rem; line-height: 1; padding: 6px 8px; cursor: pointer; border-radius: var(--r-sm);
+}
+.imp-clear:hover { color: var(--ink); background: var(--panel-2); }
+.imp-recent { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-block: 6px; }
+.imp-recent button { border: 1px solid var(--line-2); background: var(--panel); color: var(--ink-2); border-radius: var(--r-full); padding: 3px 11px; font-size: .8rem; cursor: pointer; }
+.imp-recent button:hover { border-color: var(--ink-3); color: var(--ink); }
+.imp-count { color: var(--ink-2); font-size: .84rem; margin-block: 6px 0; }
+.imp-readonly { padding: 8px 12px; border-radius: var(--r-md); background: var(--warn-soft); color: var(--warn); font-size: .86rem; margin-block: 8px; }
+.imp-skel { display: grid; gap: 8px; margin-block-start: 12px; }
+.imp-skel i {
+  display: block; height: 62px; border-radius: var(--r-md);
+  background: linear-gradient(90deg, var(--panel-2) 25%, color-mix(in oklab, var(--panel-2) 55%, var(--panel)) 50%, var(--panel-2) 75%);
+  background-size: 200% 100%; animation: adm-shimmer 1.4s ease-in-out infinite;
+}
+@media (prefers-reduced-motion: reduce) { .imp-skel i { animation: none; } }
+.imp-rowerr { color: var(--danger); font-size: .82rem; margin-block-start: 2px; }
+.imp-results li { transition: border-color .15s, background .15s; }
+.imp-results li.is-done { border-color: color-mix(in oklab, var(--ok) 40%, var(--line)); background: var(--ok-soft); }
+.imp-results li.is-picked { border-color: var(--accent); background: var(--accent-soft); }
+.imp-results li:hover { border-color: var(--ink-3); }
+.imp-acts { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.imp-meter { display: flex; align-items: center; gap: 10px; margin-block: 10px 4px; }
+.imp-meter-bar { position: relative; flex: 1; height: 10px; border-radius: var(--r-full); background: var(--panel-2); border: 1px solid var(--line-2); overflow: hidden; }
+.imp-meter-bar::after { content: ''; position: absolute; inset-block: 0; inset-inline-start: 0; width: var(--done, 0%); background: var(--accent); border-radius: var(--r-full); transition: width .3s ease; }
+.imp-meter-bar.is-wait::after { background: var(--warn); }
+.imp-meter span { font-size: .82rem; color: var(--ink-2); font-variant-numeric: tabular-nums; white-space: nowrap; }
+.imp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 8px; margin-block: 10px; }
+.imp-stat { padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--r-md); background: var(--panel); }
+.imp-stat b { display: block; font-size: 1.15rem; font-variant-numeric: tabular-nums; }
+.imp-stat span { font-size: .78rem; color: var(--ink-2); }
+.imp-stat.is-bad b { color: var(--danger); }
+.imp-stat.is-ok b { color: var(--ok); }
+.imp-stat.is-warn b { color: var(--warn); }
+.imp-note { font-size: .84rem; color: var(--ink-2); margin-block: 6px; }
+.imp-note.is-warn { color: var(--warn); }
+.imp-fail { margin-block-start: 10px; padding: 10px 12px; border: 1px solid color-mix(in oklab, var(--danger) 35%, transparent); background: var(--danger-soft); border-radius: var(--r-md); font-size: .86rem; }
+.imp-fail ul { margin: 6px 0 0; padding-inline-start: 18px; max-height: 160px; overflow: auto; }
+.imp-card + .imp-card { margin-block-start: 16px; }
+.imp-cand-off { opacity: .55; }
+.imp-link { color: var(--accent-text); font-size: .8rem; }
+@media (max-width: 640px) {
+  .imp-results li { flex-wrap: wrap; }
+  .imp-acts { width: 100%; }
+  .imp-acts .adm-btn { flex: 1; }
+}

@@ -12,7 +12,10 @@ const LOG_LIMIT = 40;
 const recent = [];
 const remember = (level, args) => {
   const text = args.map((a) => (a instanceof Error ? a.stack || a.message : typeof a === 'string' ? a : (() => { try { return JSON.stringify(a); } catch { return String(a); } })())).join(' ').slice(0, 600);
-  recent.unshift({ at: new Date().toISOString(), level, text });
+  // The same message repeating (a failing job loop) becomes one row with a counter instead of flooding the list.
+  const same = recent.find((e) => e.level === level && e.text === text);
+  if (same) { same.count = (same.count || 1) + 1; same.at = new Date().toISOString(); recent.splice(recent.indexOf(same), 1); recent.unshift(same); return; }
+  recent.unshift({ at: new Date().toISOString(), level, text, count: 1 });
   if (recent.length > LOG_LIMIT) recent.length = LOG_LIMIT;
 };
 for (const level of ['error', 'warn']) {
@@ -44,7 +47,32 @@ const meminfo = () => safe(() => {
   return { swapTotal: kb('SwapTotal'), swapFree: kb('SwapFree'), available: kb('MemAvailable') };
 }, { swapTotal: 0, swapFree: 0, available: 0 });
 
+// Event-loop lag: how late a 1s timer fires. Rises when the site is overloaded, so it is a better "is it slow?" signal than load average.
+let loopLag = 0;
+let lagLast = Date.now();
+setInterval(() => { const now = Date.now(); loopLag = Math.max(0, now - lagLast - 1000); lagLast = now; }, 1000).unref();
+
+// Row counts hit big tables, so keep them for 30s; the whole snapshot is reused for 4s (several open tabs poll it).
+let dataCache = { at: 0, value: null };
+const dataCounts = () => {
+  if (dataCache.value && Date.now() - dataCache.at < 30_000) return dataCache.value;
+  const value = {
+    anime: count('SELECT COUNT(*) AS n FROM anime'), manga: count('SELECT COUNT(*) AS n FROM manga'), users: count('SELECT COUNT(*) AS n FROM users'),
+    listEntries: count('SELECT COUNT(*) AS n FROM user_entries'), reviews: count('SELECT COUNT(*) AS n FROM reviews'),
+    extrasCached: count('SELECT COUNT(*) AS n FROM title_extras'), peopleCached: count('SELECT COUNT(*) AS n FROM people_cache'), missingTitles: count('SELECT COUNT(*) AS n FROM missing_titles'),
+  };
+  dataCache = { at: Date.now(), value };
+  return value;
+};
+let snapCache = { at: 0, value: null };
 export const healthSnapshot = () => {
+  if (snapCache.value && Date.now() - snapCache.at < 4000) return snapCache.value;
+  const value = buildSnapshot();
+  snapCache = { at: Date.now(), value };
+  return value;
+};
+
+const buildSnapshot = () => {
   const disk = safe(() => { const s = fs.statfsSync(ROOT_DIR); return { total: s.blocks * s.bsize, free: s.bavail * s.bsize }; }, { total: 0, free: 0 });
   const mem = meminfo();
   const dbFile = process.env.DB_FILE || path.join(SERVER_DIR, 'data.db');
@@ -55,13 +83,11 @@ export const healthSnapshot = () => {
       node: process.version, platform: `${os.type()} ${os.release()}`, uptimeSec: Math.round(os.uptime()), processUptimeSec: Math.round(process.uptime()),
       load: os.loadavg().map((n) => Math.round(n * 100) / 100), cpus: os.cpus().length,
       memTotal: os.totalmem(), memAvailable: mem.available || os.freemem(), swapTotal: mem.swapTotal, swapUsed: mem.swapTotal - mem.swapFree,
-      processRss: process.memoryUsage().rss, disk,
+      processRss: process.memoryUsage().rss, heapUsed: process.memoryUsage().heapUsed, loopLagMs: loopLag, disk,
     },
     data: {
       dbBytes: fileSize(dbFile), walBytes: fileSize(`${dbFile}-wal`), covers: dirStats(COVERS_DIR), imageCache: dirStats(path.join(SERVER_DIR, 'xcache')),
-      anime: count('SELECT COUNT(*) AS n FROM anime'), manga: count('SELECT COUNT(*) AS n FROM manga'), users: count('SELECT COUNT(*) AS n FROM users'),
-      listEntries: count('SELECT COUNT(*) AS n FROM user_entries'), reviews: count('SELECT COUNT(*) AS n FROM reviews'),
-      extrasCached: count('SELECT COUNT(*) AS n FROM title_extras'), peopleCached: count('SELECT COUNT(*) AS n FROM people_cache'), missingTitles: count('SELECT COUNT(*) AS n FROM missing_titles'),
+      ...dataCounts(),
     },
     sources: {
       tenraiPaused: tenraiCircuitOpen(), tenraiDisabled: String(process.env.TENRAI_DISABLED) === '1', provider: process.env.PROVIDER || '',
@@ -88,12 +114,21 @@ export const registerHealthRoutes = (app, { requireAdmin, writeLimiter }) => {
     res.json(healthSnapshot());
   });
   // Live check of the outside services the site depends on (goes through the VPN proxy when one is active).
+  // A probe already running (or finished <5s ago) is shared, so repeated clicks cannot hammer the outside services.
+  let probeRun = null;
+  let probeDone = { at: 0, value: null };
+  // Clear the recent-errors list (it lives in memory only; a restart empties it anyway).
+  app.delete('/api/admin/health/errors', requireAdmin, writeLimiter, (_req, res) => { recent.length = 0; snapCache = { at: 0, value: null }; res.json({ ok: true }); });
   app.post('/api/admin/health/probe', requireAdmin, writeLimiter, async (_req, res) => {
-    const [tenrai, anilist] = await Promise.all([
-      timed(() => tenraiGetRaw('/seasons/now?limit=1')),
-      timed(() => anilistSearch('one piece', 'anime')),
-    ]);
     res.setHeader('Cache-Control', 'no-store');
-    res.json({ tenrai, anilist });
+    if (probeDone.value && Date.now() - probeDone.at < 5000) return res.json(probeDone.value);
+    if (!probeRun) {
+      probeRun = Promise.all([
+        timed(() => tenraiGetRaw('/seasons/now?limit=1')),
+        timed(() => anilistSearch('one piece', 'anime')),
+      ]).then(([tenrai, anilist]) => { probeDone = { at: Date.now(), value: { tenrai, anilist, at: new Date().toISOString() } }; return probeDone.value; })
+        .finally(() => { probeRun = null; });
+    }
+    try { return res.json(await probeRun); } catch (error) { return res.status(500).json({ error: String(error?.message || error).slice(0, 200) }); }
   });
 };

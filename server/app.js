@@ -8,7 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { db, COVERS_DIR, ROOT_DIR, TMP_DIR } from './db.js';
 import {
-  clearSession, clearUserSession, currentSiteUser, currentUser, isAuthConfigured, requireAdmin, requireSiteUser,
+  clearSession, clearUserSession, currentAdmin, currentSiteUser, currentUser, isAuthConfigured, requireAdmin, requireSiteUser,
   sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials,
 } from './auth.js';
 import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.js';
@@ -30,6 +30,7 @@ import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft
 import { mapPool } from './pool.js';
 import { activateVpn, applyVpn, deleteVpnProfile, testVpn, turnOffVpn, vpnStatus } from './vpn.js';
 import { getAutoImportState, runAutoImport, setAutoImportEnabled } from './auto-import.js';
+import { ANIME_FILTERS, ANIME_SORTS, registerAdminExtras } from './admin-extras.js';
 import { importAllState, startImportAll, stopImportAll } from './import-all.js';
 import { registerSeoRoutes } from './seo.js';
 import { registerExtrasRoutes } from './extras.js';
@@ -89,6 +90,7 @@ export const createApp = () => {
     next();
   });
   app.use(express.json({ limit: '1mb' }));
+  registerAdminExtras(app);
   app.use('/api', sameOriginOnly);
 
   // ---------- Auth ----------
@@ -96,17 +98,18 @@ export const createApp = () => {
   // Moderate limiter for the heavy write endpoints (bulk imports + refreshes).
   const writeLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many write requests' } });
   app.post('/api/auth/login', loginLimiter, async (req, res) => {
-    if (!isAuthConfigured()) throw httpError(503, 'Admin login is not configured. Run: npm run setup-admin');
     const { username, password } = loginInput.parse(req.body);
-    if (!(await verifyCredentials(username, password))) throw httpError(401, 'Wrong username or password');
-    setSession(req, res, username);
-    res.json({ user: username });
+    if (!isAuthConfigured() && !db.prepare('SELECT 1 FROM admins LIMIT 1').get()) throw httpError(503, 'Admin login is not configured. Run: npm run setup-admin');
+    const who = await verifyCredentials(username, password);
+    if (!who) throw httpError(401, 'Wrong username or password');
+    setSession(req, res, who.username, { v: who.version });
+    res.json({ user: who.username });
   });
   app.post('/api/auth/logout', (req, res) => { clearSession(req, res); res.json({ ok: true }); });
   app.get('/api/auth/me', (req, res) => {
-    const user = currentUser(req);
-    if (!user) return res.status(401).json({ error: 'Not logged in', configured: isAuthConfigured() });
-    return res.json({ user });
+    const admin = currentAdmin(req);
+    if (!admin) return res.status(401).json({ error: 'Not logged in', configured: isAuthConfigured() });
+    return res.json({ user: admin.username, admin: { username: admin.username, owner: admin.owner, permissions: admin.permissions } });
   });
 
   // ---------- Site accounts (register / login / lists / public profiles) ----------
@@ -713,7 +716,7 @@ export const createApp = () => {
   app.get('/api/admin/users/export.csv', requireAdmin, (req, res) => {
     const rows = adminAllUsers();
     const header = 'username,bio,joined,anime_entries,manga_entries';
-    const esc = (value) => `"${String(value ?? '').replace(/"/g, '""')}"`;
+    const esc = (value) => `"${String(value ?? '').replace(/^[=+\-@\t\r]/, "'$&").replace(/"/g, '""')}"`;
     const lines = [header].concat(rows.map((row) => [
       row.username, row.bio, row.joined, row.animeCount, row.mangaCount,
     ].map(esc).join(',')));
@@ -858,10 +861,14 @@ export const createApp = () => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 100);
     const page = Math.max(Number(req.query.page) || 1, 1);
     const like = `%${q.replace(/[%_]/g, '')}%`;
-    const where = q ? "WHERE title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\'" : '';
-    const params = q ? [like, like] : [];
+    const conditions = [];
+    const params = [];
+    if (q) { conditions.push("(title LIKE ? OR slug LIKE ?)"); params.push(like, like); }
+    if (ANIME_FILTERS[req.query.filter]) conditions.push(ANIME_FILTERS[req.query.filter]);
+    const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+    const order = ANIME_SORTS[req.query.sort] || ANIME_SORTS.updated;
     const total = db.prepare(`SELECT COUNT(*) AS n FROM anime ${where}`).get(...params).n;
-    const rows = db.prepare(`SELECT * FROM anime ${where} ORDER BY updated_at DESC, id DESC LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
+    const rows = db.prepare(`SELECT * FROM anime ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
     res.json({
       items: rows.map((row) => { const { slug, title, format, year, sampleScore, image, updatedAt, malId } = rowToItem(row); return { slug, title, format, year, score: sampleScore, image, updatedAt, malId }; }),
       total, page, pages: Math.max(Math.ceil(total / limit), 1),
@@ -907,6 +914,8 @@ export const createApp = () => {
     const day = req.body?.airingDay;
     const value = (day === null || day === undefined || day === '') ? '' : String(day).trim();
     if (value && !WEEKDAYS.includes(value)) throw httpError(400, 'Invalid weekday');
+    // No-op when unchanged: skip the DB write and the (slow) data export.
+    if ((row.airing_day || '') === value) return res.json({ ok: true, airingDay: value, unchanged: true });
     db.prepare('UPDATE anime SET airing_day = ? WHERE id = ?').run(value, row.id);
     exportData();
     res.json({ ok: true, airingDay: value });
@@ -934,6 +943,7 @@ export const createApp = () => {
   app.get('/api/admin/catalog/search', requireAdmin, async (req, res) => {
     const q = String(req.query.q || '').trim();
     if (q.length < 2) throw httpError(400, 'Type at least 2 characters');
+    if (q.length > 200) throw httpError(400, 'Search text is too long');
     const mediaType = req.query.type === 'manga' ? 'manga' : 'anime';
     let results;
     try {
@@ -944,7 +954,8 @@ export const createApp = () => {
       console.log(`[import] Tenrai unreachable, falling back to AniList for ${mediaType} search "${q}"`);
       results = await anilistSearch(q, mediaType);
     }
-    const known = new Map(db.prepare(`SELECT mal_id, slug FROM ${mediaType} WHERE mal_id IS NOT NULL`).all().map((r) => [r.mal_id, r.slug]));
+    const found = results.map((item) => Number(item.malId)).filter((id) => Number.isInteger(id) && id > 0);
+    const known = new Map(found.length ? db.prepare(`SELECT mal_id, slug FROM ${mediaType} WHERE mal_id IN (${found.map(() => '?').join(',')})`).all(...found).map((r) => [r.mal_id, r.slug]) : []);
     res.json(results.map((item) => ({ ...item, existingSlug: known.get(item.malId) || null })));
   });
 
@@ -1062,11 +1073,24 @@ export const createApp = () => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 20, 1), 50);
     const page = Math.max(Number(req.query.page) || 1, 1);
     const like = `%${q.replace(/[%_]/g, '')}%`;
-    const where = q ? 'WHERE title LIKE ? OR slug LIKE ? OR title_fa LIKE ?' : '';
-    const params = q ? [like, like, like] : [];
-    const total = db.prepare(`SELECT COUNT(*) AS n FROM manga ${where}`).get(...params).n;
-    const rows = db.prepare(`SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id ${where.replace(/(title|slug|title_fa) LIKE/g, 'm.$1 LIKE')} ORDER BY m.id ASC LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
-    res.json({ items: rows.map(mangaRowToItem), total, page, pages: Math.max(Math.ceil(total / limit), 1), withMalId: db.prepare('SELECT COUNT(*) AS n FROM manga WHERE mal_id IS NOT NULL').get().n });
+    // Search (title / slug / Persian title / MAL id) + optional "needs attention" filter + safe sort whitelist.
+    const conds = [];
+    const params = [];
+    if (q) {
+      conds.push('(m.title LIKE ? OR m.slug LIKE ? OR m.title_fa LIKE ?' + (/^[0-9]+$/.test(q) ? ' OR m.mal_id = ?' : '') + ')');
+      params.push(like, like, like);
+      if (/^[0-9]+$/.test(q)) params.push(Number(q));
+    }
+    const FILTERS = { noCover: "m.cover = ''", noFa: "m.title_fa = ''", noScore: 'm.score IS NULL', noYear: "m.year = ''", noMal: 'm.mal_id IS NULL' };
+    const filter = String(req.query.filter || '');
+    if (FILTERS[filter]) conds.push(FILTERS[filter]);
+    const where = conds.length ? 'WHERE ' + conds.join(' AND ') : '';
+    const SORTS = { updated: 'm.updated_at DESC, m.id DESC', title: 'm.title COLLATE NOCASE ASC, m.id ASC', score: 'm.score IS NULL, m.score DESC, m.id DESC', year: "CAST(NULLIF(m.year, '') AS INTEGER) IS NULL, CAST(NULLIF(m.year, '') AS INTEGER) DESC", chapters: 'm.chapters IS NULL, m.chapters DESC, m.id DESC' };
+    const order = SORTS[String(req.query.sort || '')] || SORTS.updated;
+    const total = db.prepare(`SELECT COUNT(*) AS n FROM manga m ${where}`).get(...params).n;
+    const rows = db.prepare(`SELECT m.*, s.magazines FROM manga m LEFT JOIN manga_serial s ON s.mal_id = m.mal_id ${where} ORDER BY ${order} LIMIT ? OFFSET ?`).all(...params, limit, (page - 1) * limit);
+    const c = db.prepare("SELECT COUNT(*) AS total, SUM(mal_id IS NOT NULL) AS withMalId, SUM(cover = '') AS noCover, SUM(title_fa = '') AS noFa, SUM(score IS NULL) AS noScore, SUM(year = '') AS noYear, SUM(mal_id IS NULL) AS noMal FROM manga").get();
+    res.json({ items: rows.map(mangaRowToItem), total, page, pages: Math.max(Math.ceil(total / limit), 1), withMalId: c.withMalId || 0, attention: { noCover: c.noCover || 0, noFa: c.noFa || 0, noScore: c.noScore || 0, noYear: c.noYear || 0, noMal: c.noMal || 0 } });
   });
   app.post('/api/admin/manga/refresh-all', requireAdmin, writeLimiter, (req, res) => {
     cleanupTemp();
@@ -1521,12 +1545,13 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     }
     return '';
   };
-  const missingPersianRows = (table) => {
-    const rows = db.prepare(
-      `SELECT id, slug, synopsis FROM ${table} WHERE mal_id IS NOT NULL AND synopsis IS NOT NULL AND synopsis != '' ORDER BY id ASC LIMIT 400`,
-    ).all();
-    return rows.filter((row) => needsPersian(row.synopsis));
-  };
+  // SQL twin of needsPersian(): nested CASE so json_type never sees invalid JSON.
+  const FA_TEXT_SQL = "CASE WHEN json_valid(synopsis) THEN (CASE WHEN json_type(synopsis) = 'object' THEN trim(coalesce(json_extract(synopsis, '$.fa'), '')) ELSE '' END) ELSE '' END";
+  const MISSING_SQL = `mal_id IS NOT NULL AND synopsis IS NOT NULL AND synopsis != '' AND ${FA_TEXT_SQL} = ''`;
+  const missingPersianRows = (table, limit = 400) => db.prepare(
+    `SELECT id, slug, synopsis FROM ${table} WHERE ${MISSING_SQL} ORDER BY id ASC LIMIT ?`,
+  ).all(limit);
+  const countMissing = (table) => db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${MISSING_SQL}`).get().n;
   const autoTranslatedRows = (table, limit = 400) => {
     const rows = db.prepare(
       `SELECT id, slug, synopsis FROM ${table} WHERE mal_id IS NOT NULL AND synopsis IS NOT NULL AND synopsis != '' ORDER BY id ASC LIMIT ?`,
@@ -1544,12 +1569,14 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     return list;
   };
   app.post('/api/admin/translate/backfill', requireAdmin, writeLimiter, async (req, res) => {
+    const mode = String(req.body?.mode || 'missing').toLowerCase();
+    const media = String(req.body?.media || 'both').toLowerCase();
+    if (!['missing', 'forceauto', 'force-auto', 'retranslate', 'retranslate-auto'].includes(mode)) throw httpError(400, 'Unknown mode');
+    if (!['both', 'anime', 'manga'].includes(media)) throw httpError(400, 'Unknown media type');
     if (backfillRunning) throw httpError(429, 'A backfill run is already in flight');
     backfillRunning = true;
     const startedAt = Date.now();
-    const budgetMs = Number(req.body?.budgetMs) || 240_000; // leave headroom under the 300s cap
-    const mode = String(req.body?.mode || 'missing').toLowerCase();
-    const media = String(req.body?.media || 'both').toLowerCase();
+    const budgetMs = Math.min(Math.max(Number(req.body?.budgetMs) || 240_000, 5_000), 240_000); // headroom under the 300s cap
     const tables = media === 'anime' ? ['anime'] : media === 'manga' ? ['manga'] : ['anime', 'manga'];
     const results = [];
     let translated = 0;
@@ -1608,7 +1635,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     let remainingMissing = 0;
     if (mode === 'missing') {
       for (const table of ['anime', 'manga']) {
-        remainingMissing += missingPersianRows(table).length;
+        remainingMissing += countMissing(table);
       }
     }
     res.json({
@@ -1618,7 +1645,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
       skippedManual,
       remaining: mode === 'missing' ? remainingMissing : 0,
       elapsedMs: Date.now() - startedAt,
-      results,
+      results: [...results.filter((r) => !r.ok), ...results.filter((r) => r.ok)].slice(0, 200), // failures first, capped
     });
   });
 
@@ -1627,19 +1654,22 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   // admin approves (optionally after editing) them. Approving drops the auto flag,
   // which also protects the text from later bulk re-translation.
   const REVIEW_TABLES = { anime: 'anime', manga: 'manga' };
-  const pendingReviewRows = (table, q = '') => {
-    const rows = db.prepare(
-      `SELECT id, slug, title, synopsis FROM ${table} WHERE synopsis LIKE '%"auto":true%' ORDER BY id ASC`,
-    ).all();
-    const needle = q.trim().toLowerCase();
-    const list = [];
-    for (const row of rows) {
-      const obj = parseSynopsisObj(row.synopsis);
-      if (!obj || obj.auto !== true || !String(obj.fa || '').trim()) continue;
-      if (needle && !`${row.title} ${row.slug}`.toLowerCase().includes(needle)) continue;
-      list.push({ table, slug: row.slug, title: row.title, en: String(obj.en || '').trim(), fa: String(obj.fa).trim() });
-    }
-    return list;
+  // Pending = JSON object with auto:true and a non-empty fa. Counted and paged in SQL (no full-table load).
+  const PENDING_SQL = `synopsis LIKE '%"auto":true%' AND ${FA_TEXT_SQL} != '' AND (CASE WHEN json_valid(synopsis) THEN json_extract(synopsis, '$.auto') ELSE 0 END) = 1`;
+  const pendingCount = (table) => db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE ${PENDING_SQL}`).get().n;
+  const reviewPage = (tables, q, limit, offset, sort = '') => {
+    const term = q.trim().toLowerCase();
+    const needle = `%${term.replace(/[!%_]/g, '!$&')}%`;
+    const search = term ? " AND (lower(title) LIKE ? ESCAPE '!' OR lower(slug) LIKE ? ESCAPE '!')" : '';
+    const union = tables.map((table) => `SELECT '${table}' AS tbl, id, slug, title, synopsis FROM ${table} WHERE ${PENDING_SQL}${search}`).join(' UNION ALL ');
+    const params = term ? tables.flatMap(() => [needle, needle]) : [];
+    const total = db.prepare(`SELECT COUNT(*) AS n FROM (${union})`).get(...params).n;
+    const rows = db.prepare(`SELECT * FROM (${union}) ORDER BY ${sort === 'short' ? "(length(json_extract(synopsis, '$.fa')) * 1.0 / MAX(1, length(json_extract(synopsis, '$.en')))), " : ''}tbl, id LIMIT ? OFFSET ?`).all(...params, limit, offset);
+    const items = rows.map((row) => {
+      const obj = parseSynopsisObj(row.synopsis) || {};
+      return { table: row.tbl, slug: row.slug, title: row.title, en: String(obj.en || '').trim(), fa: String(obj.fa || '').trim() };
+    });
+    return { total, items };
   };
 
   app.get('/api/admin/translate/review', requireAdmin, (req, res) => {
@@ -1648,8 +1678,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     const limit = Math.min(Math.max(Number(req.query.limit) || 10, 1), 50);
     const offset = Math.max(Number(req.query.offset) || 0, 0);
     const q = String(req.query.q || '').slice(0, 80);
-    const all = tables.flatMap((table) => pendingReviewRows(table, q));
-    res.json({ total: all.length, items: all.slice(offset, offset + limit) });
+    res.json(reviewPage(tables, q, limit, offset, String(req.query.sort || '')));
   });
 
   app.post('/api/admin/translate/review/:media/:slug', requireAdmin, writeLimiter, async (req, res) => {
@@ -1663,6 +1692,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     let fa;
     let auto = false;
     if (action === 'retranslate') {
+      if (obj && obj.auto !== true && String(obj.fa || '').trim()) throw httpError(409, 'This Persian text was written or approved by hand');
       if (!en) throw httpError(400, 'No English source to translate');
       fa = await translateSynopsis(en);
       if (!fa) throw httpError(502, 'Translation service returned nothing');
@@ -1683,11 +1713,13 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   app.get('/api/admin/translate/status', requireAdmin, (req, res) => {
     let missing = 0;
     let pending = 0;
+    let total = 0;
     for (const table of ['anime', 'manga']) {
-      missing += missingPersianRows(table).length;
-      pending += pendingReviewRows(table).length;
+      missing += countMissing(table);
+      pending += pendingCount(table);
+      total += db.prepare(`SELECT COUNT(*) AS n FROM ${table} WHERE mal_id IS NOT NULL AND synopsis IS NOT NULL AND synopsis != ''`).get().n;
     }
-    res.json({ missing, pending });
+    res.json({ missing, pending, total, approved: Math.max(0, total - missing - pending), running: backfillRunning });
   });
 
   // Approve many machine translations at once, exactly as they are stored
@@ -1696,15 +1728,22 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     const items = Array.isArray(req.body?.items) ? req.body.items.slice(0, 50) : [];
     if (items.length === 0) throw httpError(400, 'No items given');
     let approved = 0;
-    for (const item of items) {
-      const table = REVIEW_TABLES[item?.media];
-      if (!table) continue;
-      const row = db.prepare(`SELECT id, synopsis FROM ${table} WHERE slug = ?`).get(String(item.slug || ''));
-      const obj = row ? parseSynopsisObj(row.synopsis) : null;
-      if (!obj || obj.auto !== true || !String(obj.fa || '').trim()) continue;
-      db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
-        .run(JSON.stringify({ fa: obj.fa, en: obj.en }), row.id);
-      approved += 1;
+    db.exec('BEGIN');
+    try {
+      for (const item of items) {
+        const table = REVIEW_TABLES[item?.media];
+        if (!table || typeof item.slug !== 'string') continue;
+        const row = db.prepare(`SELECT id, synopsis FROM ${table} WHERE slug = ?`).get(item.slug);
+        const obj = row ? parseSynopsisObj(row.synopsis) : null;
+        if (!obj || obj.auto !== true || !String(obj.fa || '').trim()) continue;
+        db.prepare(`UPDATE ${table} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`)
+          .run(JSON.stringify({ fa: obj.fa, en: obj.en }), row.id);
+        approved += 1;
+      }
+      db.exec('COMMIT');
+    } catch (error) {
+      db.exec('ROLLBACK');
+      throw error;
     }
     if (approved > 0) exportData();
     res.json({ ok: true, approved });
@@ -1739,7 +1778,9 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   });
   app.post('/api/admin/auto-import/run', requireAdmin, writeLimiter, async (req, res) => {
     if (getAutoImportState().running) throw httpError(429, 'An auto-import run is already in flight');
-    res.json(await runAutoImport(bulkImportHandler));
+    // Runs in the background (a long request would be cut by the CDN); the page polls the state.
+    runAutoImport(bulkImportHandler).catch((error) => console.error(`[auto-import] ${error.message}`));
+    res.json(getAutoImportState());
   });
 
   app.get('/api/admin/temp-cover/:token', requireAdmin, (req, res) => {

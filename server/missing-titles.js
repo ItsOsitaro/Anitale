@@ -50,8 +50,10 @@ export const registerMissingRoutes = (app, { requireAdmin, writeLimiter }) => {
   app.get('/api/admin/missing-titles', requireAdmin, (_req, res) => {
     cleanup();
     const rows = db.prepare(`
-      SELECT m.type, m.mal_id AS malId, m.title,
-        (SELECT COUNT(*) FROM missing_requests r WHERE r.type = m.type AND r.mal_id = m.mal_id) AS requests
+      SELECT m.type, m.mal_id AS malId, m.title, m.first_at AS firstAt,
+        (SELECT COUNT(*) FROM missing_requests r WHERE r.type = m.type AND r.mal_id = m.mal_id) AS requests,
+        (SELECT group_concat(username, ',') FROM (SELECT u.username FROM missing_requests r JOIN users u ON u.id = r.user_id
+          WHERE r.type = m.type AND r.mal_id = m.mal_id ORDER BY u.username COLLATE NOCASE LIMIT 3)) AS requesters
       FROM missing_titles m
       ORDER BY requests DESC, m.first_at ASC
       LIMIT 500
