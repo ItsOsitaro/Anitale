@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 const text = (max = 500) => z.string().trim().max(max).default('');
-const httpUrl = z.string().trim().max(500).refine((value) => /^https?:\/\//i.test(value), 'URL must start with http:// or https://');
+const httpUrl = z.string().trim().max(2000).refine((value) => /^https?:\/\//i.test(value), 'URL must start with http:// or https://');
 const list = (item, max = 50) => z.array(item).max(max).default([]);
 
 export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
@@ -9,8 +9,8 @@ export const slugPattern = /^[a-z0-9]+(?:-[a-z0-9]+)*$/;
 export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const animeInput = z.object({
-  title: z.string().trim().min(1, 'Title is required').max(200),
-  titleFa: z.string().trim().max(200).optional(),
+  title: z.string().trim().min(1, 'Title is required').max(500),
+  titleFa: z.string().trim().max(500).optional(),
   slug: z.string().trim().toLowerCase().max(80).regex(slugPattern, 'Slug may contain only a-z, 0-9 and -').optional().or(z.literal('')),
   malId: z.coerce.number().int().positive().nullable().optional(),
   category: text(100),
@@ -27,12 +27,12 @@ export const animeInput = z.object({
   synopsisAuto: z.boolean().optional(),
   genres: list(z.string().trim().min(1).max(50)),
   alternativeTitles: z.object({
-    synonyms: list(z.string().trim().min(1).max(200)),
-    japanese: text(200),
-    romaji: text(200),
-    english: text(200),
+    synonyms: list(z.string().trim().min(1).max(500)),
+    japanese: text(500),
+    romaji: text(500),
+    english: text(500),
   }).default({ synonyms: [], japanese: '', romaji: '', english: '' }),
-  information: list(z.object({ label: z.string().trim().min(1).max(60), value: z.string().trim().max(500) }), 40),
+  information: list(z.object({ label: z.string().trim().min(1).max(60), value: z.string().trim().max(1500) }), 40),
   statistics: z.object({
     score: text(20), scoredBy: text(40), ranked: text(20), popularity: text(20), members: text(40), favorites: text(40),
   }).nullable().optional(),
