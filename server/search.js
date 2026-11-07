@@ -47,7 +47,7 @@ const buildDocs = () => {
     const alt = item.alternativeTitles || {};
     docs.push({
       kind: 'anime', item, image: item.image || '',
-      titles: [item.title, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle),
+      titles: [item.title, item.titleFa, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle),
       genres: (item.genres || []).map(foldTitle),
       sensitive: isSensitiveItem(item),
       ...factsOf(item, 'anime'),

@@ -131,6 +131,7 @@ export default function AnimeForm() {
         <legend>{t('secBasic')}</legend>
         <div className="adm-grid">
           <Field id="f-title" label={`${t('fTitle')} *`} wide><input id="f-title" dir="auto" value={form.title} onChange={(e) => set({ title: e.target.value })} required /></Field>
+          <Field id="f-title-fa" label={t('fTitleFa')} hint={t('fTitleFaHint')} wide><input id="f-title-fa" dir="rtl" value={form.titleFa} onChange={(e) => set({ titleFa: e.target.value })} /></Field>
           <Field id="f-slug" label={t('fSlug')} hint={t('fSlugHint')}><input id="f-slug" dir="ltr" value={form.slug} placeholder="auto" onChange={(e) => set({ slug: e.target.value.toLowerCase() })} /></Field>
           <Field id="f-format" label={t('fFormat')}>
             <input id="f-format" dir="ltr" list="adm-formats" value={form.format} onChange={(e) => set({ format: e.target.value })} />

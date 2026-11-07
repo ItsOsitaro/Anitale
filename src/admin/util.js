@@ -9,7 +9,7 @@ export const INFO_FIELDS = ['Type', 'Episodes', 'Status', 'Aired', 'Premiered', 
 export const STAT_FIELDS = [['score', 'sScore'], ['scoredBy', 'sScoredBy'], ['ranked', 'sRanked'], ['popularity', 'sPopularity'], ['members', 'sMembers'], ['favorites', 'sFavorites']];
 
 export const emptyForm = () => ({
-  title: '', slug: '', malId: null, format: 'TV', category: '', year: '', score: '', airingDay: '', synopsis: '', synopsisFa: '', genres: [],
+  title: '', titleFa: '', slug: '', malId: null, format: 'TV', category: '', year: '', score: '', airingDay: '', synopsis: '', synopsisFa: '', genres: [],
   synonyms: [], japanese: '', romaji: '', english: '',
   info: Object.fromEntries(INFO_FIELDS.map((name) => [name, ''])), extraRows: [],
   stats: { score: '', scoredBy: '', ranked: '', popularity: '', members: '', favorites: '' },
@@ -33,7 +33,7 @@ export const toForm = (item) => {
     : { en: item.synopsis || '', fa: '' };
   return {
     ...form,
-    title: item.title || '', slug: item.slug || '', malId: item.malId ?? null, format: item.format || '', category: item.category || '',
+    title: item.title || '', titleFa: item.titleFa || '', slug: item.slug || '', malId: item.malId ?? null, format: item.format || '', category: item.category || '',
     year: item.year || '', score: item.sampleScore ?? item.score ?? '', airingDay: item.airingDay || '', synopsis: synopsis.en, synopsisFa: synopsis.fa || item.synopsisFa || '', genres: item.genres || [],
     // Persian picked up by auto-translation keeps flagging itself so future
     // refreshes may re-translate; any admin edit of the field clears it.
@@ -62,6 +62,7 @@ export const toPayload = (form, { omitTempCover = false } = {}) => {
   const hasStats = Object.values(form.stats).some((value) => String(value ?? '').trim() !== '');
   return {
     title: form.title,
+    titleFa: (form.titleFa || '').trim(),
     slug: form.slug.trim(),
     malId: form.malId || null,
     category: form.category,

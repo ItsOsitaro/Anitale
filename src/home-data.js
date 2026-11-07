@@ -12,9 +12,9 @@ import { membersOf } from './lib/catalog-rules.js';
 // fa→en fallback; plain strings pass through untouched.
 export const synopsisText = (item, lang) => (typeof item?.synopsis === 'string' ? item.synopsis : L(item?.synopsis, lang));
 
-// Display title: manga rows can carry a Persian display title (titleFa).
+// Display title: always the original title (the Persian one lives under alternative titles).
 export const displayTitle = (item, lang) => (
-  typeof item.title === 'string' ? (lang === 'fa' && item.titleFa ? item.titleFa : item.title) : L(item.title, lang)
+  typeof item.title === 'string' ? item.title : L(item.title, lang)
 );
 
 export const getCurrentSeasonInfo = () => {

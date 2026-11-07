@@ -635,9 +635,21 @@ export const createApp = () => {
   // them for a minute and refresh in the background (admin edits show up within
   // ~1 minute; browsers revalidate every time because max-age is absent).
   const publicCatalogCache = (res) => res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=60, stale-while-revalidate=300');
+  // `?lite=1` is the public site's list: the heavy per-title fields (links,
+  // alternative titles, streaming platforms, full synopsis) are left out and
+  // the detail page fetches them from /api/anime/:slug. Admin keeps the full list.
+  const clipText = (value, max) => (typeof value === 'string' && value.length > max ? `${value.slice(0, max).trimEnd()}…` : value);
+  const liteAnime = (item) => {
+    const { availableAt, alternativeTitles, streamingPlatforms, synopsis, ...rest } = item;
+    const short = typeof synopsis === 'string'
+      ? clipText(synopsis, 320)
+      : (synopsis && typeof synopsis === 'object' ? { ...synopsis, fa: clipText(synopsis.fa, 320), en: clipText(synopsis.en, 320) } : synopsis);
+    return { ...rest, synopsis: short };
+  };
   app.get('/api/anime', (req, res) => {
     publicCatalogCache(res);
-    res.json(db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem));
+    const items = db.prepare('SELECT * FROM anime ORDER BY id ASC').all().map(rowToItem);
+    res.json(req.query.lite === '1' ? items.map(liteAnime) : items);
   });
   app.get('/api/anime/:slug', (req, res) => {
     const row = getBySlug(req.params.slug);
@@ -739,7 +751,7 @@ export const createApp = () => {
 
     const titlesOf = (item) => {
       const titles = item.alternativeTitles || {};
-      return [item.title, titles.english, titles.romaji, titles.japanese, ...(titles.synonyms || [])]
+      return [item.title, item.titleFa, titles.english, titles.romaji, titles.japanese, ...(titles.synonyms || [])]
         .filter(Boolean)
         .map(foldTitle);
     };

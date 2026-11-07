@@ -137,7 +137,7 @@ export default function MobileDetailPage({
     { label: t('popularity'), value: item.statistics?.popularity },
   ];
   const synonyms = alternativeTitles.synonyms?.join(lang === 'fa' ? '، ' : ', ');
-  const hasAlt = synonyms || alternativeTitles.japanese || alternativeTitles.english;
+  const hasAlt = synonyms || alternativeTitles.japanese || alternativeTitles.english || item.titleFa;
   const longSynopsis = (item.synopsis || '').length > 220;
 
   return (
@@ -246,6 +246,7 @@ export default function MobileDetailPage({
                   { label: t('synonyms'), value: synonyms },
                   { label: t('japaneseTitle'), value: alternativeTitles.japanese },
                   { label: t('englishTitle'), value: alternativeTitles.english },
+                  { label: t('persianTitle'), value: item.titleFa },
                 ]} />
               </section>
             )}

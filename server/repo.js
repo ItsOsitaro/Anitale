@@ -9,10 +9,10 @@ const COLS = [
 ];
 
 const insertStmt = db.prepare(
-  `INSERT INTO anime (slug, cover, ${COLS.join(', ')}) VALUES (@slug, @cover, ${COLS.map((c) => `@${c}`).join(', ')})`,
+  `INSERT INTO anime (slug, cover, title_fa, ${COLS.join(', ')}) VALUES (@slug, @cover, COALESCE(@title_fa, ''), ${COLS.map((c) => `@${c}`).join(', ')})`,
 );
 const updateStmt = db.prepare(
-  `UPDATE anime SET slug=@slug, cover=@cover, ${COLS.map((c) => `${c}=@${c}`).join(', ')}, updated_at=datetime('now') WHERE id=@id`,
+  `UPDATE anime SET slug=@slug, cover=@cover, title_fa=COALESCE(@title_fa, title_fa), ${COLS.map((c) => `${c}=@${c}`).join(', ')}, updated_at=datetime('now') WHERE id=@id`,
 );
 
 export const getBySlug = (slug) => db.prepare('SELECT * FROM anime WHERE slug = ?').get(slug);

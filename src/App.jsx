@@ -367,10 +367,9 @@ function AnimeCard({ item, rank }) {
   const { lang, t } = useSiteLang();
   const isManga = item.format === 'Manga';
   const href = mediaHref(item, isManga ? 'manga' : 'anime');
-  // Queue 19: manga rows can carry a Persian display title (titleFa).
-  const title = typeof item.title === 'string'
-    ? (lang === 'fa' && item.titleFa ? item.titleFa : item.title)
-    : L(item.title, lang);
+  // Titles stay in their original (English) form on every language; the Persian
+  // title only appears under alternative titles and in search matching.
+  const title = typeof item.title === 'string' ? item.title : L(item.title, lang);
 
   return (
     <article className="anime-card">
@@ -917,9 +916,7 @@ function SectionPage({ theme, onThemeChange }) {
           return sort === 'new' ? delta : -delta;
         }
         if (sort === 'az') {
-          const firstTitle = lang === 'fa' && first.titleFa ? first.titleFa : first.title;
-          const secondTitle = lang === 'fa' && second.titleFa ? second.titleFa : second.title;
-          return firstTitle.localeCompare(secondTitle, 'fa', { sensitivity: 'base' });
+          return first.title.localeCompare(second.title, 'en', { sensitivity: 'base' });
         }
         return (second.weightedScore ?? second.sampleScore ?? 0) - (first.weightedScore ?? first.sampleScore ?? 0);
       })
@@ -1193,12 +1190,13 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
               </div>
               <SuggestEdit item={item} mediaType={mediaType} />
               <div className="detail-sidebar-sections">
-                {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english) && (
+                {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english || item.titleFa) && (
                   <DetailSection id="detailAlternativeTitles" title={t('alternativeTitles')} className="detail-sidebar-section">
                     <SidebarDataList rows={[
                       { label: t('synonyms'), value: alternativeTitles.synonyms?.join(lang === 'fa' ? '، ' : ', ') },
                       { label: t('japaneseTitle'), value: alternativeTitles.japanese },
                       { label: t('englishTitle'), value: alternativeTitles.english },
+                      { label: t('persianTitle'), value: item.titleFa },
                     ]} />
                   </DetailSection>
                 )}
@@ -1345,6 +1343,24 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   if (idMatch) item = catalog.find((entry) => String(entry.malId) === idMatch[1]) || null;
   if (!item) item = catalog.find((entry) => entry.slug === idOrSlug) || null;
   const resolved = item;
+  // The catalog list is lite (no links / alternative titles / full synopsis);
+  // anime detail pages pull those from /api/anime/:slug and merge them in.
+  const [full, setFull] = useState(null);
+  const resolvedSlug = resolved?.slug;
+  useEffect(() => {
+    setFull(null);
+    if (!resolvedSlug || mediaType !== 'anime') return undefined;
+    let cancelled = false;
+    fetch(`/api/anime/${encodeURIComponent(resolvedSlug)}`)
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (!cancelled && data?.slug === resolvedSlug) setFull(data); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [resolvedSlug, mediaType]);
+  if (item && full) {
+    item = { ...item, synopsis: full.synopsis, availableAt: full.availableAt, alternativeTitles: full.alternativeTitles, streamingPlatforms: full.streamingPlatforms };
+  }
+  const detailSource = item;
   // Rank among the titles the visitor can see (weighted score, see lib/catalog-rules.js).
   const ranked = resolved ? (mediaType === 'manga' ? visibleManga : visibleAnime).find((entry) => entry.slug === resolved.slug) : null;
   item = {
@@ -1353,15 +1369,13 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
     // Both media types share the same synopsis contract: a legacy plain string
     // or bilingual { fa, en } — resolve it to the viewer's language (manga's
     // seeded rows carry both; anime shows Persian once one is stored).
-    synopsis: synopsisText(item, lang),
+    synopsis: synopsisText(detailSource, lang),
     // Persian text that is still an unreviewed machine translation gets a small note.
-    synopsisAuto: lang === 'fa' && Boolean(resolved?.synopsis?.auto && resolved.synopsis.fa),
+    synopsisAuto: lang === 'fa' && Boolean(detailSource?.synopsis?.auto && detailSource.synopsis.fa),
     ...(mediaType === 'manga'
       ? { image: item ? withMangaImages(mangaCatalog, animeCatalog).find((entry) => entry.slug === item.slug)?.image : item }
       : {}),
   };
-  // Queue 19: the fa storefront shows the Persian title when manga rows carry one.
-  if (item && lang === 'fa' && item.titleFa) item = { ...item, title: item.titleFa };
 
   if (resolved && isSensitive(resolved) && !showSensitive) {
     return <SensitiveGate mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} />;

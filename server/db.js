@@ -161,6 +161,10 @@ const mangaScoreColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info
 if (!mangaScoreColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN score REAL`);
 db.exec('CREATE UNIQUE INDEX IF NOT EXISTS idx_manga_mal_id ON manga(mal_id) WHERE mal_id IS NOT NULL');
 
+// Migration: Persian title for anime (shown under alternative titles + searchable; never the display title).
+const animeTitleFaColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('anime') WHERE name = 'title_fa'").get();
+if (!animeTitleFaColumn.n) db.exec(`ALTER TABLE anime ADD COLUMN title_fa TEXT NOT NULL DEFAULT ''`);
+
 // Migration: Persian display title for manga (fa storefront), editor-managed.
 const mangaTitleFaColumn = db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('manga') WHERE name = 'title_fa'").get();
 if (!mangaTitleFaColumn.n) db.exec(`ALTER TABLE manga ADD COLUMN title_fa TEXT NOT NULL DEFAULT ''`);

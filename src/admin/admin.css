@@ -754,3 +754,8 @@ body[data-theme="dark"] .adm-primary:hover:not(:disabled) { background: var(--ac
 .sg-diff p { margin: 4px 0 0; white-space: pre-wrap; font-size: 13.5px; }
 .sg-actions, .sg-reject { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
 @media (max-width: 700px) { .sg-diff { grid-template-columns: 1fr; } }
+
+/* overflow guards (critique follow-up) */
+.adm-schedule-day, .adm-schedule-item { min-width: 0; }
+.adm-schedule-item select { max-width: 45%; }
+.adm-grow strong { overflow-wrap: anywhere; }

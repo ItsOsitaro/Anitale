@@ -13,7 +13,7 @@ const fetchJson = async (url) => {
 // in localStorage; later visits revalidate with If-None-Match and, on 304,
 // hydrate instantly from the stored copy without re-parsing 240 KB of JSON.
 const CATALOG_CACHE_KEYS = {
-  '/api/anime': 'malCatalogCacheAnime',
+  '/api/anime?lite=1': 'malCatalogCacheAnimeLite',
   '/api/manga': 'malCatalogCacheManga',
 };
 
@@ -38,7 +38,8 @@ const fetchJsonCached = async (url) => {
 };
 
 const fromApi = async () => {
-  const items = await fetchJsonCached('/api/anime');
+  try { localStorage.removeItem('malCatalogCacheAnime'); } catch { /* old full-catalog cache, no longer used */ }
+  const items = await fetchJsonCached('/api/anime?lite=1');
   if (!Array.isArray(items)) throw new Error('Unexpected API response');
   return items.map((item) => ({
     ...item,

@@ -10,6 +10,7 @@ export const WEEKDAYS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
 export const animeInput = z.object({
   title: z.string().trim().min(1, 'Title is required').max(200),
+  titleFa: z.string().trim().max(200).optional(),
   slug: z.string().trim().toLowerCase().max(80).regex(slugPattern, 'Slug may contain only a-z, 0-9 and -').optional().or(z.literal('')),
   malId: z.coerce.number().int().positive().nullable().optional(),
   category: text(100),

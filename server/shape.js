@@ -62,6 +62,8 @@ export const inputToColumns = (input) => {
   }) : en;
   return {
     mal_id: input.malId ?? null,
+    // null = leave the stored Persian title untouched (imports / refresh never send it).
+    title_fa: typeof input.titleFa === 'string' ? input.titleFa : null,
     title: input.title,
     category: input.category,
     year: input.year,

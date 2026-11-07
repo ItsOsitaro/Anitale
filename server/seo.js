@@ -204,7 +204,7 @@ export const registerSeoRoutes = (app) => {
         return;
       }
       const origin = originOf(req);
-      const name = type === 'manga' && item.titleFa ? item.titleFa : item.title;
+      const name = item.title;
       const title = `${name} | ${SITE_NAME}`;
       const description = clip(synopsisOf(item), 200)
         || `${name} — ${type === 'manga' ? 'مانگا' : 'انیمه'}${item.year ? ` ${item.year}` : ''} در ${SITE_NAME}`;
