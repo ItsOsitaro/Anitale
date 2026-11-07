@@ -600,7 +600,7 @@ function HomePage() {
   const animeCatalog = useVisibleCatalog();
   const mangaCatalog = useVisibleMangaCatalog();
   const picks = selectHomePicks({ animeCatalog, mangaCatalog });
-  const { topAnime, trendingAnime, currentSeason, topAiring, mangaItems, freshManga, popularAnime, upcomingAnime } = picks;
+  const { topAnime, currentSeason, topAiring, mangaItems, freshManga, popularAnime, upcomingAnime } = picks;
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
   // visit, and manually re-rollable with the dice action in the hero.
   // Seen picks this session never repeat (when the catalog is exhausted, the
@@ -676,10 +676,6 @@ function HomePage() {
               <SectionHeading title={t('topAnime')} to="/top/anime" action="fullRanking" />
               <AnimeShelf items={topAnime} showRank />
             </section>
-            <section id="trendingGrid">
-              <SectionHeading title={t('trendingNow')} to="/anime" action="explore" />
-              <AnimeShelf items={trendingAnime} />
-            </section>
             <section id="seasonalLineup">
               <SectionHeading title={t('seasonalLineup')} to="/seasonal" action="calendar" />
               <AnimeShelf items={currentSeason} />
@@ -747,7 +743,7 @@ function RankedList({ items, toPrefix }) {
 }
 
 function CatalogControls({ query, onQueryChange, genre, onGenreChange, genres, count, format, onFormatChange, formats, year, onYearChange, years, sort, onSortChange }) {
-  const { t } = useSiteLang();
+  const { t, lang } = useSiteLang();
   return (
     <div className="catalog-controls">
       <label className="catalog-search">

@@ -3800,7 +3800,7 @@ body[data-theme='dark'] .email-badge.is-pending { color: oklch(0.82 0.13 75); }
 .community-bars { display: flex; align-items: flex-end; gap: 5px; height: 64px; margin: 0; padding: 0; list-style: none; flex: 1 1 180px; max-width: 320px; }
 .community-bars li { position: relative; flex: 1; height: 100%; display: flex; align-items: flex-end; justify-content: center; }
 .community-bars__fill { display: block; width: 100%; border-radius: 4px 4px 0 0; background: color-mix(in oklch, var(--primary) 70%, transparent); }
-.community-bars small { position: absolute; bottom: -18px; font-size: 0.68rem; color: var(--muted-foreground); }
+.community-bars small { position: absolute; bottom: -18px; font-size: 0.75rem; color: var(--muted-foreground); }
 .community-score { padding-bottom: 18px; }
 .community-myrating { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
 .community-myrating__chips { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -4356,3 +4356,6 @@ a.people-chip:hover { background: color-mix(in oklch, var(--primary) 9%, transpa
 .site-footer p { margin: 0; }
 /* The header already carries sign-in on mobile; the intro strip keeps only its sentence there. */
 .mobile-home .intro-strip__cta { display: none; }
+
+/* <small> never drops below the 12px floor */
+small { font-size: max(12px, 0.8em); }
