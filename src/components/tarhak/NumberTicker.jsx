@@ -38,9 +38,12 @@ export function NumberTicker({
       if (ref.current) ref.current.textContent = formatNumber(target, decimalPlaces, locale);
       return;
     }
+    // The real value is in the DOM from the first paint (print, screen readers, off-screen cards);
+    // rewind the visible digits only when the card actually enters the viewport, then count up.
+    if (ref.current) ref.current.textContent = formatNumber(initial, decimalPlaces, locale);
     timer = setTimeout(() => motionValue.set(target), delay * 1000);
     return () => { if (timer !== null) clearTimeout(timer); };
-  }, [motionValue, isInView, delay, target, decimalPlaces, locale]);
+  }, [motionValue, isInView, delay, initial, target, decimalPlaces, locale]);
 
   useEffect(() => {
     const unsubscribe = springValue.on('change', (latest) => {
@@ -50,15 +53,20 @@ export function NumberTicker({
     return unsubscribe;
   }, [springValue, decimalPlaces, locale]);
 
+  const real = formatNumber(value, decimalPlaces, locale);
   return (
-    <span
-      ref={ref}
-      dir="ltr"
-      className={cn('inline-block tabular-nums text-foreground tracking-normal', className)}
-      {...props}
-    >
-      {formatNumber(initial, decimalPlaces, locale)}
-    </span>
+    <>
+      <span
+        ref={ref}
+        dir="ltr"
+        aria-hidden="true"
+        className={cn('inline-block tabular-nums text-foreground tracking-normal', className)}
+        {...props}
+      >
+        {real}
+      </span>
+      <span className="sr-only" dir="ltr">{real}</span>
+    </>
   );
 }
 
