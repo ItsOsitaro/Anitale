@@ -1,22 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="62 36 144 200" role="img" aria-label="Anitale">
-  <!-- Official Anitale mark: a notebook card with the indigo A and the crimson flower. -->
-  <!-- Offset back layer (soft periwinkle book stack) -->
-  <rect x="78" y="56" width="120" height="176" rx="20" fill="#c9baf8" />
-  <!-- Front card -->
-  <rect x="68" y="41" width="120" height="176" rx="20" fill="#f5f3fc" />
-  <!-- Notebook spine rule -->
-  <line x1="85" y1="59" x2="85" y2="199" stroke="#d6cff3" stroke-width="6" stroke-linecap="round" />
-  <!-- The A (crossbar-free, flower takes its place) -->
-  <path d="M92 182 L128 73 L164 182" fill="none" stroke="#3a2ca0" stroke-width="30" stroke-linecap="round" stroke-linejoin="round" />
-  <!-- Crimson flower -->
-  <g fill="#e8506b">
-    <circle cx="121" cy="139" r="8" />
-    <circle cx="129.66" cy="144" r="8" />
-    <circle cx="129.66" cy="153.6" r="8" />
-    <circle cx="121" cy="158.6" r="8" />
-    <circle cx="112.34" cy="153.6" r="8" />
-    <circle cx="112.34" cy="144" r="8" />
-    <circle cx="121" cy="148.8" r="10.5" />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="36 20 184 214" role="img" aria-label="Anitale">
+  <!-- Anitale mark: a folded bookmark ribbon forms the A (your list, your tale); a sakura blossom is its crossbar; the sparkle is the anime shine. -->
+  <defs>
+    <linearGradient id="a-front" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e8577a"/><stop offset="1" stop-color="#c8284f"/>
+    </linearGradient>
+    <path id="a-petal" d="M0 -4 C-13 -9 -18 -26 -9 -35 L0 -29 L9 -35 C18 -26 13 -9 0 -4 Z"/>
+  </defs>
+  <g stroke-linejoin="round" stroke-width="6">
+    <path d="M128 26 L44 228 L70 207 L96 228 L128 151 Z" fill="#8c1d43" stroke="#8c1d43"/>
+    <path d="M128 26 L212 228 L186 207 L160 228 L104.6 84.3 Z" fill="url(#a-front)" stroke="url(#a-front)"/>
   </g>
-  <circle cx="121" cy="148.8" r="4.5" fill="#fff" />
+  <g transform="translate(128 166)" fill="#fff6f9" stroke="#8c1d43" stroke-width="2.5" stroke-linejoin="round">
+    <use href="#a-petal"/><use href="#a-petal" transform="rotate(72)"/><use href="#a-petal" transform="rotate(144)"/><use href="#a-petal" transform="rotate(216)"/><use href="#a-petal" transform="rotate(288)"/>
+  </g>
+  <circle cx="128" cy="166" r="6" fill="#e8577a"/>
+  <path d="M198 34 Q200 50 214 52 Q200 54 198 70 Q196 54 182 52 Q196 50 198 34 Z" fill="#f4a9c0"/>
 </svg>
