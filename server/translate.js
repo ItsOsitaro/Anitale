@@ -409,6 +409,15 @@ const defaultChain = () => {
   return chain;
 };
 
+// provider name -> time until which it is skipped. shortcut: per-process memory, resets on restart.
+const COOLDOWN = new Map();
+const cooldownFor = (error) => {
+  const message = String(error?.message || '');
+  if (/429/.test(message)) return 10 * 60_000;
+  if (/timeout|aborted|fetch failed|5\d\d/i.test(message)) return 2 * 60_000;
+  return 0;
+};
+
 export const translateSynopsis = async (text) => {
   const source = cleanSource(text);
   if (!source) throw new Error('Synopsis text is empty');
@@ -422,7 +431,11 @@ export const translateSynopsis = async (text) => {
   // behind as resilience so one dead provider can never stall imports.
   const chain = adminPin ? [adminPin, ...baseline.filter((name) => name !== adminPin)] : baseline;
   let lastError = null;
-  for (const name of chain) {
+  // A provider that just answered 429 / timed out / failed to connect sits out for a while, so a long
+  // import or backfill stops hammering a rate-limited endpoint (thousands of failed calls per run).
+  const live = chain.filter((name) => (COOLDOWN.get(name) || 0) <= Date.now());
+  if (live.length === 0) throw new Error('Translation providers are rate-limited right now; try again in a few minutes');
+  for (const name of live) {
     try {
       const startedAt = Date.now();
       const raw = await PROVIDERS[name](prepared);
@@ -433,7 +446,9 @@ export const translateSynopsis = async (text) => {
       return translated;
     } catch (error) {
       lastError = error;
-      console.error(`[translate] ${name}: ${error.message}`);
+      const pause = cooldownFor(error);
+      if (pause) COOLDOWN.set(name, Date.now() + pause);
+      console.error(`[translate] ${name}: ${error.message}${pause ? ` (paused ${pause / 60000} min)` : ''}`);
     }
   }
   throw lastError || new Error('All translation providers failed');
