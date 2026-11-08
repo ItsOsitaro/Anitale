@@ -4,10 +4,14 @@ import { Button } from '@/components/ui/button';
 import { useSiteLang } from '@/i18n';
 import { useCatalog, useEnsureTitles, useMangaCatalog } from '@/catalog-context.jsx';
 import { mediaHref } from '@/catalog.js';
+import { formatNumber } from '@/lib/digits.js';
+
+const LIMIT = 8;
 
 // Watch / reading order of a franchise, built on demand from the title's relations.
 export default function WatchOrder({ mediaType, malId, currentTitle }) {
-  const { t } = useSiteLang();
+  const { t, lang } = useSiteLang();
+  const [all, setAll] = useState(false);
   const anime = useCatalog();
   const manga = useMangaCatalog();
   const catalog = mediaType === 'manga' ? manga : anime;
@@ -15,7 +19,7 @@ export default function WatchOrder({ mediaType, malId, currentTitle }) {
   const [state, setState] = useState({ status: 'idle', found: 0 });
   useEnsureTitles(mediaType, [], (state.items || []).map((entry) => entry.id));
 
-  useEffect(() => { setOpen(false); setState({ status: 'idle', found: 0 }); }, [mediaType, malId]);
+  useEffect(() => { setOpen(false); setAll(false); setState({ status: 'idle', found: 0 }); }, [mediaType, malId]);
 
   useEffect(() => {
     if (!open || !malId) return undefined;
@@ -45,11 +49,14 @@ export default function WatchOrder({ mediaType, malId, currentTitle }) {
   }
   const items = state.items || [];
   if (items.length <= 1) return <p className="extras-muted">{t('watchOrderSingle')}</p>;
+  // Long franchises start folded to the first rows; the current title always stays visible.
+  const visible = all || items.length <= LIMIT ? items : items.filter((entry, index) => index < LIMIT || entry.id === malId);
   return (
     <div className="watch-order">
       <h3>{t(mediaType === 'manga' ? 'readOrderTitle' : 'watchOrderTitle')}</h3>
       <ol>
-        {items.map((entry, index) => {
+        {visible.map((entry) => {
+          const index = items.indexOf(entry);
           const local = catalog.find((item) => item.malId === entry.id);
           const here = entry.id === malId;
           const body = (
@@ -70,6 +77,9 @@ export default function WatchOrder({ mediaType, malId, currentTitle }) {
           );
         })}
       </ol>
+      {visible.length < items.length && (
+        <Button type="button" variant="outline" size="sm" className="watch-order__open" onClick={() => setAll(true)}>{t('charShowAll', { n: formatNumber(items.length, lang) })}</Button>
+      )}
       {state.truncated && <p className="extras-muted">{t('watchOrderTruncated')}</p>}
       <p className="extras-muted">{t('watchOrderNote')}</p>
     </div>

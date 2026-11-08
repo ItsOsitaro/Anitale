@@ -4694,3 +4694,4 @@ small { font-size: max(12px, 0.8em); }
 .dx .community-reviews-head, .dx .community-mine h3, .dx .rec-section h3 { font-size: 17px; font-weight: 800; }
 .dx .rec-section { margin: 0 0 8px; }
 .dx-more > .rec-section + * { margin-block-start: 28px; }
+.extras-more.is-chip { margin: 0; min-height: 32px; padding-inline: 14px; font-size: 12.5px; }

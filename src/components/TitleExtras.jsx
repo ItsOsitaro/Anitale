@@ -113,17 +113,31 @@ function TitleLink({ type, id, name, image }) {
     : <span className="extras-title-link is-plain">{body}</span>;
 }
 
+const RELATION_LIMIT = 6; // long franchises (One Piece...) have dozens of side stories and adaptations
+
 export function Relations({ data }) {
-  const { lang } = useSiteLang();
+  const { t, lang } = useSiteLang();
+  const [open, setOpen] = useState(() => new Set());
   if (!data.relations?.length) return null;
   return (
     <dl className="extras-relations">
-      {data.relations.map((group) => (
-        <div key={group.relation}>
-          <dt>{lang === 'fa' ? (RELATION_FA[group.relation] || group.relation) : group.relation}</dt>
-          <dd>{group.entries.map((e) => <TitleLink key={`${e.type}${e.id}`} type={e.type} id={e.id} name={e.name} />)}</dd>
-        </div>
-      ))}
+      {data.relations.map((group) => {
+        const expanded = open.has(group.relation);
+        const shown = expanded ? group.entries : group.entries.slice(0, RELATION_LIMIT);
+        return (
+          <div key={group.relation}>
+            <dt>{lang === 'fa' ? (RELATION_FA[group.relation] || group.relation) : group.relation}</dt>
+            <dd>
+              {shown.map((e) => <TitleLink key={`${e.type}${e.id}`} type={e.type} id={e.id} name={e.name} />)}
+              {!expanded && group.entries.length > RELATION_LIMIT && (
+                <button type="button" className="extras-more is-chip" onClick={() => setOpen((current) => new Set(current).add(group.relation))}>
+                  {t('charShowAll', { n: formatNumber(group.entries.length, lang) })}
+                </button>
+              )}
+            </dd>
+          </div>
+        );
+      })}
     </dl>
   );
 }
