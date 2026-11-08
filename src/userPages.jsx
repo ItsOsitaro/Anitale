@@ -16,6 +16,7 @@ import { coverUrl } from '@/lib/cover';
 import { isEmail } from './accountPages.jsx';
 import { profileInsights } from '@/lib/profile-insights';
 import ShareCardDialog from '@/components/ShareCardDialog';
+import EntryTable from '@/components/EntryTable';
 import { profileCardData } from '@/lib/share-card';
 import { formatNumber, formatScore } from '@/lib/digits.js';
 import { genreLabel } from '@/lib/genre-kinds';
@@ -307,6 +308,9 @@ export function UserDashboard() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [tagFilter, setTagFilter] = useState('');
   const [planSort, setPlanSort] = useState('recent');
+  // The compact table suits long lists; the choice is remembered on this device.
+  const [view, setViewState] = useState(() => (typeof localStorage !== 'undefined' && localStorage.getItem('anitale.listView') === 'cards' ? 'cards' : 'table'));
+  const setView = (next) => { setViewState(next); try { localStorage.setItem('anitale.listView', next); } catch { /* private mode */ } };
   const [bio, setBio] = useState('');
   const [bioState, setBioState] = useState('idle'); // idle | saving | saved
   const [avatarSaving, setAvatarSaving] = useState(false);
@@ -451,6 +455,10 @@ export function UserDashboard() {
           <button role="tab" aria-selected={tab === 'anime'} className={tab === 'anime' ? 'is-active' : ''} onClick={() => pickTab('anime')}>{t('dashAnimeTab')}</button>
           <button role="tab" aria-selected={tab === 'manga'} className={tab === 'manga' ? 'is-active' : ''} onClick={() => pickTab('manga')}>{t('dashMangaTab')}</button>
           <span className="list-count">{t('total', { n: listEntries.length })}</span>
+          <span className="view-toggle" role="group" aria-label={t('viewLabel')}>
+            <button type="button" aria-pressed={view === 'table'} onClick={() => setView('table')}>{t('viewTable')}</button>
+            <button type="button" aria-pressed={view === 'cards'} onClick={() => setView('cards')}>{t('viewCards')}</button>
+          </span>
         </div>
         {tabEntries.length > 0 && (
           <div className="status-filter" role="group" aria-label={t('dashFilterLabel')}>
@@ -496,6 +504,8 @@ export function UserDashboard() {
             <p>{t('dashEmpty')}</p>
             <p className="media-note">{t('dashEmptyHint')}</p>
           </div>
+        ) : view === 'table' ? (
+          <EntryTable entries={listEntries} resolve={(entry) => (tab === 'anime' ? animeBySlug : mangaBySlug).get(entry.slug)} mediaType={tab} />
         ) : (
           <div className="entry-grid">
             {listEntries.map((entry) => {

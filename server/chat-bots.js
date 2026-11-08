@@ -62,6 +62,28 @@ const call = async (id, method, body, timeoutMs = 20000) => {
   return data.result;
 };
 
+// ---- owner alerts (health problems go to one chat linked from the admin panel) ------------------
+const alertChat = (id) => String(getSetting(`chat.${id}.alertChat`, '') || '');
+export const alertInfo = () => Object.keys(PROVIDERS).map((id) => ({ id, name: PROVIDERS[id].name, configured: configured(id), linked: Boolean(alertChat(id)) }));
+export const makeAlertCode = (id) => {
+  const code = crypto.randomBytes(5).toString('hex').toUpperCase();
+  setSetting('chat.alertcode', JSON.stringify({ code, provider: id, expires: Date.now() + 15 * 60000 }));
+  const u = username(id);
+  return { code, url: u ? PROVIDERS[id].link(u, code) : '', username: u };
+};
+export const unlinkAlert = (id) => setSetting(`chat.${id}.alertChat`, '');
+export const sendAlert = async (text) => {
+  let sent = 0;
+  for (const id of Object.keys(PROVIDERS)) {
+    const chat = alertChat(id);
+    if (!chat || !configured(id)) continue;
+    try { await sendMessage(id, chat, text); sent += 1; } catch { /* the chat may be gone; the panel shows it as linked until the owner unlinks */ }
+  }
+  return sent;
+};
+export const sendAlertTest = () => sendAlert('✅ پیام آزمایشی انی‌تیل: هشدارهای سلامت به این گفتگو می‌آیند.');
+const pendingAlertCode = () => { try { return JSON.parse(getSetting('chat.alertcode', '') || 'null'); } catch { return null; } };
+
 // ---- admin panel settings (the token itself is never returned) ---------------------------------
 export const botSettings = () => Object.keys(PROVIDERS).map((id) => {
   const t = token(id);
@@ -111,12 +133,20 @@ const handleMessage = async (id, message) => {
   const [command, payload] = text.split(/\s+/);
   const verb = String(command || '').toLowerCase().replace(/@.*$/, '');
   if (verb === '/stop') {
+    if (alertChat(id) === chatId) unlinkAlert(id);
     const removed = db.prepare('DELETE FROM chat_links WHERE provider = ? AND chat_id = ?').run(id, chatId).changes;
     await sendMessage(id, chatId, removed ? 'اتصال قطع شد. دیگر پیامی نمی‌فرستم.' : 'این گفتگو به حسابی وصل نبود.');
     return;
   }
   const code = String(payload || (verb === '/start' ? '' : text)).trim().toUpperCase();
   if (!code || (verb !== '/start' && !/^[0-9A-F]{10}$/.test(code))) { await sendMessage(id, chatId, HELP); return; }
+  const pending = pendingAlertCode();
+  if (pending && pending.provider === id && pending.code === code && pending.expires > Date.now()) {
+    setSetting(`chat.${id}.alertChat`, chatId);
+    setSetting('chat.alertcode', '');
+    await sendMessage(id, chatId, '✅ این گفتگو برای هشدارهای سلامت انی‌تیل ثبت شد.');
+    return;
+  }
   const row = db.prepare('SELECT user_id FROM chat_link_codes WHERE code = ? AND provider = ? AND expires_at > ?').get(code, id, Date.now());
   if (!row) { await sendMessage(id, chatId, 'این کد معتبر نیست یا منقضی شده. از «حساب من» در سایت کد تازه بگیر.'); return; }
   db.prepare('INSERT OR REPLACE INTO chat_links (user_id, provider, chat_id) VALUES (?, ?, ?)').run(row.user_id, id, chatId);

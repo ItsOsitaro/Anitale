@@ -655,11 +655,18 @@ export const createApp = () => {
   // the detail page fetches them from /api/anime/:slug. Admin keeps the full list.
   const clipText = (value, max) => (typeof value === 'string' && value.length > max ? `${value.slice(0, max).trimEnd()}…` : value);
   const clipSynopsis = (synopsis) => (typeof synopsis === 'string'
-    ? clipText(synopsis, 320)
-    : (synopsis && typeof synopsis === 'object' ? { ...synopsis, fa: clipText(synopsis.fa, 320), en: clipText(synopsis.en, 320) } : synopsis));
+    ? clipText(synopsis, 240)
+    : (synopsis && typeof synopsis === 'object' ? { ...synopsis, fa: clipText(synopsis.fa, 240), en: clipText(synopsis.en, 240) } : synopsis));
+  // The list only needs the information rows that cards, seasons, the schedule, rankings and the sensitive filter read;
+  // the long ones (producers, licensors, dates, genres) come with the full item when a title page opens.
+  const LITE_INFO_ROWS = new Set(['type', 'episodes', 'status', 'premiered', 'broadcast', 'duration', 'rating', 'studios']);
   const liteAnime = (item) => {
-    const { availableAt, alternativeTitles, streamingPlatforms, synopsis, ...rest } = item;
-    return { ...rest, synopsis: clipSynopsis(synopsis) };
+    const { availableAt, alternativeTitles, streamingPlatforms, synopsis, information, ...rest } = item;
+    return {
+      ...rest,
+      information: Array.isArray(information) ? information.filter((row) => LITE_INFO_ROWS.has(String(row?.label).toLowerCase())) : information,
+      synopsis: clipSynopsis(synopsis),
+    };
   };
   const liteManga = (item) => ({ ...item, synopsis: clipSynopsis(item.synopsis) });
   app.get('/api/anime', (req, res) => {

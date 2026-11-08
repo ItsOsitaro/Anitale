@@ -9,6 +9,7 @@ import { startMagazineBackfill } from './magazines.js';
 import { startScoreBackfill } from './score-backfill.js';
 import { startExtrasBackfill } from './extras-backfill.js';
 import { startChatBots } from './chat-bots.js';
+import { startHealthAlerts } from './health-alerts.js';
 import { initVpn } from './vpn.js';
 
 const added = seedIfEmpty();
@@ -28,6 +29,7 @@ startMagazineBackfill();
 startScoreBackfill();
 startExtrasBackfill();
 startChatBots();
+startHealthAlerts();
 startMaintenance();
 app.listen(port, host, () => {
   warmSearch(); // build the (slim) search index in the background

@@ -82,11 +82,11 @@ const staticBody = ({ heading, lines = [], text = '' }) => {
   return `<style>#root>.seo-static{position:absolute;left:-9999px;top:0;width:1px;height:1px;overflow:hidden}</style><div class="seo-static">${parts.join('')}</div>`;
 };
 
-const injectMeta = (html, { title, description, url, image, jsonLd, body = '' }) => {
+const injectMeta = (html, { title, description, url, image, jsonLd, body = '', ogType = 'website' }) => {
   const tags = [
     `<meta name="description" content="${escapeHtml(description)}" />`,
     `<link rel="canonical" href="${escapeHtml(url)}" />`,
-    '<meta property="og:type" content="website" />',
+    `<meta property="og:type" content="${ogType}" />`,
     `<meta property="og:site_name" content="${SITE_NAME}" />`,
     '<meta property="og:locale" content="fa_IR" />',
     `<meta property="og:title" content="${escapeHtml(title)}" />`,
@@ -205,21 +205,50 @@ export const registerSeoRoutes = (app) => {
       }
       const origin = originOf(req);
       const name = item.title;
-      const title = `${name} | ${SITE_NAME}`;
+      const typeFa = type === 'manga' ? 'مانگا' : 'انیمه';
+      const title = `${name}${item.year ? ` (${item.year})` : ''} — ${typeFa} | ${SITE_NAME}`;
       const description = clip(synopsisOf(item), 200)
         || `${name} — ${type === 'manga' ? 'مانگا' : 'انیمه'}${item.year ? ` ${item.year}` : ''} در ${SITE_NAME}`;
       const url = `${origin}/${type}/${item.malId ?? item.slug}`;
       const image = item.image ? `${origin}${item.image}` : '';
+      const infoRow = (label) => (Array.isArray(item.information) ? item.information.find((row) => String(row?.label).toLowerCase() === label)?.value : '') || '';
+      const episodes = Number(String(infoRow('episodes')).replace(/[^0-9]/g, '')) || 0;
+      const started = /([A-Z][a-z]{2}) (\d{1,2}), (\d{4})/.exec(infoRow('aired') || infoRow('published'));
+      const monthAt = started ? 'JanFebMarAprMayJunJulAugSepOctNovDec'.indexOf(started[1]) / 3 : -1;
+      const startDate = started && monthAt >= 0 ? new Date(Date.UTC(Number(started[3]), monthAt, Number(started[2]))).toISOString().slice(0, 10) : '';
+      const scoreNumber = Number(String(item.statistics?.score || '').replace(/[^0-9.]/g, ''));
+      const votes = Number(String(item.statistics?.scoredBy || '').replace(/[^0-9]/g, ''));
+      const alternates = [...new Set([item.titleFa, item.alternativeTitles?.japanese, item.alternativeTitles?.english, item.alternativeTitles?.romaji].filter((n) => n && n !== name))];
+      const studios = infoRow('studios').split(',').map((n) => n.trim()).filter(Boolean);
+      const mal = item.malId ? `https://myanimelist.net/${type}/${item.malId}` : '';
       const jsonLd = {
         '@context': 'https://schema.org',
-        '@type': type === 'manga' ? 'Book' : 'TVSeries',
-        name,
-        ...(item.title !== name ? { alternateName: item.title } : {}),
-        description,
-        url,
-        ...(image ? { image } : {}),
-        ...(item.genres?.length ? { genre: item.genres } : {}),
-        ...(item.sampleScore ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: Number(item.sampleScore), bestRating: 10, ratingCount: 1 } } : {}),
+        '@graph': [
+          {
+            '@type': type === 'manga' ? 'Book' : 'TVSeries',
+            name,
+            ...(alternates.length ? { alternateName: alternates } : {}),
+            description,
+            url,
+            ...(image ? { image } : {}),
+            ...(item.genres?.length ? { genre: item.genres } : {}),
+            ...(type === 'anime' && episodes ? { numberOfEpisodes: episodes } : {}),
+            ...(startDate ? { datePublished: startDate } : {}),
+            ...(studios.length && type === 'anime' ? { productionCompany: studios.map((n) => ({ '@type': 'Organization', name: n })) } : {}),
+            ...(mal ? { sameAs: [mal] } : {}),
+            inLanguage: 'ja',
+            // Only a real vote count counts as a rating: no invented "1 vote" scores.
+            ...(scoreNumber > 0 && votes > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: scoreNumber, bestRating: 10, worstRating: 1, ratingCount: votes } } : {}),
+          },
+          {
+            '@type': 'BreadcrumbList',
+            itemListElement: [
+              { '@type': 'ListItem', position: 1, name: SITE_NAME, item: `${origin}/` },
+              { '@type': 'ListItem', position: 2, name: typeFa, item: `${origin}/${type}` },
+              { '@type': 'ListItem', position: 3, name, item: url },
+            ],
+          },
+        ],
       };
       // Sensitive titles stay reachable by link but are kept out of search engines.
       if (isSensitiveItem(item)) res.setHeader('X-Robots-Tag', 'noindex');
@@ -233,7 +262,7 @@ export const registerSeoRoutes = (app) => {
         ],
         text: synopsisOf(item),
       });
-      res.send(injectMeta(shell, { title, description, url, image, jsonLd, body }));
+      res.send(injectMeta(shell, { title, description, url, image, jsonLd, body, ogType: type === 'manga' ? 'book' : 'video.tv_show' }));
     } catch (error) {
       next(error);
     }

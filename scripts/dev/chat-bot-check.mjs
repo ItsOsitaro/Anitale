@@ -58,6 +58,18 @@ assert.equal(sent.length, before + 1);
 await bots.handleUpdate('telegram', { chat: { id: 555 }, text: '/stop' });
 assert.equal(db.prepare('SELECT COUNT(*) AS n FROM chat_links').get().n, 0);
 
+// 5. owner alerts: link a chat with a one-time code, then a problem reaches it
+const alertCode = bots.makeAlertCode('telegram').code;
+await bots.handleUpdate('telegram', { chat: { id: 777 }, text: `/start ${alertCode}` });
+assert.equal(bots.alertInfo().find((p) => p.id === 'telegram').linked, true);
+const beforeAlert = sent.length;
+assert.equal(await bots.sendAlert('disk almost full'), 1);
+assert.equal(sent.at(-1).chat_id, '777');
+assert.equal(sent.length, beforeAlert + 1);
+await bots.handleUpdate('telegram', { chat: { id: 778 }, text: `/start ${alertCode}` });
+assert.equal(bots.alertInfo().find((p) => p.id === 'telegram').linked, true, 'a used alert code does not move the link');
+assert.ok(sent.at(-1).text.includes('معتبر نیست'));
+
 console.log('chat-bots: all checks passed');
 server.close();
 process.exit(0);

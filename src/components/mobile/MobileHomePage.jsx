@@ -4,6 +4,7 @@ import { mediaHref } from '@/catalog';
 import { displayTitle, selectCurrentSeasonPicks } from '@/home-data';
 import HeroCarousel from './HeroCarousel';
 import IntroStrip from '@/components/IntroStrip';
+import OnboardingPicker from '@/components/OnboardingPicker';
 import QuickChips from './QuickChips';
 import SectionHeader from './SectionHeader';
 import Rail from './Rail';
@@ -65,6 +66,7 @@ export default function MobileHomePage({ picks, lang, t }) {
     <div className="mobile-home">
       {heroItems && heroItems.length > 0 && <HeroCarousel items={heroItems} />}
       <IntroStrip />
+      <OnboardingPicker />
       <QuickChips />
       {picks.forYou?.items.length > 0 && (
         <>

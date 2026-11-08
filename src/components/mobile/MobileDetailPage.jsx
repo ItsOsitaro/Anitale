@@ -18,6 +18,7 @@ import { coverUrl } from '@/lib/cover';
 import { formatNumber, formatScore } from '@/lib/digits.js';
 import { infoLabel, infoValue } from '@/lib/info-labels.js';
 import CommunitySection from '../CommunitySection';
+import UserRecs from '../Recommendations.jsx';
 import { hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
 
 const TAB_IDS = ['summary', 'media', 'reviews', 'info', 'team', 'related'];
@@ -153,6 +154,10 @@ export default function MobileDetailPage({
   const synonyms = (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ');
   const hasAlt = synonyms || alternativeTitles.japanese || alternativeTitles.english || item.titleFa;
   const longSynopsis = (item.synopsis || '').length > 220;
+  // Type, episodes, status and genres are already in the hero; the info tab keeps only what it does not show.
+  const HERO_ROWS = ['type', 'episodes', 'chapters', 'status', 'genres', 'themes'];
+  const infoRows = informationRows.filter((row) => !HERO_ROWS.includes(String(row.label).toLowerCase()));
+  const hasLinks = item.availableAt?.length > 0 || item.streamingPlatforms?.length > 0 || item.resources?.length > 0;
 
   return (
     <div className="mobile-detail">
@@ -254,14 +259,14 @@ export default function MobileDetailPage({
 
         {tab === 'reviews' && (
           <section>
-            <CommunitySection mediaType={mediaType} slug={item.slug} />
+            <CommunitySection mediaType={mediaType} slug={item.slug} withRecs={false} />
           </section>
         )}
         {tab === 'info' && (
           <>
             <section>
               <h2 className="mobile-detail__h">{t('information')}</h2>
-              <FactGrid rows={informationRows} />
+              <FactGrid rows={infoRows} />
               <SuggestEdit item={item} mediaType={mediaType} />
             </section>
             <section>
@@ -269,45 +274,42 @@ export default function MobileDetailPage({
               <FactGrid rows={statisticsRows} />
             </section>
             {hasAlt && (
-              <section>
-                <h2 className="mobile-detail__h">{t('alternativeTitles')}</h2>
+              <details className="dx-alt mobile-detail__alt">
+                <summary>{t('alternativeTitles')}</summary>
                 <FactGrid rows={[
                   { label: t('synonyms'), value: synonyms },
                   { label: t('japaneseTitle'), value: alternativeTitles.japanese },
                   { label: t('englishTitle'), value: alternativeTitles.english },
                   { label: t('persianTitle'), value: item.titleFa },
                 ]} />
-              </section>
+              </details>
             )}
-            <section>
-              <h2 className="mobile-detail__h">{t('availableAt')}</h2>
-              {item.availableAt?.length ? (
-                <ul className="mobile-detail__list">
-                  {item.availableAt.map((entry) => (
-                    <li key={entry.label}>
-                      {entry.href ? <a href={entry.href} target="_blank" rel="noreferrer">{entry.label}</a> : <span>{entry.label}</span>}
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="mobile-detail__muted">{t('emptyLocalEntry')}</p>}
-            </section>
-            <section>
-              <h2 className="mobile-detail__h">{t('streaming')}</h2>
-              {item.streamingPlatforms?.length ? (
-                <>
-                  <ul className="mobile-detail__list">
-                    {item.streamingPlatforms.map((p) => <li key={p}><span dir="ltr">{p}</span></li>)}
-                  </ul>
-                  {item.streamingNotice && <p className="mobile-detail__muted">{item.streamingNotice}</p>}
-                </>
-              ) : <p className="mobile-detail__muted">{t('emptyLocalEntry')}</p>}
-            </section>
-            {item.resources?.length > 0 && (
+            {hasLinks && (
               <section>
-                <h2 className="mobile-detail__h">{t('resources')}</h2>
-                <ul className="mobile-detail__list">
-                  {item.resources.map((r) => <li key={r.label}><span>{r.label}</span></li>)}
-                </ul>
+                <h2 className="mobile-detail__h">{t('linksAndWatch')}</h2>
+                {item.streamingPlatforms?.length > 0 && (
+                  <>
+                    <h3 className="dx-sub">{t('streaming')}</h3>
+                    <ul className="dx-chips">{item.streamingPlatforms.map((p) => <li key={p}><span dir="ltr">{p}</span></li>)}</ul>
+                    {item.streamingNotice && <p className="mobile-detail__muted">{item.streamingNotice}</p>}
+                  </>
+                )}
+                {item.availableAt?.length > 0 && (
+                  <>
+                    <h3 className="dx-sub">{t('availableAt')}</h3>
+                    <ul className="dx-chips">
+                      {item.availableAt.map((entry) => (
+                        <li key={entry.label}>{entry.href ? <a href={entry.href} target="_blank" rel="noreferrer"><span dir="ltr">{entry.label}</span></a> : <span dir="ltr">{entry.label}</span>}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {item.resources?.length > 0 && (
+                  <>
+                    <h3 className="dx-sub">{t('resources')}</h3>
+                    <ul className="dx-chips">{item.resources.map((r) => <li key={r.label}><span dir="ltr">{r.label}</span></li>)}</ul>
+                  </>
+                )}
               </section>
             )}
           </>
@@ -325,25 +327,17 @@ export default function MobileDetailPage({
             {hasAny(extras, 'characters') && (
               <section>
                 <h2 className="mobile-detail__h">{t('charactersVA')}</h2>
-                <Characters data={extras.data} />
+                <Characters data={extras.data} limit={8} />
               </section>
             )}
-            {hasAny(extras, 'staff') && (
+            {(hasAny(extras, 'staff') || (mediaType === 'anime' && (hasAny(extras, 'openings') || hasAny(extras, 'endings')))) && (
               <section>
-                <h2 className="mobile-detail__h">{t('staffSection')}</h2>
-                <Staff data={extras.data} />
-              </section>
-            )}
-            {mediaType === 'anime' && hasAny(extras, 'openings') && (
-              <section>
-                <h2 className="mobile-detail__h">{t('openingTheme')}</h2>
-                <Themes data={extras.data} kind="op" />
-              </section>
-            )}
-            {mediaType === 'anime' && hasAny(extras, 'endings') && (
-              <section>
-                <h2 className="mobile-detail__h">{t('endingTheme')}</h2>
-                <Themes data={extras.data} kind="ed" />
+                <h2 className="mobile-detail__h">{t('creditsSection')}</h2>
+                <div className="dx-folds">
+                  {hasAny(extras, 'staff') && <details className="dx-fold"><summary>{t('staffSection')}<small>{formatNumber(extras.data.staff.length, lang)}</small></summary><Staff data={extras.data} /></details>}
+                  {mediaType === 'anime' && hasAny(extras, 'openings') && <details className="dx-fold"><summary>{t('openingTheme')}<small>{formatNumber(extras.data.openings.length, lang)}</small></summary><Themes data={extras.data} kind="op" /></details>}
+                  {mediaType === 'anime' && hasAny(extras, 'endings') && <details className="dx-fold"><summary>{t('endingTheme')}<small>{formatNumber(extras.data.endings.length, lang)}</small></summary><Themes data={extras.data} kind="ed" /></details>}
+                </div>
               </section>
             )}
             {extras.status === 'none' && <p className="mobile-detail__muted">{t('extrasNone')}</p>}
@@ -360,18 +354,17 @@ export default function MobileDetailPage({
                 <WatchOrder mediaType={mediaType} malId={item.malId} />
               </section>
             )}
+            <section>
+              <h2 className="mobile-detail__h">{t('moreLikeThis')}</h2>
+              <UserRecs mediaType={mediaType} slug={item.slug} />
+              {hasAny(extras, 'recommendations') && <Recommendations data={extras.data} mediaType={mediaType} />}
+            </section>
             {related.length > 0 && (
               <section className="mobile-detail__rail">
-                <SectionHeader title={t('relatedAnime')} />
+                <SectionHeader title={t('sameGenres')} />
                 <Rail>
                   {related.map((entry) => <PosterCard key={entry.slug} item={entry} mediaType="anime" />)}
                 </Rail>
-              </section>
-            )}
-            {hasAny(extras, 'recommendations') && (
-              <section>
-                <h2 className="mobile-detail__h">{t('recommendationsTitle')}</h2>
-                <Recommendations data={extras.data} mediaType={mediaType} />
               </section>
             )}
           </>

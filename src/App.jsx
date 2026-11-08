@@ -60,6 +60,7 @@ import UserRecs from './components/Recommendations.jsx';
 import InstallButton from '@/components/InstallButton';
 import { useForYou } from '@/hooks/use-for-you';
 import ShareCardDialog from '@/components/ShareCardDialog';
+import OnboardingPicker from '@/components/OnboardingPicker';
 import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 import { coverUrl } from '@/lib/cover';
 
@@ -595,6 +596,7 @@ function HomePage() {
         <div className="layout">
           <main className="main-column">
             <IntroStrip />
+            <OnboardingPicker />
             {featured && (
               <section className="hero panel" style={{ '--hero-image': `url("${featured.image}")` }}>
                 <div className="hero-poster" aria-hidden="true">

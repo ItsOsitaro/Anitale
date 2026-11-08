@@ -27,6 +27,11 @@ export default {
     chbToken: 'Bot token', chbTokenKeep: 'Leave empty to keep the saved token', chbUsername: 'Bot username (without @)',
     chbProxyNote: 'Telegram is blocked from Iran: the server reaches it through the proxy set on the VPN page.',
     chbSave: 'Save', chbSaved: 'Saved.', chbTest: 'Test the token', chbTestOk: 'Connected to the bot {name}.', chbClear: 'Remove saved token', chbCleared: 'Saved token removed.',
+    chbManual: 'Or send the bot this message yourself:',
+    oalTitle: 'Health alerts to you', oalSub: 'A message in Telegram or Bale when the disk is nearly full, memory runs out, the server gets stuck, or the data provider is down for about half an hour — and another when it is fixed.',
+    oalNeedBot: 'Set up a bot token above first.', oalLinked: 'Alerts come here', oalNotLinked: 'Not linked', oalLink: 'Link this messenger', oalUnlink: 'Unlink', oalTest: 'Send a test alert', oalTestSent: 'Test alert sent.',
+    oalStep: 'Open the bot and press Start. The code is valid for 15 minutes.', oalOpenBot: 'Open the bot', oalEnable: 'Send alerts', oalDisk: 'Warn when free disk space is below (%)',
+    oalWhen: 'The server checks every 5 minutes, tells you once when a problem starts, reminds you every 6 hours while it lasts, and says when it is over. If the whole server is down it cannot send anything.',
   },
   fa: {
     loginSub: 'برای ادامه، حساب مدیر را وارد کن.', loginShow: 'نمایش گذرواژه', loginHide: 'پنهان کردن گذرواژه', loginCaps: 'Caps Lock روشن است', loginEmpty: 'نام کاربری و گذرواژه را وارد کن.',
@@ -51,5 +56,10 @@ export default {
     chbToken: 'توکن بات', chbTokenKeep: 'برای نگه‌داشتن توکن فعلی خالی بگذار', chbUsername: 'نام‌کاربری بات (بدون @)',
     chbProxyNote: 'تلگرام از ایران بسته است: سرور از پراکسی صفحه‌ی VPN به آن وصل می‌شود.',
     chbSave: 'ذخیره', chbSaved: 'ذخیره شد.', chbTest: 'آزمایش توکن', chbTestOk: 'به بات {name} وصل شد.', chbClear: 'حذف توکن ذخیره‌شده', chbCleared: 'توکن ذخیره‌شده حذف شد.',
+    chbManual: 'یا این پیام را خودت برای بات بفرست:',
+    oalTitle: 'هشدار سلامت سایت برای خودت', oalSub: 'وقتی دیسک رو به پایان باشد، حافظه تمام شود، سرور گیر کند یا منبع داده حدود نیم ساعت در دسترس نباشد در تلگرام یا بله پیام می‌گیری، و وقتی درست شد هم.',
+    oalNeedBot: 'اول بالا توکن یک بات را ثبت کن.', oalLinked: 'هشدارها اینجا می‌آید', oalNotLinked: 'وصل نیست', oalLink: 'اتصال این پیام‌رسان', oalUnlink: 'قطع اتصال', oalTest: 'ارسال هشدار آزمایشی', oalTestSent: 'هشدار آزمایشی فرستاده شد.',
+    oalStep: 'بات را باز کن و Start را بزن. کد ۱۵ دقیقه معتبر است.', oalOpenBot: 'باز کردن بات', oalEnable: 'ارسال هشدار', oalDisk: 'وقتی فضای خالی دیسک کمتر از این باشد هشدار بده (٪)',
+    oalWhen: 'سرور هر ۵ دقیقه چک می‌کند، شروع مشکل را یک بار می‌گوید، تا وقتی ادامه دارد هر ۶ ساعت یادآوری می‌کند و پایانش را هم خبر می‌دهد. اگر کل سرور از کار بیفتد نمی‌تواند چیزی بفرستد.',
   },
 };
