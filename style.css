@@ -4628,3 +4628,69 @@ small { font-size: max(12px, 0.8em); }
   .dx-layout { grid-template-columns: minmax(0, 1fr); }
   .dx-hero { grid-template-columns: 200px minmax(0, 1fr); gap: 26px; padding: 26px; }
 }
+
+/* ===== Title page v2: calm aside, folded credits, thin section tabs ===== */
+.dx-layout { grid-template-columns: minmax(0, 1fr) 340px; gap: 44px; margin-block-start: 8px; }
+.dx-aside { gap: 20px; padding-block-start: 22px; }
+.dx-aside > .dx-card { justify-self: stretch; }
+.dx-card { padding: 22px 22px 14px; border: 1px solid color-mix(in oklch, var(--border) 80%, transparent); border-radius: 20px; background: var(--card); }
+.dx-card h2 { margin: 0 0 8px; font-size: 16px; font-weight: 800; }
+.dx-aside .sidebar-data-list { display: block; margin: 0; }
+.dx-aside .sidebar-data-list > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); gap: 14px; align-items: baseline; padding-block: 12px; border-block-start: 1px solid color-mix(in oklch, var(--border) 60%, transparent); }
+.dx-aside .sidebar-data-list > div:first-child { border-block-start: 0; }
+.dx-aside .sidebar-data-list dt { font-size: 12.5px; color: var(--muted-foreground); }
+.dx-aside .sidebar-data-list dd { font-size: 13.5px; line-height: 1.75; text-align: start; unicode-bidi: isolate; }
+.dx-alt { margin-block-start: 4px; border-block-start: 1px solid color-mix(in oklch, var(--border) 60%, transparent); }
+.dx-alt summary, .dx-fold summary { display: flex; align-items: center; gap: 10px; padding-block: 14px; cursor: pointer; list-style: none; font-size: 14px; font-weight: 700; }
+.dx-alt summary::-webkit-details-marker, .dx-fold summary::-webkit-details-marker { display: none; }
+.dx-alt summary::after, .dx-fold summary::after { content: ''; margin-inline-start: auto; width: 8px; height: 8px; border-inline-end: 2px solid var(--muted-foreground); border-block-end: 2px solid var(--muted-foreground); transform: rotate(45deg); transition: transform .18s ease-out; }
+.dx-alt[open] summary::after, .dx-fold[open] summary::after { transform: rotate(-135deg); }
+.dx-alt[open] .sidebar-data-list { padding-block-end: 6px; }
+.dx-alt summary:focus-visible, .dx-fold summary:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 8px; }
+.dx-sub { margin: 18px 0 10px; font-size: 12.5px; font-weight: 700; color: var(--muted-foreground); }
+.dx-card .dx-sub:first-of-type { margin-block-start: 6px; }
+.dx-card ul.dx-chips { padding-block-end: 12px; }
+.dx-chips { display: flex; flex-wrap: wrap; gap: 8px; margin: 0; padding: 0; list-style: none; }
+.dx-chips li > a, .dx-chips li > span { display: inline-flex; align-items: center; min-height: 34px; padding-inline: 14px; border: 1px solid var(--border); border-radius: 999px; background: var(--background); color: var(--foreground); font-size: 13px; font-weight: 600; }
+.dx-chips li > a:hover { border-color: var(--primary); color: var(--primary-text); }
+.dx-card .streaming-notice { margin: 4px 0 12px; font-size: 12px; color: var(--muted-foreground); }
+.dx-folds { border-block-start: 1px solid color-mix(in oklch, var(--border) 60%, transparent); }
+.dx-fold { border-block-end: 1px solid color-mix(in oklch, var(--border) 60%, transparent); }
+.dx-fold summary small { padding: 1px 9px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); font-weight: 700; }
+.dx-fold > ul { padding-block-end: 16px; }
+.extras-more { margin-block-start: 14px; min-height: 40px; padding-inline: 20px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: var(--foreground); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.extras-more:hover { border-color: var(--primary); color: var(--primary-text); }
+.dx .extras-chars li { flex: 1 1 calc(50% - 8px); }
+.dx .detail-content-section { padding-block: 34px; }
+.dx .detail-section-grid > .detail-content-section:first-child { padding-block-start: 22px; border-block-start: 0; }
+.dx .detail-content-section h2 { font-size: 21px; margin-block-end: 18px; }
+.dx-more .dx-sub { margin-block-start: 26px; }
+.dx-more .card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 16px; }
+
+/* Thin sticky tab bar */
+.dx .detail-section-nav {
+  gap: 2px; margin-block: 24px 0; padding: 0; border: 0; border-radius: 0; top: 58px;
+  border-block-end: 1px solid var(--border); background: color-mix(in oklch, var(--background) 94%, transparent);
+}
+.dx .detail-section-nav a { position: relative; padding: 15px 18px; border-radius: 0; font-size: 14px; font-weight: 700; color: var(--muted-foreground); background: none; }
+.dx .detail-section-nav a:hover { background: none; color: var(--foreground); }
+.dx .detail-section-nav a.is-active { color: var(--primary-text); background: none; }
+.dx .detail-section-nav a.is-active::after { content: ''; position: absolute; inset-inline: 12px; inset-block-end: -1px; height: 3px; border-radius: 3px 3px 0 0; background: var(--primary); }
+@media (max-width: 1100px) { .dx-layout { grid-template-columns: minmax(0, 1fr); } }
+
+/* Community block inside the title page */
+.dx .community { display: grid; gap: 26px; }
+.dx .community p.community-hint, .dx .community-hint { font-size: 14px; color: var(--muted-foreground); }
+.dx .community > .community-hint { padding: 14px 18px; border-radius: 14px; background: var(--muted); }
+.dx .community-hint a { color: var(--primary-text); font-weight: 700; }
+.dx .community-score { gap: 20px 40px; align-items: center; padding: 0 0 22px; }
+.dx .community-score__value { font-size: 3rem; color: var(--primary-text); font-variant-numeric: tabular-nums; }
+.dx .community-score__meta { font-size: 13px; }
+.dx .community-bars { height: 72px; max-width: 380px; }
+.dx .community-statuses { margin: 0; }
+.dx .community-statuses__total { font-size: 13px; }
+.dx .community-statuses ul { gap: 8px; }
+.dx .community-statuses li { padding: 5px 13px; border: 1px solid var(--border); border-radius: 999px; font-size: 13px; }
+.dx .community-reviews-head, .dx .community-mine h3, .dx .rec-section h3 { font-size: 17px; font-weight: 800; }
+.dx .rec-section { margin: 0 0 8px; }
+.dx-more > .rec-section + * { margin-block-start: 28px; }

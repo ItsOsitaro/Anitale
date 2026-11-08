@@ -138,6 +138,7 @@ export const messages = {
     airDaysLabel: 'روز هفته', airTimeNote: 'ساعت‌ها به وقت ژاپن (JST) است و ممکن است در ایران یک روز زودتر یا دیرتر باشد.',
     seasonWinter: 'زمستان', seasonSpring: 'بهار', seasonSummer: 'تابستان', seasonFall: 'پاییز', seasonAllShown: 'همهٔ انیمه‌ها',
     seasonAllHead: 'همهٔ عنوان‌های فصل', seasonDayAll: 'همه', seasonSortPop: 'محبوب‌ترین', seasonSortScore: 'بالاترین امتیاز',
+    creditsSection: 'عوامل و آهنگ‌ها', moreLikeThis: 'بیشتر شبیه این', linksAndWatch: 'پخش و لینک‌ها', sameGenres: 'هم‌ژانر', charShowAll: 'نمایش همه ({n})',
     alertsHint: 'انیمه‌هایی از فهرست «در حال تماشا» که امروز قسمت تازه‌شان پخش می‌شود.', alertsAria: 'امروز پخش می‌شود، {n} مورد دیده‌نشده', alertsEpisode: 'قسمت {n}', alertsWatched: '+۱ دیدم', alertsLater: 'بعداً', alertsSeen: 'دیده شد', alertsUpTo: 'تا قسمت {n} دیده‌ای', alertsPostponed: 'برای بعد',
     // Site accounts
     navAuth: 'ورود / ثبت‌نام', homeIntroLabel: 'معرفی انی‌تیل', homeIntro: 'کاتالوگ فارسی انیمه و مانگا؛ فهرست خودت را بساز، نقد بنویس و پیشنهاد بگیر.', authLogin: 'ورود به حساب', authRegister: 'ساخت حساب',
@@ -314,6 +315,7 @@ export const messages = {
     airDaysLabel: 'Day of the week', airTimeNote: 'Times are Japan time (JST); in Iran the day can shift by one.',
     seasonWinter: 'Winter', seasonSpring: 'Spring', seasonSummer: 'Summer', seasonFall: 'Fall', seasonAllShown: 'All anime',
     seasonAllHead: 'Every title this season', seasonDayAll: 'All', seasonSortPop: 'Most popular', seasonSortScore: 'Top rated',
+    creditsSection: 'Credits & music', moreLikeThis: 'More like this', linksAndWatch: 'Watch & links', sameGenres: 'Same genres', charShowAll: 'Show all ({n})',
     alertsHint: 'Shows on your “watching” list with a new episode today.', alertsAria: 'Airing today, {n} unseen', alertsEpisode: 'Episode {n}', alertsWatched: '+1 watched', alertsLater: 'Later', alertsSeen: 'Watched', alertsUpTo: 'Watched up to episode {n}', alertsPostponed: 'Later',
     // Site accounts
     navAuth: 'Sign in / Join', homeIntroLabel: 'About Anitale', homeIntro: 'A Persian catalog of anime and manga: build your own list, write reviews and get recommendations.', authLogin: 'Sign in', authRegister: 'Create account',

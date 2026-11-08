@@ -179,7 +179,7 @@ function ReviewItem({ review, signedIn }) {
 }
 
 // Community score + reviews for one title. Shared by the desktop and mobile detail pages.
-export default function CommunitySection({ mediaType, slug }) {
+export default function CommunitySection({ mediaType, slug, withRecs = true }) {
   const { t } = useSiteLang();
   const user = useUser();
   const [data, setData] = useState(null);
@@ -246,7 +246,7 @@ export default function CommunitySection({ mediaType, slug }) {
       {data.reviews.length < data.total && (
         <Button type="button" variant="outline" size="sm" onClick={() => load(page + 1)}>{t('reviewsMore')}</Button>
       )}
-      <Recommendations mediaType={mediaType} slug={slug} />
+      {withRecs && <Recommendations mediaType={mediaType} slug={slug} />}
     </div>
   );
 }

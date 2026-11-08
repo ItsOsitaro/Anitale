@@ -56,6 +56,7 @@ import MobileCatalogPage from '@/components/mobile/MobileCatalogPage';
 import MobileRankingPage from '@/components/mobile/MobileRankingPage';
 import MobileSeasonalPage from '@/components/mobile/MobileSeasonalPage';
 import { SchedulePageBody, SeasonPageBody } from './airingBoard.jsx';
+import UserRecs from './components/Recommendations.jsx';
 import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 import { coverUrl } from '@/lib/cover';
 
@@ -1103,21 +1104,24 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     { id: 'detailMedia', label: t('mediaSection'), show: Boolean(item.malId) },
     { id: 'detailRelatedEntries', label: t('relatedEntries'), show: hasAny(extras, 'relations') },
     { id: 'detailReviews', label: t('reviewsTitle'), show: true },
-    { id: 'relatedHeading', label: t(mediaType === 'manga' ? 'relatedManga' : 'relatedAnime'), show: related.length > 0 },
+    { id: 'relatedHeading', label: t('moreLikeThis'), show: true },
   ].filter((entry) => entry.show);
   const navKey = sectionNav.map((entry) => entry.id).join('|');
   const [activeSection, setActiveSection] = useState('');
   useEffect(() => {
-    if (isMobile || typeof IntersectionObserver === 'undefined') return undefined;
+    if (isMobile) return undefined;
     const ids = navKey.split('|').filter(Boolean);
-    const visible = new Set();
-    const observer = new IntersectionObserver((entries) => {
-      entries.forEach((entry) => (entry.isIntersecting ? visible.add(entry.target.id) : visible.delete(entry.target.id)));
-      const first = ids.find((id) => visible.has(id));
-      if (first) setActiveSection(first);
-    }, { rootMargin: '-140px 0px -60% 0px' });
-    ids.forEach((id) => { const node = document.getElementById(id); if (node) observer.observe(node); });
-    return () => observer.disconnect();
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      let current = ids[0] || '';
+      for (const id of ids) { const node = document.getElementById(id); if (node && node.getBoundingClientRect().top <= 150) current = id; }
+      setActiveSection(current);
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
   }, [navKey, isMobile]);
 
   const toggleSaved = () => {
@@ -1156,6 +1160,18 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
       />
     );
   }
+
+  // The hero already shows type, episodes, status and the genre chips; the aside keeps only what the hero does not.
+  const HERO_ROWS = ['type', 'episodes', 'chapters', 'status', 'genres', 'themes'];
+  const asideRows = informationRows.filter((row) => !HERO_ROWS.includes(String(row.label).toLowerCase()));
+  const altRows = [
+    { label: t('synonyms'), value: (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ') },
+    { label: t('japaneseTitle'), value: alternativeTitles.japanese },
+    { label: t('englishTitle'), value: alternativeTitles.english },
+    { label: t('persianTitle'), value: item.titleFa },
+  ];
+  const hasLinks = item.availableAt?.length > 0 || item.streamingPlatforms?.length > 0 || item.resources?.length > 0;
+  const hasCredits = hasAny(extras, 'staff') || (mediaType === 'anime' && (hasAny(extras, 'openings') || hasAny(extras, 'endings')));
 
   return (
     <>
@@ -1258,11 +1274,11 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                     : <p className="detail-synopsis" dir="auto">{item.synopsis}</p>}
                   {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
                 </DetailSection>
-                {hasAny(extras, 'characters') && (
-                  <DetailSection id="detailCharacters" title={t('charactersVA')}><Characters data={extras.data} /></DetailSection>
-                )}
                 {hasAny(extras, 'trailer') && (
                   <DetailSection id="detailTrailer" title={t('trailerTitle')}><Trailer data={extras.data} /></DetailSection>
+                )}
+                {hasAny(extras, 'characters') && (
+                  <DetailSection id="detailCharacters" title={t('charactersVA')}><Characters data={extras.data} limit={8} /></DetailSection>
                 )}
                 {item.malId && (
                   <DetailSection id="detailMedia" title={t('mediaSection')}><MediaTabs item={item} mediaType={mediaType} /></DetailSection>
@@ -1271,81 +1287,78 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 {hasAny(extras, 'relations') && (
                   <DetailSection id="detailRelatedEntries" title={t('relatedEntries')}><Relations data={extras.data} /><WatchOrder mediaType={mediaType} malId={item.malId} /></DetailSection>
                 )}
-                {hasAny(extras, 'staff') && (
-                  <DetailSection id="detailStaff" title={t('staffSection')}><Staff data={extras.data} /></DetailSection>
-                )}
-                {mediaType === 'anime' && hasAny(extras, 'openings') && (
-                  <DetailSection id="detailOpening" title={t('openingTheme')}><Themes data={extras.data} kind="op" /></DetailSection>
-                )}
-                {mediaType === 'anime' && hasAny(extras, 'endings') && (
-                  <DetailSection id="detailEnding" title={t('endingTheme')}><Themes data={extras.data} kind="ed" /></DetailSection>
+                {hasCredits && (
+                  <DetailSection id="detailCredits" title={t('creditsSection')}>
+                    <div className="dx-folds">
+                      {hasAny(extras, 'staff') && <details className="dx-fold"><summary>{t('staffSection')}<small>{formatNumber(extras.data.staff.length, lang)}</small></summary><Staff data={extras.data} /></details>}
+                      {mediaType === 'anime' && hasAny(extras, 'openings') && <details className="dx-fold"><summary>{t('openingTheme')}<small>{formatNumber(extras.data.openings.length, lang)}</small></summary><Themes data={extras.data} kind="op" /></details>}
+                      {mediaType === 'anime' && hasAny(extras, 'endings') && <details className="dx-fold"><summary>{t('endingTheme')}<small>{formatNumber(extras.data.endings.length, lang)}</small></summary><Themes data={extras.data} kind="ed" /></details>}
+                    </div>
+                  </DetailSection>
                 )}
                 <DetailSection id="detailReviews" title={t('reviewsTitle')} className="detail-content-section detail-community">
-                  <CommunitySection mediaType={mediaType} slug={item.slug} />
+                  <CommunitySection mediaType={mediaType} slug={item.slug} withRecs={false} />
                 </DetailSection>
-                {hasAny(extras, 'recommendations') && (
-                  <DetailSection id="detailRecommendations" title={t('recommendationsTitle')}><Recommendations data={extras.data} mediaType={mediaType} /></DetailSection>
+                {(
+                  <DetailSection id="relatedHeading" title={t('moreLikeThis')} className="detail-content-section dx-more">
+                    <UserRecs mediaType={mediaType} slug={item.slug} />
+                    {hasAny(extras, 'recommendations') && <Recommendations data={extras.data} mediaType={mediaType} />}
+                    {related.length > 0 && (
+                      <>
+                        <h3 className="dx-sub">{t('sameGenres')}</h3>
+                        <AnimeGrid items={related} />
+                      </>
+                    )}
+                  </DetailSection>
                 )}
               </div>
             </div>
             <aside className="dx-aside">
+              <section className="dx-card" aria-labelledby="dx-info-title">
+                <h2 id="dx-info-title">{t('information')}</h2>
+                <SidebarDataList rows={asideRows} />
+                {altRows.some((row) => row.value) && (
+                  <details className="dx-alt">
+                    <summary>{t('alternativeTitles')}</summary>
+                    <SidebarDataList rows={altRows} />
+                  </details>
+                )}
+              </section>
+              {hasLinks && (
+                <section className="dx-card" aria-labelledby="dx-links-title">
+                  <h2 id="dx-links-title">{t('linksAndWatch')}</h2>
+                  {item.streamingPlatforms?.length > 0 && (
+                    <>
+                      <h3 className="dx-sub">{t('streaming')}</h3>
+                      <ul className="dx-chips">
+                        {item.streamingPlatforms.map((platform) => <li key={platform}><span dir="ltr">{platform}</span></li>)}
+                      </ul>
+                      {item.streamingNotice && <p className="streaming-notice">{item.streamingNotice}</p>}
+                    </>
+                  )}
+                  {item.availableAt?.length > 0 && (
+                    <>
+                      <h3 className="dx-sub">{t('availableAt')}</h3>
+                      <ul className="dx-chips">
+                        {item.availableAt.map((entry) => (
+                          <li key={entry.label}>{entry.href ? <a href={entry.href} target="_blank" rel="noreferrer"><span dir="ltr">{entry.label}</span></a> : <span dir="ltr">{entry.label}</span>}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                  {item.resources?.length > 0 && (
+                    <>
+                      <h3 className="dx-sub">{t('resources')}</h3>
+                      <ul className="dx-chips">
+                        {item.resources.map((resource) => <li key={resource.label}><span dir="ltr">{resource.label}</span></li>)}
+                      </ul>
+                    </>
+                  )}
+                </section>
+              )}
               <SuggestEdit item={item} mediaType={mediaType} />
-              <div className="detail-sidebar-sections">
-                {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english || item.titleFa) && (
-                  <DetailSection id="detailAlternativeTitles" title={t('alternativeTitles')} className="detail-sidebar-section">
-                    <SidebarDataList rows={[
-                      { label: t('synonyms'), value: (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ') },
-                      { label: t('japaneseTitle'), value: alternativeTitles.japanese },
-                      { label: t('englishTitle'), value: alternativeTitles.english },
-                      { label: t('persianTitle'), value: item.titleFa },
-                    ]} />
-                  </DetailSection>
-                )}
-                <DetailSection id="detailInformation" title={t('information')} className="detail-sidebar-section">
-                  <SidebarDataList rows={informationRows} />
-                </DetailSection>
-                {item.availableAt?.length > 0 && (
-                  <DetailSection id="detailAvailableAt" title={t('availableAt')} className="detail-sidebar-section">
-                    <ul className="sidebar-link-list">
-                      {item.availableAt.map((entry) => (
-                        <li key={entry.label}>
-                          <span className="sidebar-resource-icon" aria-hidden="true">{entry.icon || '↗'}</span>
-                          {entry.href ? <a href={entry.href} target="_blank" rel="noreferrer">{entry.label}</a> : <span>{entry.label}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </DetailSection>
-                )}
-                {item.resources?.length > 0 && (
-                  <DetailSection id="detailResources" title={t('resources')} className="detail-sidebar-section">
-                    <ul className="sidebar-link-list">
-                      {item.resources.map((resource) => (
-                        <li key={resource.label}>
-                          <span className="sidebar-resource-icon" aria-hidden="true">{resource.icon}</span>
-                          <span>{resource.label}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </DetailSection>
-                )}
-                {item.streamingPlatforms?.length > 0 && (
-                  <DetailSection id="detailStreaming" title={t('streaming')} className="detail-sidebar-section">
-                    <ul className="streaming-platform-list">
-                      {item.streamingPlatforms.map((platform) => (
-                        <li key={platform}><span className="platform-mark" aria-hidden="true">{platform[0]}</span><span dir="ltr">{platform}</span></li>
-                      ))}
-                    </ul>
-                    {item.streamingNotice && <p className="streaming-notice">{item.streamingNotice}</p>}
-                  </DetailSection>
-                )}
-              </div>
             </aside>
           </div>
-
-          <section className="related-section" aria-labelledby="relatedHeading">
-            <h2 id="relatedHeading">{t(mediaType === 'manga' ? 'relatedManga' : 'relatedAnime')}</h2>
-            <AnimeGrid items={related} />
-          </section>
         </main>
       </div>
     </>

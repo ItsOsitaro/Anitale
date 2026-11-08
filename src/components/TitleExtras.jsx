@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSiteLang } from '@/i18n';
 import { useCatalog, useEnsureTitles, useMangaCatalog } from '../catalog-context.jsx';
 import { mediaHref } from '../catalog.js';
+import { formatNumber } from '@/lib/digits.js';
 
 // Extra detail for a title (characters, relations, recommendations, trailer, themes) from
 // /api/extras. The server fetches it from Tenrai once and keeps it; we only render what exists.
@@ -69,12 +70,15 @@ export function ExtrasSkeleton() {
   return <p className="extras-muted" role="status">{t('extrasLoading')}</p>;
 }
 
-export function Characters({ data }) {
-  const { t } = useSiteLang();
+export function Characters({ data, limit = 0 }) {
+  const { t, lang } = useSiteLang();
+  const [all, setAll] = useState(false);
   if (!data.characters?.length) return null;
+  const list = limit && !all ? data.characters.slice(0, limit) : data.characters;
   return (
+    <>
     <ul className="extras-chars">
-      {data.characters.map((c) => (
+      {list.map((c) => (
         <li key={c.id}>
           <Poster src={c.image} />
           <span className="extras-char-text">
@@ -86,6 +90,10 @@ export function Characters({ data }) {
         </li>
       ))}
     </ul>
+    {limit > 0 && !all && data.characters.length > limit && (
+      <button type="button" className="extras-more" onClick={() => setAll(true)}>{t('charShowAll', { n: formatNumber(data.characters.length, lang) })}</button>
+    )}
+    </>
   );
 }
 
