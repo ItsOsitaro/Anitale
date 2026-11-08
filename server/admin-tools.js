@@ -6,6 +6,9 @@ import { extrasConfig, saveExtrasConfig, rescheduleExtras, extrasStatus } from '
 import { scoreConfig, saveScoreConfig, rescheduleScores, scoreStatus } from './score-backfill.js';
 import { alertConfig, saveAlertConfig } from './health-alerts.js';
 import { clientErrorsLast } from './health.js';
+import { saveRevision } from './revisions.js';
+import { openReportCount } from './reports.js';
+import { translateSynopsis } from './translate.js';
 
 // Admin helpers added in the fifth admin round. Routes live under /api/admin/x/<area>/... so the permission gate
 // (server/admin-accounts.js) applies: catalog = titles, users = members, system = growth / self-check / background jobs.
@@ -129,8 +132,83 @@ export const registerAdminTools = (app) => {
     return res.json({ ok: true });
   });
 
+  // Bulk: add or remove one genre on up to 100 titles (only the genres column changes, as with edit suggestions).
+  app.post('/api/admin/x/catalog/bulk-genre', requireAdmin, (req, res) => {
+    const type = req.body?.type === 'manga' ? 'manga' : 'anime';
+    const genre = String(req.body?.genre || '').trim().slice(0, 40);
+    const add = req.body?.mode !== 'remove';
+    const slugs = (Array.isArray(req.body?.slugs) ? req.body.slugs : []).map((s) => String(s).slice(0, 200)).slice(0, 100);
+    if (!genre || !slugs.length) return bad(res, 'Genre and titles are required');
+    let changed = 0;
+    for (const slug of slugs) {
+      const row = db.prepare(`SELECT * FROM ${type} WHERE slug = ?`).get(slug);
+      if (!row) continue;
+      let list = [];
+      try { list = JSON.parse(row.genres) || []; } catch { list = []; }
+      const has = list.some((g) => String(g).toLowerCase() === genre.toLowerCase());
+      if ((add && has) || (!add && !has)) continue;
+      saveRevision(req.admin?.username || '', type, row, 'genre');
+      const next = add ? [...list, genre] : list.filter((g) => String(g).toLowerCase() !== genre.toLowerCase());
+      db.prepare(`UPDATE ${type} SET genres = ?, updated_at = datetime('now') WHERE id = ?`).run(JSON.stringify(next), row.id);
+      changed += 1;
+    }
+    return res.json({ ok: true, changed });
+  });
+
+  // Bulk: Persian synopsis for selected titles that have an English one and no Persian yet (a few per call; the page loops).
+  app.post('/api/admin/x/translate/titles', requireAdmin, async (req, res) => {
+    const type = req.body?.type === 'manga' ? 'manga' : 'anime';
+    const slugs = (Array.isArray(req.body?.slugs) ? req.body.slugs : []).map((s) => String(s).slice(0, 200)).slice(0, 3);
+    let translated = 0;
+    let skipped = 0;
+    let failed = 0;
+    for (const slug of slugs) {
+      const row = db.prepare(`SELECT * FROM ${type} WHERE slug = ?`).get(slug);
+      let syn = {};
+      try { syn = JSON.parse(row?.synopsis || '{}') || {}; } catch { syn = {}; }
+      if (!row || !syn.en || syn.fa) { skipped += 1; continue; }
+      try {
+        const fa = await translateSynopsis(syn.en);
+        if (!fa) throw new Error('empty');
+        saveRevision(req.admin?.username || '', type, row, 'translate');
+        db.prepare(`UPDATE ${type} SET synopsis = ?, updated_at = datetime('now') WHERE id = ?`).run(JSON.stringify({ ...syn, fa, auto: true }), row.id);
+        translated += 1;
+      } catch { failed += 1; }
+    }
+    return res.json({ ok: true, translated, skipped, failed });
+  });
+
+  // Merge a duplicate title into the main one: members' list entries, reviews, stack items and favourites move over
+  // (where the member has no entry for the main title yet), then the duplicate is deleted (and can be reverted as a row).
+  app.post('/api/admin/x/catalog/merge', requireAdmin, (req, res) => {
+    const type = req.body?.type === 'manga' ? 'manga' : 'anime';
+    const from = String(req.body?.from || '').slice(0, 200);
+    const into = String(req.body?.into || '').slice(0, 200);
+    if (!from || !into || from === into) return bad(res, 'Two different titles are required');
+    const a = db.prepare(`SELECT * FROM ${type} WHERE slug = ?`).get(from);
+    const b = db.prepare(`SELECT * FROM ${type} WHERE slug = ?`).get(into);
+    if (!a || !b) return bad(res, 'Title not found', 404);
+    const moved = {};
+    db.exec('BEGIN');
+    try {
+      moved.entries = db.prepare('UPDATE OR IGNORE user_entries SET slug = ? WHERE media_type = ? AND slug = ?').run(into, type, from).changes;
+      db.prepare('DELETE FROM user_entries WHERE media_type = ? AND slug = ?').run(type, from);
+      moved.reviews = db.prepare('UPDATE OR IGNORE reviews SET slug = ? WHERE media_type = ? AND slug = ?').run(into, type, from).changes;
+      db.prepare('DELETE FROM reviews WHERE media_type = ? AND slug = ?').run(type, from);
+      moved.stacks = db.prepare('UPDATE OR IGNORE stack_items SET slug = ? WHERE media_type = ? AND slug = ?').run(into, type, from).changes;
+      db.prepare('DELETE FROM stack_items WHERE media_type = ? AND slug = ?').run(type, from);
+      moved.favorites = db.prepare('UPDATE OR IGNORE favorites SET ref = ? WHERE kind = ? AND ref = ?').run(into, type, from).changes;
+      db.prepare('DELETE FROM favorites WHERE kind = ? AND ref = ?').run(type, from);
+      db.prepare('DELETE FROM recs WHERE media_type = ? AND (slug_a = ? OR slug_b = ?)').run(type, from, from); // pairs are ordered; simply dropped
+      saveRevision(req.admin?.username || '', type, a, 'merge');
+      db.prepare(`DELETE FROM ${type} WHERE id = ?`).run(a.id);
+      db.exec('COMMIT');
+    } catch (error) { db.exec('ROLLBACK'); throw error; }
+    return res.json({ ok: true, moved });
+  });
+
   // Extra queue counts for the dashboard (cheap).
   app.get('/api/admin/x/community/queues', requireAdmin, (_req, res) => {
-    res.json({ searchMisses: db.prepare('SELECT COUNT(*) AS n FROM search_misses').get().n, clientErrors: clientErrorsLast() });
+    res.json({ searchMisses: db.prepare('SELECT COUNT(*) AS n FROM search_misses').get().n, clientErrors: clientErrorsLast(), reports: openReportCount() });
   });
 };

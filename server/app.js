@@ -21,6 +21,8 @@ import { registerCalendarRoutes } from './calendar.js';
 import { registerContinueRoutes } from './continue-series.js';
 import { registerOgRoutes } from './og-image.js';
 import { registerTogetherRoute } from './together.js';
+import { registerReportRoutes } from './reports.js';
+import { registerAnnouncementRoutes } from './announcement.js';
 import { logMiss } from './search-aliases.js';
 import { registerHomeCommunityRoute } from './home-community.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
@@ -517,6 +519,8 @@ export const createApp = () => {
   registerCalendarRoutes(app, botDeps);
   registerContinueRoutes(app, botDeps);
   registerTogetherRoute(app, botDeps);
+  registerReportRoutes(app, botDeps);
+  registerAnnouncementRoutes(app);
   registerHomeCommunityRoute(app);
   app.get('/api/favorites/:kind/:ref', (req, res) => {
     const { kind, ref } = favParams(req);

@@ -3,6 +3,7 @@ import { ProfileStacks } from '@/stacksPages.jsx';
 import Achievements from '@/components/Achievements';
 import TasteMatch from '../TasteMatch';
 import Together from '../Together';
+import ReportButton from '../ReportButton';
 import { AboutRich } from '@/lib/safe-markup.jsx';
 import { useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
@@ -69,6 +70,7 @@ export default function MobileProfile({ onOpenFollows, followSheet, profile, ent
         </p>
         <TasteMatch similarity={similarity} />
         {!isOwner && <Together username={profile.username} />}
+        {!isOwner && <ReportButton kind="user" refId={profile.username} ownerName={profile.username} />}
         {isOwner ? (
           <>
             <Link className="mprofile__own" to="/dashboard">{t('ownProfile')}</Link>

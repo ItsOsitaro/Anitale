@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ReportButton from '@/components/ReportButton';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useSiteLang } from '@/i18n';
@@ -45,6 +46,7 @@ function RecCard({ rec, mediaType, catalog, signedIn }) {
         <p dir="auto">{rec.body}</p>
         <small>{t('recBy')} <Link to={`/user/${encodeURIComponent(rec.username)}`}>{rec.username}</Link></small>
         <RecHelpful rec={rec} signedIn={signedIn} />
+        <ReportButton kind="rec" refId={rec.id} ownerName={rec.username} />
       </div>
     </li>
   );

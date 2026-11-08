@@ -61,6 +61,7 @@ import InstallButton from '@/components/InstallButton';
 import { useForYou } from '@/hooks/use-for-you';
 import { useContinueSeries } from '@/hooks/use-continue-series';
 import ContinueManga from '@/components/ContinueManga';
+import AnnouncementBar from '@/components/AnnouncementBar';
 import ShareCardDialog from '@/components/ShareCardDialog';
 import OnboardingPicker from '@/components/OnboardingPicker';
 import { BrowsePage, GenresIndex } from './landingPages.jsx';
@@ -1559,9 +1560,9 @@ function AppRoutes({ theme, onThemeChange }) {
     </Routes>
   );
   if (isMobile && !pathname.startsWith('/admin')) {
-    return <MobileShell>{routes}</MobileShell>;
+    return <><AnnouncementBar /><MobileShell>{routes}</MobileShell></>;
   }
-  return routes;
+  return <><AnnouncementBar />{routes}</>;
 }
 
 function CatalogSkeleton() {

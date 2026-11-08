@@ -52,6 +52,18 @@ export const api = {
     form.append('cover', file);
     return request('POST', `/api/anime/${encodeURIComponent(slug)}/cover`, form);
   },
+  bulkGenre: (body) => request('POST', '/api/admin/x/catalog/bulk-genre', body),
+  translateTitles: (body) => request('POST', '/api/admin/x/translate/titles', body),
+  mergeTitles: (body) => request('POST', '/api/admin/x/catalog/merge', body),
+  revisions: () => request('GET', '/api/admin/x/system/revisions'),
+  revisionRevert: (id) => request('POST', `/api/admin/x/system/revisions/${id}/revert`, {}),
+  reports: (status) => request('GET', `/api/admin/x/community/reports?status=${status}`),
+  reportClose: (id, status) => request('POST', `/api/admin/x/community/reports/${id}`, { status }),
+  announcement: () => request('GET', '/api/admin/x/system/announcement'),
+  announcementSave: (body) => request('POST', '/api/admin/x/system/announcement', body),
+  announcementRemove: () => request('DELETE', '/api/admin/x/system/announcement'),
+  backups: () => request('GET', '/api/admin/x/system/backups'),
+  backupAct: (body) => request('POST', '/api/admin/x/system/backups', body),
   growth: () => request('GET', '/api/admin/x/system/growth'),
   quality: () => request('GET', '/api/admin/x/catalog/quality'),
   jobs: () => request('GET', '/api/admin/x/system/jobs'),

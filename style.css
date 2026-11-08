@@ -4899,3 +4899,14 @@ small { font-size: max(12px, 0.8em); }
 .together h3 { margin: 0 0 8px; font-size: 14px; }
 .together ul { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .together li a { display: inline-block; padding-block: 5px; padding-inline: 10px; border-radius: 999px; background: var(--secondary); color: inherit; text-decoration: none; font-size: 13px; min-height: 28px; }
+
+/* Reports and the site notice */
+.report-btn { display: inline-flex; align-items: center; gap: 4px; background: none; border: 0; padding-block: 4px; padding-inline: 6px; color: var(--muted-foreground); font: inherit; font-size: 12px; cursor: pointer; min-height: 28px; }
+.report-btn:hover { color: var(--foreground); }
+.report-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-block: 6px; }
+.report-form input { flex: 1 1 180px; padding-block: 5px; padding-inline: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: inherit; min-width: 0; }
+.report-form button { padding-block: 5px; padding-inline: 10px; border-radius: 8px; border: 1px solid var(--border); background: var(--secondary); color: inherit; font: inherit; font-size: 12px; cursor: pointer; min-height: 28px; }
+.report-done { color: var(--muted-foreground); }
+.site-notice { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 8px; padding-inline: 16px; background: var(--primary); color: var(--primary-foreground); font-size: 14px; position: relative; z-index: 60; }
+.site-notice.is-warn { background: oklch(0.55 0.16 50); color: #fff; }
+.site-notice button { background: none; border: 0; color: inherit; font-size: 20px; line-height: 1; cursor: pointer; min-width: 28px; min-height: 28px; }

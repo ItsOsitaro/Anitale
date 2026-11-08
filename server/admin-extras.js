@@ -14,6 +14,8 @@ import { register as registerTranslate } from './admin-translate.js';
 import { register as registerCommunity } from './admin-community.js';
 import { registerAliasRoutes } from './search-aliases.js';
 import { registerAdminTools } from './admin-tools.js';
+import { captureRevisions, registerRevisionRoutes } from './revisions.js';
+import { registerBackupRoutes } from './backup.js';
 import { register as registerSystem } from './admin-system.js';
 
 db.exec(`
@@ -54,6 +56,7 @@ export const registerAdminExtras = (app) => {
     return next();
   });
   app.use(adminGate);
+  app.use(captureRevisions);
 
   registerAdminAccountRoutes(app);
 
@@ -70,6 +73,7 @@ export const registerAdminExtras = (app) => {
       badges: {
         suggestions: n("SELECT COUNT(*) AS n FROM edit_suggestions WHERE status = 'pending'"),
         missing: n('SELECT COUNT(*) AS n FROM missing_titles'),
+        reports: n("SELECT COUNT(*) AS n FROM content_reports WHERE status = 'open'"),
       },
       attention: {
         noCover: n("SELECT COUNT(*) AS n FROM anime WHERE cover = ''"),
@@ -142,6 +146,8 @@ export const registerAdminExtras = (app) => {
   registerCommunity(app);
   registerAliasRoutes(app);
   registerAdminTools(app);
+  registerRevisionRoutes(app);
+  registerBackupRoutes(app);
   registerSystem(app);
 };
 

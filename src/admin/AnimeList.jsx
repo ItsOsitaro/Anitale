@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, runBulkJob } from './api.js';
+import { BulkBar } from './ToolsPages.jsx';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 import { mediaHref } from '../catalog.js';
@@ -75,24 +76,7 @@ export default function AnimeList() {
 
   // Several titles at once: tick rows, then refresh or delete them one after another (the source allows ~1.5 requests a second).
   const [picked, setPicked] = useState(() => new Set());
-  const [bulkBusy, setBulkBusy] = useState('');
   const togglePick = (slug) => setPicked((current) => { const next = new Set(current); if (next.has(slug)) next.delete(slug); else next.add(slug); return next; });
-  const runPicked = async (kind) => {
-    const chosen = (data?.items || []).filter((item) => picked.has(item.slug));
-    const targets = kind === 'refresh' ? chosen.filter((item) => item.malId) : chosen;
-    if (!targets.length) { toast(t('refreshNothing'), 'error'); return; }
-    if (kind === 'delete' && !await confirm(t('bulkDeleteConfirm', { n: targets.length }), { danger: true })) return;
-    setBulkBusy(kind);
-    let ok = 0;
-    let bad = 0;
-    for (const item of targets) {
-      try { if (kind === 'refresh') await api.refresh(item.slug); else await api.remove(item.slug); ok += 1; } catch { bad += 1; }
-    }
-    setBulkBusy('');
-    setPicked(new Set());
-    toast(t('bulkDone', { ok, bad }), bad ? 'error' : undefined);
-    load();
-  };
 
   // Human text for one change ({field, from, to}).
   const changeText = (change) => {
@@ -110,7 +94,13 @@ export default function AnimeList() {
       const { item: saved, coverWarning, changes = [] } = await api.refresh(item.slug);
       toast(t('refreshed', { title: saved.title }));
       const report = changes.map(changeText).filter(Boolean);
-      if (report.length > 0) toast(report.join(' · '));
+      if (report.length > 0) {
+        // The old row was kept (Revisions): if the new data looks wrong, one click puts it back.
+        if (!await confirm(t('refreshKeep', { changes: report.join(' · ') }))) {
+          const rev = (await api.revisions()).items.find((r) => r.slug === item.slug && r.action === 'refresh' && !r.reverted);
+          if (rev) { await api.revisionRevert(rev.id); toast(t('rvDone')); }
+        }
+      }
       if (coverWarning) toast(t('coverWarning', { msg: coverWarning }), 'error');
       load();
     } catch (err) {
@@ -178,14 +168,7 @@ export default function AnimeList() {
           </button>
         ))}
       </div>
-      {picked.size > 0 && (
-        <div className="adm-bulkbar" role="region" aria-label={t('bulkBar')}>
-          <strong>{t('bulkPicked', { n: num(picked.size) })}</strong>
-          <button className="adm-btn" type="button" disabled={Boolean(bulkBusy)} onClick={() => runPicked('refresh')}>{bulkBusy === 'refresh' ? t('refreshing') : t('refreshBtn')}</button>
-          <button className="adm-btn is-danger" type="button" disabled={Boolean(bulkBusy)} onClick={() => runPicked('delete')}>{t('delete')}</button>
-          <button className="adm-btn" type="button" disabled={Boolean(bulkBusy)} onClick={() => setPicked(new Set())}>{t('bulkClear')}</button>
-        </div>
-      )}
+      {canEdit && <BulkBar kind="anime" items={data?.items || []} picked={picked} clear={() => setPicked(new Set())} reload={load} />}
       {error && <p className="adm-error" role="alert">{error} <button className="adm-btn" type="button" onClick={load}>{t('mangaRetry')}</button></p>}
       <div className={`adm-card adm-table-wrap al-wrap${loading && data ? ' is-loading' : ''}`} aria-busy={loading}>
         <table className="adm-table al-table">

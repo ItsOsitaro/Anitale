@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, runBulkJob } from './api.js';
+import { BulkBar } from './ToolsPages.jsx';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 import { formatNumber, formatScore } from '../lib/digits.js';
@@ -110,6 +111,8 @@ export default function MangaList() {
 
   const rows = data?.items || [];
   const att = data?.attention;
+  const [picked, setPicked] = useState(() => new Set());
+  const togglePick = (slug) => setPicked((current) => { const next = new Set(current); if (next.has(slug)) next.delete(slug); else next.add(slug); return next; });
 
   // Human text for one change ({field, from, to}) — same report as the anime list.
   const changeText = (change) => {
@@ -273,9 +276,11 @@ export default function MangaList() {
       )}
 
       <div className={`adm-card adm-table-wrap${loading && data ? ' manga-is-loading' : ''}`} aria-busy={loading}>
+        {canEdit && <BulkBar kind="manga" items={rows} picked={picked} clear={() => setPicked(new Set())} reload={load} />}
         <table className="adm-table">
           <thead>
             <tr>
+              {canEdit && <th><input type="checkbox" aria-label={t('bulkAll')} checked={rows.length > 0 && rows.every((row) => picked.has(row.slug))} onChange={(e) => setPicked(e.target.checked ? new Set(rows.map((row) => row.slug)) : new Set())} /></th>}
               <th>{t('mangaColCover')}</th>
               <th>{t('mangaColTitle')}</th>
               <th>{t('mangaColFa')}</th>
@@ -293,6 +298,7 @@ export default function MangaList() {
               return (
                 <React.Fragment key={row.slug}>
                   <tr>
+                    {canEdit && <td><input type="checkbox" aria-label={row.title} checked={picked.has(row.slug)} onChange={() => togglePick(row.slug)} /></td>}
                     <td className="manga-cover-cell">{row.image ? <img className="adm-thumb" src={row.image} alt="" loading="lazy" onError={(e) => e.currentTarget.classList.add("is-broken")} /> : <span className="adm-thumb adm-thumb-empty" />}</td>
                     <td className="manga-title-cell">
                       <Link to={`/manga/${row.slug}`} dir="auto"><strong>{row.title}</strong></Link>

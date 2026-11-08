@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import ChatBotSettings from './ChatBotSettings.jsx';
-import { SelfCheck } from './ToolsPages.jsx';
+import { SelfCheck, BackupCard } from './ToolsPages.jsx';
 import { Link } from 'react-router-dom';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
@@ -228,6 +228,7 @@ export default function HealthPage() {
         </div>
       </div>
       <SelfCheck />
+      <BackupCard />
       <ChatBotSettings />
     </div>
   );

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import ReportButton from '@/components/ReportButton';
 import FriendsWatched from '@/components/FriendsWatched';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -175,6 +176,7 @@ function ReviewItem({ review, signedIn }) {
         <button type="button" className="community-spoiler" onClick={() => setShown(true)}>{t('reviewSpoilerShow')}</button>
       )}
       <HelpfulButton review={review} signedIn={signedIn} />
+      <ReportButton kind="review" refId={review.id} ownerName={review.username} />
     </li>
   );
 }

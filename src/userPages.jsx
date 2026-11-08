@@ -25,6 +25,7 @@ import { ProfileFavorites } from '@/components/Favorites';
 import { ProfileStacks } from '@/stacksPages.jsx';
 import TasteMatch from '@/components/TasteMatch';
 import Together from '@/components/Together';
+import ReportButton from '@/components/ReportButton';
 import AboutEditor from '@/components/AboutEditor';
 import { AboutRich } from '@/lib/safe-markup.jsx';
 import { FavoriteGenres, ProfileReviews, RecentActivity, StatusBreakdown, TopRated } from '@/components/ProfileInsights';
@@ -794,6 +795,7 @@ export function UserPublicProfile() {
             </p>
             {!isOwner && <TasteMatch similarity={data.similarity} />}
             {!isOwner && <Together username={profile.username} />}
+            {!isOwner && <ReportButton kind="user" refId={profile.username} ownerName={profile.username} />}
           </div>
           <FollowButton
             profile={{ ...profile, isFollowing: followCounts.isFollowing }}

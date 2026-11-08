@@ -13,7 +13,7 @@ import BulkImport from './BulkImport.jsx';
 import QuickAdd from './QuickAdd.jsx';
 import MissingTitles from './MissingTitles.jsx';
 import SearchMisses from './SearchMisses.jsx';
-import { GrowthPage, QualityPage, JobsPage } from './ToolsPages.jsx';
+import { GrowthPage, QualityPage, JobsPage, RevisionsPage, ReportsPage, AnnouncementPage } from './ToolsPages.jsx';
 import AutoImport from './AutoImport.jsx';
 import HealthPage from './HealthPage.jsx';
 import VpnPage from './VpnPage.jsx';
@@ -143,6 +143,9 @@ const NAV = [
       { to: '/admin/quality', icon: IconCheckList, key: 'qlNav', perm: 'catalog' },
       { to: '/admin/growth', icon: IconPulse, key: 'gwNav', perm: 'system' },
       { to: '/admin/jobs', icon: IconRefresh, key: 'jbNav', perm: 'system' },
+      { to: '/admin/revisions', icon: IconClock, key: 'rvNav', perm: 'system' },
+      { to: '/admin/reports', icon: IconShield, key: 'rpNav', badge: 'reports', perm: 'community' },
+      { to: '/admin/announce', icon: IconBolt, key: 'anNav', perm: 'system' },
       { to: '/admin/vpn', icon: IconShield, key: 'vpnNav', perm: 'system' },
       { to: '/admin/health', icon: IconPulse, key: 'hlNav', perm: 'system' },
       { to: '/admin/translate', end: true, icon: IconTranslate, key: 'translateNav', perm: 'translate' },
@@ -188,6 +191,9 @@ const titleFor = (pathname) => {
   if (pathname.startsWith('/admin/quality')) return 'qlNav';
   if (pathname.startsWith('/admin/growth')) return 'gwNav';
   if (pathname.startsWith('/admin/jobs')) return 'jbNav';
+  if (pathname.startsWith('/admin/revisions')) return 'rvNav';
+  if (pathname.startsWith('/admin/reports')) return 'rpNav';
+  if (pathname.startsWith('/admin/announce')) return 'anNav';
   if (pathname.startsWith('/admin/vpn')) return 'vpnNav';
   if (pathname.startsWith('/admin/health')) return 'hlNav';
   if (pathname.startsWith('/admin/translate/review')) return 'reviewNav';
@@ -430,6 +436,9 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="quality" element={guard('catalog', <QualityPage />)} />
                 <Route path="growth" element={guard('system', <GrowthPage />)} />
                 <Route path="jobs" element={guard('system', <JobsPage />)} />
+                <Route path="revisions" element={guard('system', <RevisionsPage />)} />
+                <Route path="reports" element={guard('community', <ReportsPage />)} />
+                <Route path="announce" element={guard('system', <AnnouncementPage />)} />
                 <Route path="reviews" element={guard('community', <UserReviews />)} />
                 <Route path="recs" element={guard('community', <UserRecs />)} />
                 <Route path="suggestions" element={guard('community', <Suggestions />)} />

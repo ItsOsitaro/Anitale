@@ -56,6 +56,7 @@ export default function Dashboard() {
   // What needs attention: queues first, then catalog gaps. Items the admin cannot open are not listed.
   const todo = data && [
     { key: 'dashSuggestions', n: data.badges.suggestions, to: '/admin/suggestions', area: 'community' },
+    { key: 'dashReports', n: data.badges.reports || 0, to: '/admin/reports', area: 'community' },
     { key: 'dashMissing', n: data.badges.missing, to: '/admin/missing', area: 'community' },
     { key: 'dashSearchMisses', n: queues?.searchMisses || 0, to: '/admin/search-misses', area: 'community' },
     { key: 'dashClientErrors', n: queues?.clientErrors || 0, to: '/admin/health', area: 'system' },

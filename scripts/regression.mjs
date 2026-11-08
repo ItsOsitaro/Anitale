@@ -165,6 +165,61 @@ if (admin) {
     await call('DELETE', `/api/admin/x/users/${victim}/ban`, { cookie: admin });
     check('lifted suspension allows login', (await call('POST', '/api/user/login', { body: { username: victim, password } })).status === 200);
   }
+  // sixth admin round: bulk genre + revert, merge, reports, announcement, backups
+  const pick = items.filter((i) => i.slug !== sample.slug).slice(0, 2);
+  const [one, two] = pick;
+  const before = (await call('GET', `/api/anime/${one.slug}`)).json;
+  const bulk = await call('POST', '/api/admin/x/catalog/bulk-genre', { cookie: admin, body: { type: 'anime', slugs: [one.slug], genre: 'RegressionGenre', mode: 'add' } });
+  check('bulk genre adds a genre', bulk.status === 200 && bulk.json?.changed === 1, JSON.stringify(bulk.json));
+  const withGenre = (await call('GET', `/api/anime/${one.slug}`)).json;
+  check('the genre is on the title', withGenre?.genres?.includes('RegressionGenre'));
+  const revs = await call('GET', '/api/admin/x/system/revisions', { cookie: admin });
+  const rev = revs.json?.items?.find((r) => r.slug === one.slug && r.action === 'genre');
+  check('the change is listed as a revision', Boolean(rev));
+  const back = rev && await call('POST', `/api/admin/x/system/revisions/${rev.id}/revert`, { cookie: admin, body: {} });
+  check('revert restores the old genres', back?.status === 200 && !(await call('GET', `/api/anime/${one.slug}`)).json?.genres?.includes('RegressionGenre') && JSON.stringify((await call('GET', `/api/anime/${one.slug}`)).json?.genres) === JSON.stringify(before?.genres));
+
+  const note = await call('POST', '/api/admin/x/system/announcement', { cookie: admin, body: { text: 'regression notice', hours: 1, level: 'warn' } });
+  check('announcement saved', note.status === 200 && note.json?.active === true);
+  const shown = await call('GET', '/api/announcement');
+  check('announcement is public', shown.json?.text === 'regression notice');
+  await call('DELETE', '/api/admin/x/system/announcement', { cookie: admin });
+  check('announcement can be removed', Object.keys((await call('GET', '/api/announcement')).json || {}).length === 0);
+
+  const backups = await call('GET', '/api/admin/x/system/backups', { cookie: admin });
+  check('backup status answers', backups.status === 200 && Array.isArray(backups.json?.files));
+  const snap = await call('POST', '/api/admin/x/system/backups', { cookie: admin, body: { now: true } });
+  check('backup now creates a snapshot', snap.status === 200 && snap.json?.files?.length >= 1 && snap.json.files[0].size > 10000, JSON.stringify(snap.json?.files?.[0]));
+
+  // reports: a member reports a review; the owner sees and closes it
+  if (globalThis.extraUsers) {
+    const [ua, ub] = globalThis.extraUsers;
+    const loginA = await call('POST', '/api/user/login', { body: { username: ua, password } });
+    const loginB = await call('POST', '/api/user/login', { body: { username: ub, password } });
+    await call('POST', '/api/user/reviews', { cookie: loginB.cookie, body: { mediaType: 'anime', slug: sample.slug, body: 'A review written by the regression script for reports.' } });
+    const rv = (await call('GET', `/api/community/anime/${sample.slug}`)).json?.reviews?.find((r) => r.username === ub);
+    if (rv) {
+      const rep = await call('POST', '/api/user/reports', { cookie: loginA.cookie, body: { kind: 'review', ref: String(rv.id), reason: 'regression' } });
+      check('a member can report a review', rep.status === 200, `status ${rep.status}`);
+      check('reporting needs login', (await call('POST', '/api/user/reports', { body: { kind: 'review', ref: String(rv.id) } })).status === 401);
+      const queue = await call('GET', '/api/admin/x/community/reports', { cookie: admin });
+      const item = queue.json?.items?.find((r) => r.ref === String(rv.id));
+      check('the owner sees the report with its text', Boolean(item?.subject?.text?.includes('regression script')));
+      check('the report can be closed', item && (await call('POST', `/api/admin/x/community/reports/${item.id}`, { cookie: admin, body: { status: 'done' } })).status === 200);
+    }
+  }
+
+  // merge two titles: a member's entry on the duplicate moves to the main title
+  const dupSlug = `regression-dup-${Date.now().toString(36)}`;
+  const mk = await call('POST', '/api/anime', { cookie: admin, body: { slug: dupSlug, title: 'Regression Duplicate', category: 'Action', year: '2020', format: 'TV' } });
+  if (mk.status < 300) {
+    await call('PUT', '/api/user/entries', { cookie: me, body: { mediaType: 'anime', slug: dupSlug, status: 'planned' } });
+    const merged = await call('POST', '/api/admin/x/catalog/merge', { cookie: admin, body: { type: 'anime', from: dupSlug, into: two.slug } });
+    check('merge moves entries and removes the duplicate', merged.status === 200 && merged.json?.moved?.entries >= 1, JSON.stringify(merged.json));
+    const entries = (await call('GET', '/api/user/entries', { cookie: me })).json;
+    check('the member now has the main title', JSON.stringify(entries).includes(two.slug) && !JSON.stringify(entries).includes(dupSlug));
+    await call('DELETE', `/api/user/entries/anime/${two.slug}`, { cookie: me });
+  } else check('create a duplicate title for the merge test', false, `status ${mk.status} ${mk.text.slice(0, 120)}`);
   const noOrigin = await fetch(`${BASE}/api/admin/x/community/search-aliases`, { method: 'DELETE', headers: { 'content-type': 'application/json', cookie: admin }, body: '{"alias":"x"}' });
   check('admin extras reject a write without Origin (CSRF)', noOrigin.status === 403, `status ${noOrigin.status}`);
   check('site cannot be framed by other sites', (await fetch(`${BASE}/`)).headers.get('x-frame-options') === 'SAMEORIGIN');
