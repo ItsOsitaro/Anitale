@@ -115,13 +115,23 @@ function TitleLink({ type, id, name, image }) {
 
 const RELATION_LIMIT = 6; // long franchises (One Piece...) have dozens of side stories and adaptations
 
+// These four are what people look for; every other relation group hides behind one button.
+const MAIN_RELATIONS = ['Prequel', 'Sequel', 'Adaptation', 'Side story'];
+const mainRank = (relation) => MAIN_RELATIONS.findIndex((name) => name.toLowerCase() === String(relation).toLowerCase());
+
 export function Relations({ data }) {
   const { t, lang } = useSiteLang();
   const [open, setOpen] = useState(() => new Set());
+  const [others, setOthers] = useState(false);
   if (!data.relations?.length) return null;
+  const main = data.relations.filter((g) => mainRank(g.relation) >= 0).sort((a, b) => mainRank(a.relation) - mainRank(b.relation));
+  const rest = data.relations.filter((g) => mainRank(g.relation) < 0);
+  const restCount = rest.reduce((sum, g) => sum + g.entries.length, 0);
+  const groups = others || main.length === 0 ? [...main, ...rest] : main;
   return (
+    <>
     <dl className="extras-relations">
-      {data.relations.map((group) => {
+      {groups.map((group) => {
         const expanded = open.has(group.relation);
         const shown = expanded ? group.entries : group.entries.slice(0, RELATION_LIMIT);
         return (
@@ -139,6 +149,10 @@ export function Relations({ data }) {
         );
       })}
     </dl>
+    {!others && main.length > 0 && rest.length > 0 && (
+      <button type="button" className="extras-more" onClick={() => setOthers(true)}>{t('relOthers', { n: formatNumber(restCount, lang) })}</button>
+    )}
+    </>
   );
 }
 
