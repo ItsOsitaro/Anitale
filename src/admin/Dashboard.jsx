@@ -55,8 +55,8 @@ export default function Dashboard() {
 
   // What needs attention: queues first, then catalog gaps. Items the admin cannot open are not listed.
   const todo = data && [
-    { key: 'dashSuggestions', n: data.badges.suggestions, to: '/admin/suggestions', area: 'community' },
-    { key: 'dashReports', n: data.badges.reports || 0, to: '/admin/reports', area: 'community' },
+    { key: 'dashSuggestions', n: data.badges.suggestions, to: '/admin/suggestions', area: 'reviews' },
+    { key: 'dashReports', n: data.badges.reports || 0, to: '/admin/reports', area: 'reports' },
     { key: 'dashMissing', n: data.badges.missing, to: '/admin/missing', area: 'community' },
     { key: 'dashSearchMisses', n: queues?.searchMisses || 0, to: '/admin/search-misses', area: 'community' },
     { key: 'dashClientErrors', n: queues?.clientErrors || 0, to: '/admin/health', area: 'system' },
@@ -71,7 +71,7 @@ export default function Dashboard() {
     { to: '/admin/quick-add', label: t('quickNav'), area: 'import', level: 'edit' },
     { to: '/admin/auto-import', label: t('autoNav'), area: 'import', level: 'edit' },
     { to: '/admin/translate/review', label: t('reviewNav'), area: 'translate', level: 'view' },
-    { to: '/admin/reviews', label: t('rvNav'), area: 'community', level: 'view' },
+    { to: '/admin/reviews', label: t('rvNav'), area: 'reviews', level: 'view' },
     { to: '/admin/health', label: t('hlNav'), area: 'system', level: 'view' },
   ].filter((row) => can(row.area, row.level));
 

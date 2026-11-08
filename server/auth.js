@@ -46,11 +46,42 @@ const parseCookies = (header = '') => Object.fromEntries(
   }),
 );
 
+// Admin sessions: every admin login gets a row (id carried in the cookie) so the owner can see where admins are signed in
+// and end one. A cookie from before this existed has no id and keeps working until it expires (1 day).
+db.exec(`
+CREATE TABLE IF NOT EXISTS admin_sessions (
+  sid TEXT PRIMARY KEY,
+  admin TEXT NOT NULL,
+  ip TEXT NOT NULL DEFAULT '',
+  ua TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT (datetime('now')),
+  last_seen TEXT NOT NULL DEFAULT (datetime('now')),
+  revoked INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS admin_ips (
+  admin TEXT NOT NULL,
+  ip TEXT NOT NULL,
+  first_seen TEXT NOT NULL DEFAULT (datetime('now')),
+  PRIMARY KEY (admin, ip)
+);
+`);
+const seenAt = new Map(); // sid -> last time last_seen was written (at most once a minute per session)
+export const listAdminSessions = () => db.prepare("SELECT sid, admin, ip, ua, created_at AS createdAt, last_seen AS lastSeen FROM admin_sessions WHERE revoked = 0 AND created_at >= datetime('now', '-1 day') ORDER BY last_seen DESC LIMIT 100").all();
+export const revokeAdminSession = (sid) => db.prepare('UPDATE admin_sessions SET revoked = 1 WHERE sid = ?').run(String(sid)).changes;
+export const revokeOtherAdminSessions = (keepSid) => db.prepare('UPDATE admin_sessions SET revoked = 1 WHERE sid != ? AND revoked = 0').run(String(keepSid || '')).changes;
+export const currentSid = (req) => readToken(parseCookies(req.headers.cookie)[COOKIE])?.sid || '';
+
 // The signed-in admin: { username, owner, permissions, id } or null. An extra admin's cookie is
 // re-checked against the table on every request (disabled / deleted / password reset = signed out).
 export const currentAdmin = (req) => {
   const payload = readToken(parseCookies(req.headers.cookie)[COOKIE]);
   if (payload?.kind !== 'admin') return null;
+  if (payload.sid) {
+    const session = db.prepare('SELECT revoked FROM admin_sessions WHERE sid = ?').get(payload.sid);
+    if (!session || session.revoked) return null; // ended by the owner (or the row was cleaned up)
+    const now = Date.now();
+    if (now - (seenAt.get(payload.sid) || 0) > 60000) { seenAt.set(payload.sid, now); db.prepare("UPDATE admin_sessions SET last_seen = datetime('now') WHERE sid = ?").run(payload.sid); }
+  }
   if (process.env.ADMIN_USER && safeEqual(payload.u, process.env.ADMIN_USER)) return { username: payload.u, owner: true, permissions: {}, id: 0 };
   const row = adminRow(payload.u);
   if (!row || !row.active || Number(row.token_version) !== Number(payload.v ?? 0)) return null;
@@ -94,7 +125,15 @@ const secureFlag = (req) => {
 };
 
 export const setSession = (req, res, user, extra = {}) => {
-  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user, 'admin', extra, ADMIN_TTL_SECONDS)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ADMIN_TTL_SECONDS}${secureFlag(req)}`);
+  const sid = crypto.randomBytes(12).toString('base64url');
+  const ip = String(req.ip || '').slice(0, 64);
+  db.prepare('INSERT INTO admin_sessions (sid, admin, ip, ua) VALUES (?, ?, ?, ?)').run(sid, String(user), ip, String(req.headers['user-agent'] || '').slice(0, 200));
+  if (Math.random() < 0.1) db.prepare("DELETE FROM admin_sessions WHERE created_at < datetime('now', '-30 days')").run();
+  // A sign-in from an address this admin never used before is reported to the owner's chat (the first ever one is just recorded).
+  const known = db.prepare('SELECT COUNT(*) AS n FROM admin_ips WHERE admin = ?').get(String(user)).n;
+  const isNew = db.prepare('INSERT OR IGNORE INTO admin_ips (admin, ip) VALUES (?, ?)').run(String(user), ip).changes > 0;
+  if (isNew && known > 0) import('./chat-bots.js').then((m) => m.sendAlert(`🔐 ورود ادمین «${user}» از نشانی تازه: ${ip}`)).catch(() => {});
+  res.setHeader('Set-Cookie', `${COOKIE}=${createToken(user, 'admin', { ...extra, sid }, ADMIN_TTL_SECONDS)}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${ADMIN_TTL_SECONDS}${secureFlag(req)}`);
 };
 
 export const clearSession = (req, res) => {

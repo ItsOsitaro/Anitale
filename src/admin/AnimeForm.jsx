@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { AdminNotes, TitlePreview } from './ToolsPages.jsx';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
@@ -236,6 +237,9 @@ export default function AnimeForm() {
       <nav className="af-jump" aria-label={t('afJump')}>
         {SECTIONS.map(([anchor, key]) => <a key={anchor} href={`#${anchor}`} aria-current={activeSec === anchor ? 'true' : undefined} onClick={(e) => { e.preventDefault(); document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' }); }}>{t(key)}</a>)}
       </nav>
+      <TitlePreview form={form} cover={coverSrc} />
+      {isEdit && form.slug && <AdminNotes type={LIST_PATH.includes('manga') ? 'manga' : 'anime'} slug={form.slug} />}
+      {isEdit && form.slug && <p className="adm-muted"><Link to={`/admin/revisions?q=${encodeURIComponent(form.slug)}`}>{t('rvHistory')}</Link></p>}
       <form ref={formRef} onSubmit={save} noValidate>
 
         <fieldset className="adm-card" id="sec-basic" disabled={ro}>

@@ -21,7 +21,7 @@ const TitleLink = ({ type, slug, title, t }) => (
 // for members, so removing an inappropriate one happens here.
 export default function UserRecs() {
   const { t, lang, toast, confirm, can } = useAdmin();
-  const canEdit = can('community', 'edit');
+  const canEdit = can('reviews', 'edit');
   const [query, setQuery] = useState('');
   const [type, setType] = useState('');
   const [voted, setVoted] = useState(false);

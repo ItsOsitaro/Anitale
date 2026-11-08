@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { CannedEditor } from './ToolsPages.jsx';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
@@ -40,7 +41,7 @@ function Diff({ s, t }) {
 // Queue of member edit suggestions: approve applies the change, reject needs a reason shown to the member.
 export default function Suggestions() {
   const { t, lang, toast, confirm, can } = useAdmin();
-  const canEdit = can('community', 'edit');
+  const canEdit = can('reviews', 'edit');
   const [status, setStatus] = useState('pending');
   const [kind, setKind] = useState('');
   const [query, setQuery] = useState('');
@@ -50,6 +51,8 @@ export default function Suggestions() {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [rejecting, setRejecting] = useState(null); // suggestion id | 'bulk'
   const [reason, setReason] = useState('');
+  const [canned, setCanned] = useState([]);
+  useEffect(() => { api.canned().then((d) => setCanned(d.items)).catch(() => {}); }, []);
   const searchRef = useRef(null);
   const q = useDebounced(query.trim(), 300);
 
@@ -102,6 +105,7 @@ export default function Suggestions() {
     <div className="sg-reject">
       <div className="cm-presets">
         {PRESETS.map((key) => <button key={key} type="button" className="adm-fchip" onClick={() => setReason(t(key))}>{t(key)}</button>)}
+        {canned.map((text) => <button key={text} type="button" className="adm-fchip" onClick={() => setReason(text)}>{text}</button>)}
       </div>
       <input className="adm-search" dir="auto" placeholder={t('sgReasonPh')} aria-label={t('sgReasonPh')} title={t('sgReasonMin')} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={300} autoFocus
         onKeyDown={(e) => { if (e.key === 'Enter' && reason.trim().length >= 3 && !disabled) onSubmit(); if (e.key === 'Escape') cancelReject(); }} />
@@ -193,6 +197,7 @@ export default function Suggestions() {
         })}
       </div>
       <Pager data={data} page={page} setPage={setPage} t={t} lang={lang} />
+      <CannedEditor items={canned} onSaved={setCanned} />
     </section>
   );
 }

@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
+import { AdminSessions } from './ToolsPages.jsx';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 
-const AREAS = ['catalog', 'import', 'translate', 'community', 'users', 'system'];
+const AREAS = ['catalog', 'import', 'translate', 'community', 'reviews', 'reports', 'users', 'system'];
 const areaKey = (area) => `area${area[0].toUpperCase()}${area.slice(1)}`;
 
 // Ready-made permission sets; the matrix below can still be adjusted by hand.
@@ -231,6 +232,7 @@ export default function AdminsPage() {
           </div>
         </div>
       </form>
+      <AdminSessions />
     </div>
   );
 }

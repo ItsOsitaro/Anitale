@@ -202,10 +202,10 @@ if (admin) {
       const rep = await call('POST', '/api/user/reports', { cookie: loginA.cookie, body: { kind: 'review', ref: String(rv.id), reason: 'regression' } });
       check('a member can report a review', rep.status === 200, `status ${rep.status}`);
       check('reporting needs login', (await call('POST', '/api/user/reports', { body: { kind: 'review', ref: String(rv.id) } })).status === 401);
-      const queue = await call('GET', '/api/admin/x/community/reports', { cookie: admin });
+      const queue = await call('GET', '/api/admin/x/reports', { cookie: admin });
       const item = queue.json?.items?.find((r) => r.ref === String(rv.id));
       check('the owner sees the report with its text', Boolean(item?.subject?.text?.includes('regression script')));
-      check('the report can be closed', item && (await call('POST', `/api/admin/x/community/reports/${item.id}`, { cookie: admin, body: { status: 'done' } })).status === 200);
+      check('the report can be closed', item && (await call('POST', `/api/admin/x/reports/${item.id}`, { cookie: admin, body: { status: 'done' } })).status === 200);
     }
   }
 
@@ -220,6 +220,45 @@ if (admin) {
     check('the member now has the main title', JSON.stringify(entries).includes(two.slug) && !JSON.stringify(entries).includes(dupSlug));
     await call('DELETE', `/api/user/entries/anime/${two.slug}`, { cookie: me });
   } else check('create a duplicate title for the merge test', false, `status ${mk.status} ${mk.text.slice(0, 120)}`);
+  // seventh admin round: sessions, finer permissions, notes, canned reasons, weekly report, revision search
+  const second = await call('POST', '/api/auth/login', { body: { username: adminUser, password: adminPass } });
+  const sessions = await call('GET', '/api/admin/admins/sessions', { cookie: admin });
+  check('owner sees admin sessions', sessions.status === 200 && sessions.json?.items?.length >= 2 && Boolean(sessions.json?.current));
+  const other = sessions.json?.items?.find((x) => x.sid !== sessions.json.current);
+  check('an extra session still works before it is ended', (await call('GET', '/api/admin/overview', { cookie: second.cookie })).status === 200);
+  const ended = other && await call('DELETE', `/api/admin/admins/sessions/${other.sid}`, { cookie: admin });
+  check('owner can end a session', ended?.status === 200);
+  const statuses = [(await call('GET', '/api/admin/overview', { cookie: second.cookie })).status, (await call('GET', '/api/admin/overview', { cookie: admin })).status];
+  check('the ended session is signed out and the other stays', statuses.includes(401) && statuses.includes(200), JSON.stringify(statuses));
+
+  const mkAdmin = async (suffix, permissions) => {
+    const username = `${name}${suffix}`;
+    const made = await call('POST', '/api/admin/admins', { cookie: admin, body: { username, password: 'regression-admin-pass-1', permissions } });
+    const entered = await call('POST', '/api/auth/login', { body: { username, password: 'regression-admin-pass-1' } });
+    return { username, id: made.json?.item?.id ?? made.json?.id, cookie: entered.cookie, status: made.status };
+  };
+  const reportsOnly = await mkAdmin('r', { reports: 'edit' });
+  check('an admin with only the reports area is created', reportsOnly.status < 300 && Boolean(reportsOnly.cookie), `status ${reportsOnly.status}`);
+  check('reports-only admin can open the reports queue', (await call('GET', '/api/admin/x/reports', { cookie: reportsOnly.cookie })).status === 200);
+  check('reports-only admin cannot open catalog tools', (await call('GET', '/api/admin/x/catalog/quality', { cookie: reportsOnly.cookie })).status === 403);
+  check('reports-only admin cannot open reviews moderation', (await call('GET', '/api/admin/reviews', { cookie: reportsOnly.cookie })).status === 403);
+  const legacy = await mkAdmin('c', { community: 'view' });
+  check('an older community permission still opens reviews and reports', (await call('GET', '/api/admin/x/reports', { cookie: legacy.cookie })).status === 200 && (await call('GET', '/api/admin/reviews', { cookie: legacy.cookie })).status === 200);
+  for (const made of [reportsOnly, legacy]) if (made.id) await call('DELETE', `/api/admin/admins/${made.id}`, { cookie: admin });
+
+  const noteAdd = await call('POST', '/api/admin/x/catalog/notes', { cookie: admin, body: { type: 'anime', slug: sample.slug, body: 'check the cover' } });
+  const notes = await call('GET', `/api/admin/x/catalog/notes?type=anime&slug=${sample.slug}`, { cookie: admin });
+  check('a note on a title is saved and listed', noteAdd.status === 200 && notes.json?.items?.[0]?.body === 'check the cover');
+  check('a note can be deleted', (await call('DELETE', `/api/admin/x/catalog/notes/${notes.json.items[0].id}`, { cookie: admin })).status === 200);
+  await call('POST', '/api/admin/x/users/notes', { cookie: admin, body: { username: name, body: 'spam twice' } });
+  const userNotes = await call('GET', `/api/admin/x/users/notes?username=${name}`, { cookie: admin });
+  check('a note on a member is saved and listed', userNotes.json?.items?.[0]?.body === 'spam twice');
+  const canned = await call('PUT', '/api/admin/x/reviews/canned', { cookie: admin, body: { items: ['Duplicate', 'Already correct', 'x'] } });
+  check('canned reasons keep only real ones', canned.status === 200 && JSON.stringify(canned.json?.items) === JSON.stringify(['Duplicate', 'Already correct']));
+  const weekly = await call('GET', '/api/admin/x/system/weekly-report', { cookie: admin });
+  check('weekly report preview has text', weekly.status === 200 && String(weekly.json?.text || '').includes('گزارش هفتگی'));
+  const found = await call('GET', `/api/admin/x/system/revisions?q=${encodeURIComponent(one.slug.slice(0, 6))}`, { cookie: admin });
+  check('revisions can be searched by title', found.status === 200 && found.json?.items?.every((r) => r.slug.includes(one.slug.slice(0, 6)) || r.title.toLowerCase().includes(one.slug.slice(0, 6).toLowerCase())));
   const noOrigin = await fetch(`${BASE}/api/admin/x/community/search-aliases`, { method: 'DELETE', headers: { 'content-type': 'application/json', cookie: admin }, body: '{"alias":"x"}' });
   check('admin extras reject a write without Origin (CSRF)', noOrigin.status === 403, `status ${noOrigin.status}`);
   check('site cannot be framed by other sites', (await fetch(`${BASE}/`)).headers.get('x-frame-options') === 'SAMEORIGIN');

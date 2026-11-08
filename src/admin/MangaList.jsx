@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, runBulkJob } from './api.js';
-import { BulkBar } from './ToolsPages.jsx';
+import { BulkBar, SavedViews } from './ToolsPages.jsx';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 import { formatNumber, formatScore } from '../lib/digits.js';
@@ -276,6 +276,7 @@ export default function MangaList() {
       )}
 
       <div className={`adm-card adm-table-wrap${loading && data ? ' manga-is-loading' : ''}`} aria-busy={loading}>
+        <SavedViews scope="manga" />
         {canEdit && <BulkBar kind="manga" items={rows} picked={picked} clear={() => setPicked(new Set())} reload={load} />}
         <table className="adm-table">
           <thead>

@@ -68,8 +68,14 @@ export const revertRevision = (id) => {
 };
 
 export const registerRevisionRoutes = (app) => {
-  app.get('/api/admin/x/system/revisions', requireAdmin, (_req, res) => {
-    res.json({ items: db.prepare('SELECT id, at, admin, tbl, slug, title, action, reverted FROM admin_revisions ORDER BY id DESC LIMIT 100').all() });
+  app.get('/api/admin/x/system/revisions', requireAdmin, (req, res) => {
+    // ?q= finds one title's whole history by (part of) its name or slug.
+    const q = String(req.query.q || '').trim().slice(0, 80).replace(/[%_\\]/g, '\\$&');
+    const like = `%${q}%`;
+    const rows = q
+      ? db.prepare("SELECT id, at, admin, tbl, slug, title, action, reverted FROM admin_revisions WHERE title LIKE ? ESCAPE '\\' OR slug LIKE ? ESCAPE '\\' ORDER BY id DESC LIMIT 200").all(like, like)
+      : db.prepare('SELECT id, at, admin, tbl, slug, title, action, reverted FROM admin_revisions ORDER BY id DESC LIMIT 100').all();
+    res.json({ items: rows });
   });
   app.post('/api/admin/x/system/revisions/:id/revert', requireAdmin, (req, res) => {
     const done = revertRevision(Number.parseInt(req.params.id, 10));

@@ -16,6 +16,7 @@ import { registerAliasRoutes } from './search-aliases.js';
 import { registerAdminTools } from './admin-tools.js';
 import { captureRevisions, registerRevisionRoutes } from './revisions.js';
 import { registerBackupRoutes } from './backup.js';
+import { registerAdminNotes } from './admin-notes.js';
 import { register as registerSystem } from './admin-system.js';
 
 db.exec(`
@@ -148,6 +149,7 @@ export const registerAdminExtras = (app) => {
   registerAdminTools(app);
   registerRevisionRoutes(app);
   registerBackupRoutes(app);
+  registerAdminNotes(app);
   registerSystem(app);
 };
 

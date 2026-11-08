@@ -9,8 +9,7 @@ import path from 'node:path';
 import { db, COVERS_DIR, ROOT_DIR, TMP_DIR } from './db.js';
 import {
   clearSession, clearUserSession, currentAdmin, currentSiteUser, currentUser, isAuthConfigured, requireAdmin, requireSiteUser,
-  sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials,
-} from './auth.js';
+  sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials, currentSid, revokeAdminSession } from './auth.js';
 import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.js';
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
@@ -120,7 +119,7 @@ export const createApp = () => {
     setSession(req, res, who.username, { v: who.version });
     res.json({ user: who.username });
   });
-  app.post('/api/auth/logout', (req, res) => { clearSession(req, res); res.json({ ok: true }); });
+  app.post('/api/auth/logout', (req, res) => { const sid = currentSid(req); if (sid) revokeAdminSession(sid); clearSession(req, res); res.json({ ok: true }); });
   app.get('/api/auth/me', (req, res) => {
     const admin = currentAdmin(req);
     if (!admin) return res.status(401).json({ error: 'Not logged in', configured: isAuthConfigured() });

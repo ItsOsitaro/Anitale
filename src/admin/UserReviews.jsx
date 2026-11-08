@@ -14,7 +14,7 @@ const snippet = (text) => (text.length > 120 ? `${text.slice(0, 120).trimEnd()}â
 // so removing an inappropriate one happens here.
 export default function UserReviews() {
   const { t, lang, toast, confirm, can } = useAdmin();
-  const canEdit = can('community', 'edit');
+  const canEdit = can('reviews', 'edit');
   const [query, setQuery] = useState('');
   const [type, setType] = useState('');
   const [spoiler, setSpoiler] = useState(false);

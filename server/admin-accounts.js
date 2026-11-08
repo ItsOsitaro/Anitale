@@ -8,19 +8,22 @@
 // Unknown admin paths are owner-only, so a forgotten route can never open up by accident.
 import bcrypt from 'bcryptjs';
 import { db } from './db.js';
-import { currentAdmin, isOwner, requireAdmin, setSession } from './auth.js';
+import { currentAdmin, currentSid, isOwner, listAdminSessions, requireAdmin, revokeAdminSession, revokeOtherAdminSessions, setSession } from './auth.js';
 
-export const AREAS = ['catalog', 'import', 'translate', 'community', 'users', 'system'];
+export const AREAS = ['catalog', 'import', 'translate', 'community', 'users', 'system', 'reviews', 'reports'];
+// Newer, narrower areas fall back to the older one an admin was already given: 'community' still opens reviews and reports.
+const FALLBACK = { reviews: 'community', reports: 'community' };
 const LEVELS = { view: 1, edit: 2 };
 
 // First match wins, so the specific import routes come before the generic anime ones.
 const RULES = [
-  [/^\/api\/admin\/x\/(catalog|import|translate|community|users|system)(\/|$)/, (m) => m[1]],
+  [/^\/api\/admin\/x\/(catalog|import|translate|community|users|system|reviews|reports)(\/|$)/, (m) => m[1]],
   [/^\/api\/admin\/anime\/import-bulk(\/|$)/, 'import'],
   [/^\/api\/admin\/(import-all|auto-import|catalog)(\/|$)/, 'import'],
   [/^\/api\/admin\/(anime|manga|temp-cover)(\/|$)/, 'catalog'],
   [/^\/api\/admin\/translate(\/|$)/, 'translate'],
-  [/^\/api\/admin\/(recs|reviews|suggestions|missing-titles)(\/|$)/, 'community'],
+  [/^\/api\/admin\/(recs|reviews|suggestions)(\/|$)/, 'reviews'],
+  [/^\/api\/admin\/missing-titles(\/|$)/, 'community'],
   [/^\/api\/admin\/users(\/|$)/, 'users'],
   [/^\/api\/admin\/(health|vpn|log)(\/|$)/, 'system'],
   [/^\/api\/admin\/(stats|overview|dashboard|me)(\/|$)/, 'any'],
@@ -43,7 +46,8 @@ const needsLevel = (req) => (['GET', 'HEAD', 'OPTIONS'].includes(req.method) || 
 export const can = (admin, area, level = 'view') => {
   if (!admin) return false;
   if (admin.owner) return true;
-  return (LEVELS[admin.permissions?.[area]] || 0) >= LEVELS[level];
+  const given = admin.permissions?.[area] ?? (FALLBACK[area] ? admin.permissions?.[FALLBACK[area]] : undefined);
+  return (LEVELS[given] || 0) >= LEVELS[level];
 };
 
 // Express middleware: 403 when a logged-in admin lacks the permission for this path.
@@ -97,6 +101,15 @@ const pwBlocked = (id) => {
 const pwFailed = (id) => { const entry = pwFails.get(id); pwFails.set(id, { n: (entry && Date.now() - entry.at <= 15 * 60_000 ? entry.n : 0) + 1, at: Date.now() }); };
 
 export const registerAdminAccountRoutes = (app) => {
+  // Where admins are signed in right now (owner only: the path is under /api/admin/admins). Ending a session signs that
+  // browser out on its next request. "Others" ends every session except the one asking.
+  app.get('/api/admin/admins/sessions', requireAdmin, (req, res) => res.json({ items: listAdminSessions(), current: currentSid(req) }));
+  app.delete('/api/admin/admins/sessions/:sid', requireAdmin, (req, res) => {
+    if (!revokeAdminSession(req.params.sid)) throw fail(404, 'No such session');
+    res.json({ ok: true });
+  });
+  app.post('/api/admin/admins/sessions/end-others', requireAdmin, (req, res) => res.json({ ok: true, ended: revokeOtherAdminSessions(currentSid(req)) }));
+
   app.get('/api/admin/admins', requireAdmin, (req, res) => {
     const rows = db.prepare('SELECT * FROM admins ORDER BY id ASC').all();
     res.json({ owner: process.env.ADMIN_USER || '', areas: AREAS, items: rows.map(publicRow) });

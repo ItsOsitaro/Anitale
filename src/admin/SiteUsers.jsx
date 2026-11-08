@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
-import { BanControl } from './ToolsPages.jsx';
+import { BanControl, AdminNotes } from './ToolsPages.jsx';
 import {
   Chip, ErrorBar, Pager, Skeleton, call, fmtDate, num, qs, useDebounced, useRemoteList, useSearchHotkey,
 } from './pages/communityKit.jsx';
@@ -194,6 +194,7 @@ export default function SiteUsers() {
         <td colSpan={colCount}>
           <div className="adm-user-detail" ref={detailRef}>
             <div className="adm-user-half">
+              <AdminNotes username={selected?.user?.username || ''} />
               <BanControl username={selected?.user?.username || ''} summary={summary} canEdit={canEdit} onChanged={() => { loadSummary(selected.user.username); reload(); }} />
               {summary && (
                 <div className="cm-summary">

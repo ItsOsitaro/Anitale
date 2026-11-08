@@ -104,3 +104,18 @@
   .adm-dash-grid > section:first-child { order: 0; }
   .adm-dash-stats { grid-template-columns: repeat(2, 1fr); }
 }
+
+.tp-notes { margin-block: 12px; padding: 12px; }
+.tp-notes ul { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 6px; }
+.tp-notes li { display: flex; flex-wrap: wrap; gap: 8px; align-items: baseline; }
+.tp-views { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-block: 8px; }
+.tp-view { display: inline-flex; gap: 2px; padding: 0; }
+.tp-view button { background: none; border: 0; color: inherit; font: inherit; cursor: pointer; padding-block: 4px; padding-inline: 8px; }
+.tp-viewform { display: inline-flex; gap: 6px; }
+.tp-viewform input, .tp-canned textarea { padding-block: 6px; padding-inline: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: inherit; min-width: 0; }
+.tp-canned { margin-block: 14px; padding: 12px; }
+.tp-canned textarea { width: 100%; margin-block: 8px; }
+.tp-preview { margin-block: 12px; padding: 12px; }
+.tp-preview__card { display: flex; gap: 14px; margin-block-start: 10px; }
+.tp-preview__card img { width: 120px; height: 170px; object-fit: cover; border-radius: 10px; flex: none; background: var(--secondary); }
+.tp-preview__empty { width: 120px; height: 170px; border-radius: 10px; background: var(--secondary); flex: none; }

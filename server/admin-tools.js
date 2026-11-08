@@ -8,6 +8,7 @@ import { alertConfig, saveAlertConfig } from './health-alerts.js';
 import { clientErrorsLast } from './health.js';
 import { saveRevision } from './revisions.js';
 import { openReportCount } from './reports.js';
+import { buildWeeklyReport, reportEnabled, setReportEnabled } from './weekly-report.js';
 import { translateSynopsis } from './translate.js';
 
 // Admin helpers added in the fifth admin round. Routes live under /api/admin/x/<area>/... so the permission gate
@@ -116,6 +117,7 @@ export const registerAdminTools = (app) => {
         { id: 'extras', enabled: extrasConfig().enabled, running: Boolean(extras.running), info: { waiting: extras.waiting, cached: extras.cached, total: extras.total }, link: '/admin/auto-import' },
         { id: 'scores', enabled: scoreConfig().enabled, running: Boolean(scores.running), info: { waiting: scores.waiting }, link: '/admin/anime?filter=noScore' },
         { id: 'alerts', enabled: alertConfig().enabled, running: false, info: null, link: '/admin/health' },
+        { id: 'weekly', enabled: reportEnabled(), running: false, info: null, link: '/admin/jobs' },
       ],
       importAll: { anime: importAllState('anime'), manga: importAllState('manga') },
     });
@@ -127,6 +129,7 @@ export const registerAdminTools = (app) => {
       case 'extras': saveExtrasConfig({ enabled: on }); rescheduleExtras(); break;
       case 'scores': saveScoreConfig({ enabled: on }); rescheduleScores(); break;
       case 'alerts': saveAlertConfig({ enabled: on }); break;
+      case 'weekly': setReportEnabled(on); break;
       default: return bad(res, 'Unknown job', 404);
     }
     return res.json({ ok: true });
@@ -206,6 +209,9 @@ export const registerAdminTools = (app) => {
     } catch (error) { db.exec('ROLLBACK'); throw error; }
     return res.json({ ok: true, moved });
   });
+
+  // What the weekly owner report would say right now (the real one goes out Saturday morning).
+  app.get('/api/admin/x/system/weekly-report', requireAdmin, (_req, res) => res.json({ text: buildWeeklyReport(), enabled: reportEnabled() }));
 
   // Extra queue counts for the dashboard (cheap).
   app.get('/api/admin/x/community/queues', requireAdmin, (_req, res) => {

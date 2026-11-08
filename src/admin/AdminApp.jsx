@@ -144,7 +144,7 @@ const NAV = [
       { to: '/admin/growth', icon: IconPulse, key: 'gwNav', perm: 'system' },
       { to: '/admin/jobs', icon: IconRefresh, key: 'jbNav', perm: 'system' },
       { to: '/admin/revisions', icon: IconClock, key: 'rvNav', perm: 'system' },
-      { to: '/admin/reports', icon: IconShield, key: 'rpNav', badge: 'reports', perm: 'community' },
+      { to: '/admin/reports', icon: IconShield, key: 'rpNav', badge: 'reports', perm: 'reports' },
       { to: '/admin/announce', icon: IconBolt, key: 'anNav', perm: 'system' },
       { to: '/admin/vpn', icon: IconShield, key: 'vpnNav', perm: 'system' },
       { to: '/admin/health', icon: IconPulse, key: 'hlNav', perm: 'system' },
@@ -158,9 +158,9 @@ const NAV = [
     group: 'navPeople',
     items: [
       { to: '/admin/users', icon: IconUsers, key: 'siteUsers', perm: 'users' },
-      { to: '/admin/reviews', icon: IconChat, key: 'rvNav', perm: 'community' },
-      { to: '/admin/recs', icon: IconHeart, key: 'rcNav', perm: 'community' },
-      { to: '/admin/suggestions', icon: IconEdit, key: 'sgNav', badge: 'suggestions', perm: 'community' },
+      { to: '/admin/reviews', icon: IconChat, key: 'rvNav', perm: 'reviews' },
+      { to: '/admin/recs', icon: IconHeart, key: 'rcNav', perm: 'reviews' },
+      { to: '/admin/suggestions', icon: IconEdit, key: 'sgNav', badge: 'suggestions', perm: 'reviews' },
     ],
   },
   {
@@ -316,7 +316,9 @@ export default function AdminApp({ theme, onThemeChange }) {
     if (!me) return false;
     if (me.owner) return true;
     const rank = { view: 1, edit: 2 };
-    return (rank[me.permissions?.[area]] || 0) >= rank[level];
+    const fallback = { reviews: 'community', reports: 'community' }; // same rule as the server: an older 'community' grant still opens these
+    const given = me.permissions?.[area] ?? (fallback[area] ? me.permissions?.[fallback[area]] : undefined);
+    return (rank[given] || 0) >= rank[level];
   }, [me]);
 
   // Items the signed-in admin may open: 'any' = everyone, 'owner' = owner only, else a permission area.
@@ -437,11 +439,11 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="growth" element={guard('system', <GrowthPage />)} />
                 <Route path="jobs" element={guard('system', <JobsPage />)} />
                 <Route path="revisions" element={guard('system', <RevisionsPage />)} />
-                <Route path="reports" element={guard('community', <ReportsPage />)} />
+                <Route path="reports" element={guard('reports', <ReportsPage />)} />
                 <Route path="announce" element={guard('system', <AnnouncementPage />)} />
-                <Route path="reviews" element={guard('community', <UserReviews />)} />
-                <Route path="recs" element={guard('community', <UserRecs />)} />
-                <Route path="suggestions" element={guard('community', <Suggestions />)} />
+                <Route path="reviews" element={guard('reviews', <UserReviews />)} />
+                <Route path="recs" element={guard('reviews', <UserRecs />)} />
+                <Route path="suggestions" element={guard('reviews', <Suggestions />)} />
                 <Route path="users" element={guard('users', <SiteUsers />)} />
                 <Route path="translate" element={guard('translate', <Translation />)} />
                 <Route path="translate/review" element={guard('translate', <ReviewQueue />)} />

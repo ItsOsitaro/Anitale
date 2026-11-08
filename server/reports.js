@@ -46,7 +46,7 @@ export const registerReportRoutes = (app, { requireSiteUser, userIdOf }) => {
     res.json({ ok: true });
   });
 
-  app.get('/api/admin/x/community/reports', requireAdmin, (req, res) => {
+  app.get('/api/admin/x/reports', requireAdmin, (req, res) => {
     const status = ['open', 'done', 'dismissed'].includes(req.query.status) ? req.query.status : 'open';
     const rows = db.prepare(`
       SELECT c.id, c.kind, c.ref, c.reason, c.status, c.created_at AS createdAt, u.username AS reporter,
@@ -54,7 +54,7 @@ export const registerReportRoutes = (app, { requireSiteUser, userIdOf }) => {
       FROM content_reports c JOIN users u ON u.id = c.user_id WHERE c.status = ? ORDER BY c.id DESC LIMIT 100`).all(status);
     res.json({ items: rows.map((row) => ({ ...row, subject: subjectOf(row.kind, row.ref) })), open: openReportCount() });
   });
-  app.post('/api/admin/x/community/reports/:id', requireAdmin, (req, res) => {
+  app.post('/api/admin/x/reports/:id', requireAdmin, (req, res) => {
     const status = req.body?.status === 'dismissed' ? 'dismissed' : 'done';
     const { changes } = db.prepare("UPDATE content_reports SET status = ? WHERE id = ? AND status = 'open'").run(status, Number.parseInt(req.params.id, 10));
     if (!changes) { res.status(404).json({ error: 'Not found' }); return; }

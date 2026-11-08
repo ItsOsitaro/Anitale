@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { api, runBulkJob } from './api.js';
-import { BulkBar } from './ToolsPages.jsx';
+import { BulkBar, SavedViews } from './ToolsPages.jsx';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 import { mediaHref } from '../catalog.js';
@@ -168,6 +168,7 @@ export default function AnimeList() {
           </button>
         ))}
       </div>
+      <SavedViews scope="anime" />
       {canEdit && <BulkBar kind="anime" items={data?.items || []} picked={picked} clear={() => setPicked(new Set())} reload={load} />}
       {error && <p className="adm-error" role="alert">{error} <button className="adm-btn" type="button" onClick={load}>{t('mangaRetry')}</button></p>}
       <div className={`adm-card adm-table-wrap al-wrap${loading && data ? ' is-loading' : ''}`} aria-busy={loading}>

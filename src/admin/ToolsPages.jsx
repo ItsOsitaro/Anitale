@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
@@ -221,6 +221,154 @@ export function BulkBar({ kind, items, picked, clear, reload }) {
   );
 }
 
+// Notes only admins see, on a title ({type, slug}) or a member ({username}).
+export function AdminNotes({ type, slug, username }) {
+  const { t, toast, confirm, can } = useAdmin();
+  const area = username ? 'users' : 'catalog';
+  const [items, setItems] = useState([]);
+  const [body, setBody] = useState('');
+  const load = useCallback(() => api.notes(username ? { username } : { type, slug }).then((d) => setItems(d.items)).catch(() => setItems([])), [type, slug, username]);
+  useEffect(() => { load(); }, [load]);
+  if (!username && !slug) return null;
+  const add = async (event) => {
+    event.preventDefault();
+    try { await api.noteAdd(username ? { username, body } : { type, slug, body }); setBody(''); load(); } catch (err) { toast(errText(err, t), 'error'); }
+  };
+  const remove = async (id) => {
+    if (!await confirm(t('ntDelete'))) return;
+    try { await api.noteRemove(username ? 'users' : 'catalog', id); load(); } catch (err) { toast(errText(err, t), 'error'); }
+  };
+  return (
+    <section className="adm-card tp-notes" aria-label={t('ntTitle')}>
+      <h3>{t('ntTitle')} <small className="adm-muted">{t('ntHint')}</small></h3>
+      <ul>
+        {items.map((n) => (
+          <li key={n.id}><span dir="auto">{n.body}</span> <small className="adm-muted" dir="ltr">{n.admin} · {n.createdAt.slice(0, 10)}</small>
+            {can(area, 'edit') && <button type="button" className="adm-btn" onClick={() => remove(n.id)} aria-label={t('ntDelete')}>×</button>}</li>
+        ))}
+      </ul>
+      {can(area, 'edit') && (
+        <form className="tp-ban" onSubmit={add}>
+          <input value={body} maxLength={1000} required onChange={(e) => setBody(e.target.value)} placeholder={t('ntPlaceholder')} aria-label={t('ntPlaceholder')} dir="auto" style={{ flex: '1 1 260px' }} />
+          <button type="submit" className="adm-btn">{t('ntAdd')}</button>
+        </form>
+      )}
+    </section>
+  );
+}
+
+// Saved views of a list: keeps the current search/filter/sort (the page address) under a name, per browser.
+export function SavedViews({ scope }) {
+  const { t } = useAdmin();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const key = `anitale.admin.views.${scope}`;
+  const read = () => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } };
+  const [views, setViews] = useState(read);
+  const [name, setName] = useState('');
+  const here = location.search;
+  const save = (event) => {
+    event.preventDefault();
+    const next = [...views.filter((v) => v.name !== name.trim()), { name: name.trim().slice(0, 40), search: here }].slice(-12);
+    try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* private mode */ }
+    setViews(next);
+    setName('');
+  };
+  const drop = (viewName) => {
+    const next = views.filter((v) => v.name !== viewName);
+    try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* private mode */ }
+    setViews(next);
+  };
+  return (
+    <div className="tp-views" role="group" aria-label={t('svTitle')}>
+      {views.map((v) => (
+        <span key={v.name} className="adm-fchip tp-view">
+          <button type="button" onClick={() => navigate(`${location.pathname}${v.search}`)} aria-pressed={v.search === here}>{v.name}</button>
+          <button type="button" onClick={() => drop(v.name)} aria-label={`${t('ntDelete')}: ${v.name}`}>×</button>
+        </span>
+      ))}
+      {here && (
+        <form onSubmit={save} className="tp-viewform">
+          <input value={name} required maxLength={40} onChange={(e) => setName(e.target.value)} placeholder={t('svName')} aria-label={t('svName')} dir="auto" />
+          <button type="submit" className="adm-btn">{t('svSave')}</button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+// Ready-made rejection reasons shared by all admins (edit them here; the reject form offers them as chips).
+export function CannedEditor({ items, onSaved }) {
+  const { t, toast, can } = useAdmin();
+  const [text, setText] = useState(items.join('\n'));
+  useEffect(() => { setText(items.join('\n')); }, [items]);
+  if (!can('reviews', 'edit')) return null;
+  const save = async () => {
+    try { const r = await api.cannedSave(text.split('\n')); onSaved(r.items); toast(t('cnSaved')); } catch (err) { toast(errText(err, t), 'error'); }
+  };
+  return (
+    <details className="adm-card tp-canned">
+      <summary>{t('cnTitle')}</summary>
+      <p className="adm-muted">{t('cnHint')}</p>
+      <textarea rows={5} value={text} onChange={(e) => setText(e.target.value)} dir="auto" aria-label={t('cnTitle')} />
+      <button type="button" className="adm-btn adm-primary" onClick={save}>{t('cnSave')}</button>
+    </details>
+  );
+}
+
+// Preview of how the title will look to visitors, from the form values (before saving).
+export function TitlePreview({ form, cover }) {
+  const { t } = useAdmin();
+  const synopsis = String(form.synopsisFa || form.synopsis || '').slice(0, 220);
+  return (
+    <details className="adm-card tp-preview">
+      <summary>{t('pvTitle')}</summary>
+      <div className="tp-preview__card">
+        {cover ? <img src={cover} alt="" width="120" height="170" /> : <span className="tp-preview__empty" aria-hidden="true" />}
+        <div>
+          <strong dir="auto">{form.title || t('pvNoTitle')}</strong>
+          <p className="adm-muted" dir="auto">{[form.category, form.year, form.format, form.score ? `★ ${form.score}` : ''].filter(Boolean).join(' · ')}</p>
+          <p dir="auto">{synopsis || t('pvNoSynopsis')}{synopsis.length >= 220 ? '…' : ''}</p>
+        </div>
+      </div>
+    </details>
+  );
+}
+
+// Active admin sessions (owner): who is signed in where, end one or all the others.
+export function AdminSessions() {
+  const { t, toast, confirm } = useAdmin();
+  const [data, setData] = useState(null);
+  const load = useCallback(() => api.sessions().then(setData).catch(() => setData(null)), []);
+  useEffect(() => { load(); }, [load]);
+  if (!data) return null;
+  const end = async (sid) => { try { await api.sessionEnd(sid); load(); } catch (err) { toast(errText(err, t), 'error'); } };
+  const others = async () => {
+    if (!await confirm(t('ssEndOthersConfirm'), { danger: true })) return;
+    try { const r = await api.sessionsEndOthers(); toast(t('ssEnded', { n: r.ended })); load(); } catch (err) { toast(errText(err, t), 'error'); }
+  };
+  return (
+    <section className="adm-card tp-page">
+      <h2>{t('ssTitle')}</h2>
+      <p className="adm-muted">{t('ssHint')}</p>
+      <ul className="tp-jobs">
+        {data.items.map((s) => (
+          <li key={s.sid}>
+            <div>
+              <strong dir="ltr">{s.admin}</strong>
+              {s.sid === data.current && <span className="adm-chip is-ok">{t('ssThis')}</span>}
+              <small className="adm-muted" dir="ltr">{s.ip} · {s.lastSeen}</small>
+              <small className="adm-muted" dir="ltr">{s.ua.slice(0, 70)}</small>
+            </div>
+            {s.sid !== data.current && <button type="button" className="adm-btn is-danger" onClick={() => end(s.sid)}>{t('ssEnd')}</button>}
+          </li>
+        ))}
+      </ul>
+      {data.items.length > 1 && <button type="button" className="adm-btn" onClick={others}>{t('ssEndOthers')}</button>}
+    </section>
+  );
+}
+
 // Download rows as a CSV file (spreadsheet-safe: cells starting with = + - @ are prefixed).
 export const downloadCsv = (name, header, rows) => {
   const cell = (v) => `"${String(v ?? '').replace(/^[=+@-]/, "'$&").replace(/"/g, '""')}"`;
@@ -238,7 +386,9 @@ export function RevisionsPage() {
   const { t, toast, confirm, can } = useAdmin();
   const [items, setItems] = useState(null);
   const [error, setError] = useState('');
-  const load = useCallback(() => api.revisions().then((d) => { setItems(d.items); setError(''); }).catch((err) => setError(errText(err, t))), [t]);
+  const [params, setParams] = useSearchParams();
+  const q = params.get('q') || '';
+  const load = useCallback(() => api.revisions(q).then((d) => { setItems(d.items); setError(''); }).catch((err) => setError(errText(err, t))), [t, q]);
   useEffect(() => { load(); }, [load]);
   const revert = async (row) => {
     if (!await confirm(t('rvConfirm', { title: row.title || row.slug }))) return;
@@ -249,6 +399,7 @@ export function RevisionsPage() {
     <section className="adm-card tp-page">
       <h2>{t('rvTitle')}</h2>
       <p className="adm-muted">{t('rvHint')}</p>
+      <input type="search" className="adm-search" dir="auto" value={q} onChange={(e) => setParams(e.target.value ? { q: e.target.value } : {}, { replace: true })} placeholder={t('rvSearch')} aria-label={t('rvSearch')} />
       {error && <p className="adm-error" role="alert">{error}</p>}
       {items && items.length === 0 && <p className="adm-empty">{t('rvEmpty')}</p>}
       <ul className="tp-jobs">
@@ -296,7 +447,7 @@ export function ReportsPage() {
               {row.subject ? <p dir="auto">{row.subject.text || '—'}</p> : <p className="adm-muted">{t('rpGone')}</p>}
               <small className="adm-muted" dir="auto">{t('rpBy', { who: row.reporter })}{row.reason ? ` · ${row.reason}` : ''} · {row.subject?.where}</small>
             </div>
-            {status === 'open' && can('community', 'edit') && (
+            {status === 'open' && can('reports', 'edit') && (
               <div className="adm-actions">
                 <button type="button" className="adm-btn adm-primary" onClick={() => close(row, 'done')}>{t('rpDone')}</button>
                 <button type="button" className="adm-btn" onClick={() => close(row, 'dismissed')}>{t('rpDismiss')}</button>
