@@ -2,12 +2,24 @@
 // the permission gate (server/admin-accounts.js) reads the area from that path (GET = view, other = edit).
 import { db } from './db.js';
 import { requireAdmin } from './auth.js';
+import { extrasStatus, saveExtrasConfig, backfillExtras, resetExtras, rescheduleExtras } from './extras-backfill.js';
 import { scoreStatus, saveScoreConfig, backfillScores, resetScoreProbe, rescheduleScores } from './score-backfill.js';
 
 const tableOf = (type) => (type === 'manga' ? 'manga' : 'anime');
 const bad = (res, message) => res.status(400).json({ error: message });
 
 export const register = (app) => {
+  // Control panel of the extras pre-cache (server/extras-backfill.js): status, settings, run now, refresh all.
+  app.get('/api/admin/x/import/extras', requireAdmin, (req, res) => res.json(extrasStatus()));
+  app.post('/api/admin/x/import/extras', requireAdmin, (req, res) => {
+    const body = req.body || {};
+    if (body.action === 'reset') { resetExtras(); rescheduleExtras(); }
+    else if (body.action === 'run') {
+      if (extrasStatus().running) return bad(res, 'Already running');
+      backfillExtras().catch(() => {});
+    } else { saveExtrasConfig(body); rescheduleExtras(); }
+    return res.json(extrasStatus());
+  });
   // Control panel of the score backfill (server/score-backfill.js): status, settings, run now, retry all.
   app.get('/api/admin/x/import/scores', requireAdmin, (req, res) => res.json(scoreStatus()));
   app.post('/api/admin/x/import/scores', requireAdmin, (req, res) => {

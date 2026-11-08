@@ -23,7 +23,7 @@ CREATE TABLE IF NOT EXISTS title_extras (
 
 // Bump when the stored shape gains fields: older rows are refreshed on their next view.
 const EXTRAS_VERSION = 3;
-const FRESH_MS = 7 * 24 * 3600 * 1000; // data is re-fetched after a week
+const FRESH_MS = 30 * 24 * 3600 * 1000; // older rows are still served at once and refreshed in the background
 const FAIL_MS = 90 * 1000; // after a failed fetch, do not retry the same title for 90 s
 const MAX_CHARACTERS = 14;
 const MAX_RELATIONS = 12;
@@ -119,6 +119,7 @@ const buildExtras = async (type, id) => {
   return { v: EXTRAS_VERSION, staff, characters: chars, relations: rels, recommendations, trailer, openings: list(themeData.openings), endings: list(themeData.endings) };
 };
 
+export const EXTRAS_VER = EXTRAS_VERSION;
 const readRow = (type, id) => db.prepare('SELECT data, fetched_at FROM title_extras WHERE type = ? AND mal_id = ?').get(type, id);
 
 const refresh = (type, id) => {
@@ -135,6 +136,9 @@ const refresh = (type, id) => {
   inflight.set(key, job);
   return job;
 };
+
+// For the background pre-cache (server/extras-backfill.js): builds and stores one title's extras.
+export const warmExtras = (type, id) => refresh(type, id);
 
 // ---- image proxy (disk cache) ---------------------------------------------------------
 const IMG_DIR = path.join(SERVER_DIR, 'xcache');
@@ -153,13 +157,15 @@ export const registerExtrasRoutes = (app) => {
     const key = `${type}:${id}`;
     const row = readRow(type, id);
     const stored = row ? JSON.parse(row.data) : null;
-    const fresh = row && Date.now() - row.fetched_at < FRESH_MS && stored.v === EXTRAS_VERSION;
-    if (fresh) {
+    const usable = row && stored.v === EXTRAS_VERSION;
+    const recentlyFailed = failedAt.has(key) && Date.now() - failedAt.get(key) < FAIL_MS;
+    if (usable) {
+      // Stored data is served at once, however old; a stale row is refreshed in the background so no visitor waits.
+      if (Date.now() - row.fetched_at >= FRESH_MS && !recentlyFailed) refresh(type, id).catch(() => {});
       res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600');
       res.json({ ...stored, ok: true });
       return;
     }
-    const recentlyFailed = failedAt.has(key) && Date.now() - failedAt.get(key) < FAIL_MS;
     try {
       if (recentlyFailed) throw new Error('recent failure');
       const data = await refresh(type, id);

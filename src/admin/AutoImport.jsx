@@ -4,6 +4,7 @@ import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 import ScoreBackfill from './ScoreBackfill.jsx';
+import ExtrasBackfill from './ExtrasBackfill.jsx';
 import { faDigits, fmtDate, fmtDur, fmtNum, friendly } from './pages/import-util.js';
 
 const POLL_MS = 3000;
@@ -215,6 +216,7 @@ export default function AutoImport() {
           )}
         </div>
       </div>
+      <ExtrasBackfill />
       <ScoreBackfill />
     </>
   );

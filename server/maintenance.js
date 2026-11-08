@@ -13,7 +13,7 @@ const IMG_TRIGGER = 20000;
 export const runMaintenance = () => {
   const now = Date.now();
   const drop = (sql, cutoff) => { try { db.prepare(sql).run(cutoff); } catch (error) { console.error('[maintenance]', error.message); } };
-  drop('DELETE FROM title_extras WHERE fetched_at < ?', now - 45 * DAY);
+  drop('DELETE FROM title_extras WHERE fetched_at < ?', now - 400 * DAY); // pre-cached on purpose (server/extras-backfill.js)
   drop('DELETE FROM media_cache WHERE fetched_at < ?', now - 30 * DAY);
   drop('DELETE FROM franchise_cache WHERE built_at < ?', now - 60 * DAY);
   drop('DELETE FROM people_cache WHERE fetched_at < ?', now - 90 * DAY);

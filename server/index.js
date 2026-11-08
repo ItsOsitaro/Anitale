@@ -7,6 +7,7 @@ import { cleanupTemp } from './images.js';
 import { startAutoImportScheduler } from './auto-import.js';
 import { startMagazineBackfill } from './magazines.js';
 import { startScoreBackfill } from './score-backfill.js';
+import { startExtrasBackfill } from './extras-backfill.js';
 import { initVpn } from './vpn.js';
 
 const added = seedIfEmpty();
@@ -24,6 +25,7 @@ const app = createApp();
 startAutoImportScheduler(app.locals.bulkImport);
 startMagazineBackfill();
 startScoreBackfill();
+startExtrasBackfill();
 startMaintenance();
 app.listen(port, host, () => {
   warmSearch(); // build the (slim) search index in the background
