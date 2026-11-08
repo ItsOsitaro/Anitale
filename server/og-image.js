@@ -1,18 +1,15 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import { db, SERVER_DIR } from './db.js';
+import { db, SERVER_DIR, ROOT_DIR } from './db.js';
 import { rowToItem } from './shape.js';
 import { mangaRowToItem } from './repo.js';
 import { isSensitiveItem } from './sensitive.js';
 import { COVERS_DIR } from './images.js';
-
-// Link-preview card for a title: GET /og/<anime|manga>/<slug>.png -> 1200x630 PNG (cover, title, year, score).
-// Telegram/Bale/WhatsApp show it when the page is shared. Built once with sharp, kept on disk, and only drawn with
-// Latin text (the server may have no Persian font). Sensitive titles and missing covers get a 404, and the page
-// then falls back to the site logo (server/seo.js).
+// Link-preview card for a title: GET /og/<anime|manga>/<slug>.png -> 1200x630 PNG (cover + site logo, no text: the
+// server has no fonts installed). Built once with sharp and kept on disk. Sensitive titles and titles without a cover
+// get a 404, and the page then falls back to the plain cover or logo (server/seo.js).
 const CACHE_DIR = path.join(SERVER_DIR, 'cache', 'og');
 const inflight = new Map();
-const esc = (text) => String(text).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
 
 let sharpPromise = null;
 const loadSharp = () => {
@@ -20,37 +17,23 @@ const loadSharp = () => {
   return sharpPromise;
 };
 
-// Two lines of at most ~26 characters, the second cut with an ellipsis.
-const wrap = (title) => {
-  const words = String(title).split(/\s+/);
-  const lines = [''];
-  for (const word of words) {
-    const last = lines.length - 1;
-    if ((`${lines[last]} ${word}`).trim().length <= 26 || !lines[last]) lines[last] = `${lines[last]} ${word}`.trim();
-    else if (lines.length < 2) lines.push(word);
-    else { lines[1] = `${lines[1]} ${word}`; }
-  }
-  if (lines[1] && lines[1].length > 26) lines[1] = `${lines[1].slice(0, 25)}…`;
-  return lines;
-};
+const LOGO = path.join(ROOT_DIR, 'public', 'logo-512.png');
 
 const draw = async (type, row, coverFile, target) => {
   const sharp = await loadSharp();
   if (!sharp) return false;
-  const lines = wrap(row.title);
-  const meta = [type === 'manga' ? 'Manga' : 'Anime', row.year, row.score ? `★ ${Number(row.score).toFixed(1)}` : ''].filter(Boolean).join('  ·  ');
+  // No text on purpose: the server has no fonts installed (text came out as empty boxes), and the cover usually
+  // carries the title anyway. Gradient + cover + the site logo.
   const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630">
     <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3b1030"/><stop offset="1" stop-color="#8c1d43"/></linearGradient></defs>
     <rect width="1200" height="630" fill="url(#g)"/>
-    <text x="470" y="${lines[1] ? 250 : 290}" font-family="sans-serif" font-size="58" font-weight="700" fill="#fff6f9">${esc(lines[0])}</text>
-    ${lines[1] ? `<text x="470" y="322" font-family="sans-serif" font-size="58" font-weight="700" fill="#fff6f9">${esc(lines[1])}</text>` : ''}
-    <text x="470" y="${lines[1] ? 400 : 370}" font-family="sans-serif" font-size="34" fill="#f6c3d2">${esc(meta)}</text>
-    <text x="470" y="560" font-family="sans-serif" font-size="40" font-weight="700" fill="#e8577a">Anitale</text>
   </svg>`;
-  const cover = await sharp(coverFile).rotate().resize(330, 470, { fit: 'cover' }).png().toBuffer();
+  const cover = await sharp(coverFile).rotate().resize(380, 540, { fit: 'cover' }).png().toBuffer();
+  const layers = [{ input: cover, left: 150, top: 45 }];
+  if (fs.existsSync(LOGO)) layers.push({ input: await sharp(LOGO).resize(300, 300, { fit: 'inside' }).png().toBuffer(), left: 700, top: 165 });
   fs.mkdirSync(CACHE_DIR, { recursive: true });
   const tmp = `${target}.${process.pid}.tmp`;
-  await sharp(Buffer.from(svg)).composite([{ input: cover, left: 90, top: 80 }]).png({ compressionLevel: 9 }).toFile(tmp);
+  await sharp(Buffer.from(svg)).composite(layers).png({ compressionLevel: 9 }).toFile(tmp);
   fs.renameSync(tmp, target);
   return true;
 };
@@ -66,7 +49,7 @@ export const registerOgRoutes = (app) => {
     const item = row && (type === 'manga' ? mangaRowToItem(row) : rowToItem(row));
     const cover = row ? coverOf(slug) : '';
     if (!row || !cover || isSensitiveItem(item)) { res.status(404).end(); return; }
-    const target = path.join(CACHE_DIR, `${type}-${slug}-${Math.round((row.score || 0) * 10)}-${Math.floor(fs.statSync(cover).mtimeMs / 1000)}.png`);
+    const target = path.join(CACHE_DIR, `v2-${type}-${slug}-${Math.floor(fs.statSync(cover).mtimeMs / 1000)}.png`);
     try {
       if (!fs.existsSync(target)) {
         if (!inflight.has(target)) inflight.set(target, draw(type, row, cover, target).finally(() => inflight.delete(target)));
