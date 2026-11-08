@@ -2,11 +2,24 @@
 // the permission gate (server/admin-accounts.js) reads the area from that path (GET = view, other = edit).
 import { db } from './db.js';
 import { requireAdmin } from './auth.js';
+import { scoreStatus, saveScoreConfig, backfillScores, resetScoreProbe, rescheduleScores } from './score-backfill.js';
 
 const tableOf = (type) => (type === 'manga' ? 'manga' : 'anime');
 const bad = (res, message) => res.status(400).json({ error: message });
 
 export const register = (app) => {
+  // Control panel of the score backfill (server/score-backfill.js): status, settings, run now, retry all.
+  app.get('/api/admin/x/import/scores', requireAdmin, (req, res) => res.json(scoreStatus()));
+  app.post('/api/admin/x/import/scores', requireAdmin, (req, res) => {
+    const body = req.body || {};
+    if (body.action === 'reset') { resetScoreProbe(); rescheduleScores(); }
+    else if (body.action === 'run') {
+      if (scoreStatus().running) return bad(res, 'Already running');
+      backfillScores().catch(() => {});
+    } else { saveScoreConfig(body); rescheduleScores(); }
+    return res.json(scoreStatus());
+  });
+
   // How much of a MAL id range is already in the catalog + the highest saved id (to suggest "next range").
   app.get('/api/admin/x/import/range-info', requireAdmin, (req, res) => {
     const table = tableOf(req.query.type);

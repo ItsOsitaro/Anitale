@@ -51,3 +51,5 @@
   .imp-acts { width: 100%; }
   .imp-acts .adm-btn { flex: 1; }
 }
+
+.imp-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; margin-block: 12px; }
