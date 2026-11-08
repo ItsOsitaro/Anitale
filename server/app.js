@@ -221,6 +221,7 @@ export const createApp = () => {
   app.post('/api/user/login', siteLoginLimiter, async (req, res) => {
     const { username, password } = loginInput.parse(req.body);
     const result = await verifySiteCredentials(username, password);
+    if (result.banned) throw httpError(403, `This account is suspended until ${result.banned.slice(0, 10)}${result.reason ? `: ${result.reason}` : ''}`);
     if (!result.ok) throw httpError(401, 'Wrong username or password');
     setUserSession(req, res, result.username);
     res.json({ user: ownUser(getUserByUsername(result.username)), ok: true });

@@ -67,3 +67,29 @@
 .chb-row { display: grid; gap: 12px; padding-block: 16px; border-block-start: 1px solid var(--line); }
 .chb-row:first-child { border-block-start: 0; padding-block-start: 0; }
 .chb-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+
+/* Fifth admin round: bulk bar, growth/quality/jobs pages, self-check, ban */
+.adm-bulkbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding-block: 8px; padding-inline: 12px; margin-block: 8px; border: 1px solid var(--border); border-radius: 10px; background: var(--card); position: sticky; top: 8px; z-index: 5; }
+.adm-bulkbar strong { margin-inline-end: auto; }
+.tp-charts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-block: 14px; }
+.tp-chart { margin: 0; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+.tp-chart svg { width: 100%; height: 90px; display: block; margin-block: 8px 4px; }
+.tp-chart rect { fill: var(--primary); }
+.tp-axis { display: flex; justify-content: space-between; font-size: 11px; color: var(--muted-foreground); }
+.tp-lists { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+.tp-lists ol, .tp-group ul { margin: 6px 0; padding-inline-start: 20px; display: grid; gap: 4px; }
+.tp-group { margin-block: 14px; padding-block-end: 10px; border-block-end: 1px solid var(--border); }
+.tp-group h3 b, .tp-lists li b { margin-inline-start: 6px; color: var(--primary-text, var(--primary)); }
+.tp-group li a + a { margin-inline-start: 8px; }
+.tp-jobs { list-style: none; margin: 14px 0 0; padding: 0; display: grid; gap: 8px; }
+.tp-jobs li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; padding-block: 10px; padding-inline: 12px; border: 1px solid var(--border); border-radius: 10px; }
+.tp-jobs li > div:first-child { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.tp-check { margin-block: 12px; display: grid; gap: 6px; }
+.tp-check li { display: flex; gap: 10px; align-items: center; }
+.tp-check .is-bad { color: var(--destructive, #b3261e); font-weight: 600; }
+.tp-ban { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-block: 10px; }
+.tp-ban input { padding-block: 6px; padding-inline: 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: inherit; min-width: 0; }
+@media (max-width: 820px) {
+  .adm-bulkbar { position: static; }
+  .tp-jobs li { flex-direction: column; align-items: stretch; }
+}

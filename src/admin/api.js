@@ -52,6 +52,16 @@ export const api = {
     form.append('cover', file);
     return request('POST', `/api/anime/${encodeURIComponent(slug)}/cover`, form);
   },
+  growth: () => request('GET', '/api/admin/x/system/growth'),
+  quality: () => request('GET', '/api/admin/x/catalog/quality'),
+  jobs: () => request('GET', '/api/admin/x/system/jobs'),
+  jobToggle: (id, enabled) => request('POST', `/api/admin/x/system/jobs/${id}`, { enabled }),
+  selfcheck: () => request('POST', '/api/admin/x/system/selfcheck', {}),
+  queues: () => request('GET', '/api/admin/x/community/queues'),
+  findTitles: (q) => request('GET', `/api/admin/x/catalog/find?q=${encodeURIComponent(q)}`),
+  findUsers: (q) => request('GET', `/api/admin/x/users/find?q=${encodeURIComponent(q)}`),
+  userBan: (username, body) => request('POST', `/api/admin/x/users/${encodeURIComponent(username)}/ban`, body),
+  userUnban: (username) => request('DELETE', `/api/admin/x/users/${encodeURIComponent(username)}/ban`),
   searchMisses: () => request('GET', '/api/admin/x/community/search-misses'),
   searchAliasAdd: (body) => request('POST', '/api/admin/x/community/search-aliases', body),
   searchAliasDelete: (alias) => request('DELETE', '/api/admin/x/community/search-aliases', { alias }),

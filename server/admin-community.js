@@ -95,6 +95,7 @@ const userQuery = (query) => {
 const userShape = (row) => ({
   username: row.username, bio: row.bio || '', bloom: Number.parseInt(row.avatar_color, 10) || bloomFor(row.username), joined: row.created_at,
   animeCount: row.anime_count ?? 0, mangaCount: row.manga_count ?? 0, email: row.email || '', emailVerified: Boolean(row.email_verified_at),
+  bannedUntil: row.banned_until && row.banned_until > new Date().toISOString() ? row.banned_until : '', banReason: row.ban_reason || '',
 });
 
 export const register = (app) => {
@@ -178,19 +179,41 @@ export const register = (app) => {
   });
   // Activity summary for the detail panel: contributions and status mix.
   app.get('/api/admin/x/users/:username/summary', requireAdmin, (req, res) => {
-    const user = db.prepare('SELECT id, email, email_verified_at FROM users WHERE username = ? COLLATE NOCASE').get(String(req.params.username || '').trim());
+    const user = db.prepare('SELECT id, email, email_verified_at, banned_until, ban_reason FROM users WHERE username = ? COLLATE NOCASE').get(String(req.params.username || '').trim());
     if (!user) throw httpError(404, 'User not found');
     const n = (sql) => db.prepare(sql).get(user.id).n;
     const statuses = {};
     for (const row of db.prepare('SELECT status, COUNT(*) AS n FROM user_entries WHERE user_id = ? GROUP BY status').all(user.id)) statuses[row.status] = row.n;
     res.json({
       email: user.email || '', emailVerified: Boolean(user.email_verified_at),
+      bannedUntil: user.banned_until && user.banned_until > new Date().toISOString() ? user.banned_until : '', banReason: user.ban_reason || '',
       reviews: n('SELECT COUNT(*) AS n FROM reviews WHERE user_id = ?'),
       recs: n('SELECT COUNT(*) AS n FROM recs WHERE user_id = ?'),
       suggestions: n('SELECT COUNT(*) AS n FROM edit_suggestions WHERE user_id = ?'),
       followers: n('SELECT COUNT(*) AS n FROM follows WHERE following_id = ?'),
       following: n('SELECT COUNT(*) AS n FROM follows WHERE follower_id = ?'),
       statuses,
+      // The newest thing the member did on the site (list change, review or suggestion).
+      lastActive: db.prepare(`SELECT MAX(t) AS t FROM (
+        SELECT MAX(COALESCE(NULLIF(updated_at, ''), created_at)) AS t FROM user_entries WHERE user_id = ?1
+        UNION ALL SELECT MAX(created_at) FROM reviews WHERE user_id = ?1
+        UNION ALL SELECT MAX(created_at) FROM edit_suggestions WHERE user_id = ?1)`).get(user.id).t || '',
     });
+  });
+
+  // Suspend / restore a member. A ban also signs them out everywhere (token_version) and blocks login and writes.
+  app.post('/api/admin/x/users/:username/ban', requireAdmin, (req, res) => {
+    const user = db.prepare('SELECT id FROM users WHERE username = ? COLLATE NOCASE').get(String(req.params.username || '').trim());
+    if (!user) throw httpError(404, 'User not found');
+    const days = toInt(req.body?.days, 7, 1, 3650);
+    const reason = String(req.body?.reason || '').trim().slice(0, 200);
+    const until = new Date(Date.now() + days * 86400000).toISOString();
+    db.prepare('UPDATE users SET banned_until = ?, ban_reason = ?, token_version = token_version + 1 WHERE id = ?').run(until, reason, user.id);
+    res.json({ ok: true, until });
+  });
+  app.delete('/api/admin/x/users/:username/ban', requireAdmin, (req, res) => {
+    const { changes } = db.prepare("UPDATE users SET banned_until = '', ban_reason = '' WHERE username = ? COLLATE NOCASE").run(String(req.params.username || '').trim());
+    if (!changes) throw httpError(404, 'User not found');
+    res.json({ ok: true });
   });
 };

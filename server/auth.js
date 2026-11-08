@@ -127,9 +127,10 @@ export const requireSiteUser = (req, res, next) => {
   const username = currentSiteUser(req);
   const payload = readToken(parseCookies(req.headers.cookie)[USER_COOKIE]);
   if (!username || !payload) return res.status(401).json({ error: 'Not logged in' });
-  const row = db.prepare('SELECT token_version FROM users WHERE username = ? COLLATE NOCASE').get(username);
+  const row = db.prepare('SELECT token_version, banned_until FROM users WHERE username = ? COLLATE NOCASE').get(username);
   // Tokens issued before this column existed carry no v; they read as version 0.
   if (!row || Number(row.token_version ?? 0) !== Number(payload.v ?? 0)) return res.status(401).json({ error: 'Not logged in' });
+  if (row.banned_until && row.banned_until > new Date().toISOString()) return res.status(403).json({ error: 'This account is suspended' });
   return next();
 };
 

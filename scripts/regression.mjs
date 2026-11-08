@@ -141,6 +141,30 @@ if (admin) {
   check('alias makes the search find its title first', viaAlias.json?.items?.[0]?.slug === sample.slug);
   await call('DELETE', '/api/admin/x/community/search-aliases', { cookie: admin, body: { alias: phrase } });
   check('health alerts settings', (await call('GET', '/api/admin/x/system/alerts', { cookie: admin })).status === 200);
+  // admin tools: quality, growth, jobs, self-check, palette search, queues
+  for (const [label, path] of [['catalog quality', '/api/admin/x/catalog/quality'], ['growth', '/api/admin/x/system/growth'], ['background jobs', '/api/admin/x/system/jobs'], ['dashboard queues', '/api/admin/x/community/queues'], ['palette titles', `/api/admin/x/catalog/find?q=${encodeURIComponent(sample.title.slice(0, 4))}`], ['palette members', '/api/admin/x/users/find?q=reg']]) {
+    const r = await call('GET', path, { cookie: admin });
+    check(`admin ${label}`, r.status === 200 && r.json, `status ${r.status}`);
+  }
+  const growth = await call('GET', '/api/admin/x/system/growth', { cookie: admin });
+  check('growth has 30 days per series', growth.json?.series?.users?.length === 30);
+  const selfcheck = await call('POST', '/api/admin/x/system/selfcheck', { cookie: admin, body: {} });
+  check('post-deploy self-check passes', selfcheck.status === 200 && selfcheck.json?.ok === true, JSON.stringify((selfcheck.json?.results || []).filter((r) => !r.ok)));
+  const jobOff = await call('POST', '/api/admin/x/system/jobs/alerts', { cookie: admin, body: { enabled: false } });
+  const jobOn = await call('POST', '/api/admin/x/system/jobs/alerts', { cookie: admin, body: { enabled: true } });
+  check('a background job can be switched off and on', jobOff.status === 200 && jobOn.status === 200);
+  // suspension: login refused while suspended, works again after lifting
+  const victim = globalThis.extraUsers?.[0];
+  if (victim) {
+    const ban = await call('POST', `/api/admin/x/users/${victim}/ban`, { cookie: admin, body: { days: 3, reason: 'regression' } });
+    check('member suspended', ban.status === 200, `status ${ban.status}`);
+    const refused = await call('POST', '/api/user/login', { body: { username: victim, password } });
+    check('suspended member cannot log in', refused.status === 403, `status ${refused.status}`);
+    const wrong = await call('POST', '/api/user/login', { body: { username: victim, password: 'wrong-password-1' } });
+    check('wrong password still looks like any other failure', wrong.status === 401, `status ${wrong.status}`);
+    await call('DELETE', `/api/admin/x/users/${victim}/ban`, { cookie: admin });
+    check('lifted suspension allows login', (await call('POST', '/api/user/login', { body: { username: victim, password } })).status === 200);
+  }
   const noOrigin = await fetch(`${BASE}/api/admin/x/community/search-aliases`, { method: 'DELETE', headers: { 'content-type': 'application/json', cookie: admin }, body: '{"alias":"x"}' });
   check('admin extras reject a write without Origin (CSRF)', noOrigin.status === 403, `status ${noOrigin.status}`);
   check('site cannot be framed by other sites', (await fetch(`${BASE}/`)).headers.get('x-frame-options') === 'SAMEORIGIN');

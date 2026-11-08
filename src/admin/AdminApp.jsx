@@ -13,6 +13,7 @@ import BulkImport from './BulkImport.jsx';
 import QuickAdd from './QuickAdd.jsx';
 import MissingTitles from './MissingTitles.jsx';
 import SearchMisses from './SearchMisses.jsx';
+import { GrowthPage, QualityPage, JobsPage } from './ToolsPages.jsx';
 import AutoImport from './AutoImport.jsx';
 import HealthPage from './HealthPage.jsx';
 import VpnPage from './VpnPage.jsx';
@@ -139,6 +140,9 @@ const NAV = [
       { to: '/admin/auto-import', icon: IconRefresh, key: 'autoNav', perm: 'import' },
       { to: '/admin/missing', icon: IconSearch, key: 'missNav', badge: 'missing', perm: 'community' },
       { to: '/admin/search-misses', icon: IconSearch, key: 'smNav', perm: 'community' },
+      { to: '/admin/quality', icon: IconCheckList, key: 'qlNav', perm: 'catalog' },
+      { to: '/admin/growth', icon: IconPulse, key: 'gwNav', perm: 'system' },
+      { to: '/admin/jobs', icon: IconRefresh, key: 'jbNav', perm: 'system' },
       { to: '/admin/vpn', icon: IconShield, key: 'vpnNav', perm: 'system' },
       { to: '/admin/health', icon: IconPulse, key: 'hlNav', perm: 'system' },
       { to: '/admin/translate', end: true, icon: IconTranslate, key: 'translateNav', perm: 'translate' },
@@ -181,6 +185,9 @@ const titleFor = (pathname) => {
   if (pathname.startsWith('/admin/auto-import')) return 'autoNav';
   if (pathname.startsWith('/admin/missing')) return 'missNav';
   if (pathname.startsWith('/admin/search-misses')) return 'smNav';
+  if (pathname.startsWith('/admin/quality')) return 'qlNav';
+  if (pathname.startsWith('/admin/growth')) return 'gwNav';
+  if (pathname.startsWith('/admin/jobs')) return 'jbNav';
   if (pathname.startsWith('/admin/vpn')) return 'vpnNav';
   if (pathname.startsWith('/admin/health')) return 'hlNav';
   if (pathname.startsWith('/admin/translate/review')) return 'reviewNav';
@@ -420,6 +427,9 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="auto-import" element={guard('import', <AutoImport />)} />
                 <Route path="missing" element={guard('community', <MissingTitles />)} />
                 <Route path="search-misses" element={guard('community', <SearchMisses />)} />
+                <Route path="quality" element={guard('catalog', <QualityPage />)} />
+                <Route path="growth" element={guard('system', <GrowthPage />)} />
+                <Route path="jobs" element={guard('system', <JobsPage />)} />
                 <Route path="reviews" element={guard('community', <UserReviews />)} />
                 <Route path="recs" element={guard('community', <UserRecs />)} />
                 <Route path="suggestions" element={guard('community', <Suggestions />)} />

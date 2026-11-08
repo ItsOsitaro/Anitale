@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { api } from './api.js';
 
 // Ctrl+K quick jump: type part of a page or section name, arrows + Enter to go.
 export default function Palette({ items, t, onClose }) {
@@ -8,10 +9,26 @@ export default function Palette({ items, t, onClose }) {
   const inputRef = useRef(null);
   const listRef = useRef(null);
   const navigate = useNavigate();
+  // Titles and members matching what is typed (each needs its own area; a 403 just means no results of that kind).
+  const [found, setFound] = useState([]);
+  useEffect(() => {
+    const needle = query.trim();
+    if (needle.length < 2) { setFound([]); return undefined; }
+    let live = true;
+    const timer = setTimeout(async () => {
+      const [titles, users] = await Promise.all([api.findTitles(needle).catch(() => ({ items: [] })), api.findUsers(needle).catch(() => ({ items: [] }))]);
+      if (!live) return;
+      setFound([
+        ...titles.items.map((row) => ({ label: row.title, group: t('palTitles'), to: row.type === 'manga' ? `/admin/manga?q=${encodeURIComponent(row.title)}` : `/admin/edit/${row.slug}` })),
+        ...users.items.map((row) => ({ label: row.username, group: t('palUsers'), to: `/admin/users?q=${encodeURIComponent(row.username)}` })),
+      ]);
+    }, 250);
+    return () => { live = false; clearTimeout(timer); };
+  }, [query, t]);
   const shown = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return items.filter((item) => !needle || `${item.label} ${item.group || ''}`.toLowerCase().includes(needle));
-  }, [items, query]);
+    return [...items.filter((item) => !needle || `${item.label} ${item.group || ''}`.toLowerCase().includes(needle)), ...found];
+  }, [items, query, found]);
   useEffect(() => {
     const opener = document.activeElement;
     inputRef.current?.focus();
@@ -35,7 +52,7 @@ export default function Palette({ items, t, onClose }) {
           role="combobox" aria-expanded="true" aria-controls="adm-palette-list" aria-activedescendant={shown[index] ? `adm-pal-${index}` : undefined} />
         <ul id="adm-palette-list" role="listbox" ref={listRef}>
           {shown.map((item, i) => (
-            <li key={item.to} id={`adm-pal-${i}`} role="option" aria-selected={i === index}>
+            <li key={`${item.to}-${i}`} id={`adm-pal-${i}`} role="option" aria-selected={i === index}>
               <button type="button" tabIndex={-1} className={i === index ? 'is-active' : ''} onMouseMove={() => i !== index && setIndex(i)} onClick={() => go(item)}>
                 <span>{item.label}</span>{item.group && <small>{item.group}</small>}
               </button>

@@ -12,6 +12,7 @@ export default function Dashboard() {
   const { t, lang, can, me } = useAdmin();
   const [data, setData] = useState(null);
   const [failed, setFailed] = useState(false);
+  const [queues, setQueues] = useState(null); // search misses + browser errors (community area)
   const [loadedAt, setLoadedAt] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
   const arrow = lang === 'fa' ? '←' : '→'; // "go" arrow must point the reading direction
@@ -19,7 +20,7 @@ export default function Dashboard() {
   const load = useCallback(() => {
     setRefreshing(true);
     return api.overview()
-      .then((result) => { setData(result); setFailed(false); setLoadedAt(new Date()); })
+      .then((result) => { setData(result); setFailed(false); setLoadedAt(new Date()); api.queues().then(setQueues).catch(() => setQueues(null)); })
       .catch(() => setFailed(true))
       .finally(() => setRefreshing(false));
   }, []);
@@ -56,6 +57,8 @@ export default function Dashboard() {
   const todo = data && [
     { key: 'dashSuggestions', n: data.badges.suggestions, to: '/admin/suggestions', area: 'community' },
     { key: 'dashMissing', n: data.badges.missing, to: '/admin/missing', area: 'community' },
+    { key: 'dashSearchMisses', n: queues?.searchMisses || 0, to: '/admin/search-misses', area: 'community' },
+    { key: 'dashClientErrors', n: queues?.clientErrors || 0, to: '/admin/health', area: 'system' },
     { key: 'dashNoPersian', n: data.attention.noPersian, to: '/admin/anime?filter=noPersian', area: 'catalog' },
     { key: 'dashNoScore', n: data.attention.noScore, to: '/admin/anime?filter=noScore', area: 'catalog' },
     { key: 'dashNoCover', n: data.attention.noCover, to: '/admin/anime?filter=noCover', area: 'catalog' },

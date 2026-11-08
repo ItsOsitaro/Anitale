@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
+import { BanControl } from './ToolsPages.jsx';
 import {
   Chip, ErrorBar, Pager, Skeleton, call, fmtDate, num, qs, useDebounced, useRemoteList, useSearchHotkey,
 } from './pages/communityKit.jsx';
@@ -36,7 +37,7 @@ export default function SiteUsers() {
   const canEdit = can('users', 'edit');
   const statusLabel = (status) => t('statusLabels')?.[status] ?? status;
 
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(() => new URLSearchParams(window.location.search).get('q') || ''); // palette links arrive with ?q=
   const [filter, setFilter] = useState('');
   const [sort, setSort] = useState('new');
   const [page, setPage] = useState(1);
@@ -193,6 +194,7 @@ export default function SiteUsers() {
         <td colSpan={colCount}>
           <div className="adm-user-detail" ref={detailRef}>
             <div className="adm-user-half">
+              <BanControl username={selected?.user?.username || ''} summary={summary} canEdit={canEdit} onChanged={() => { loadSummary(selected.user.username); reload(); }} />
               {summary && (
                 <div className="cm-summary">
                   <span className="adm-chip">{t('uSumReviews')}: {num(summary.reviews, lang)}</span>

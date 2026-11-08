@@ -13,6 +13,7 @@ import { register as registerImport } from './admin-import.js';
 import { register as registerTranslate } from './admin-translate.js';
 import { register as registerCommunity } from './admin-community.js';
 import { registerAliasRoutes } from './search-aliases.js';
+import { registerAdminTools } from './admin-tools.js';
 import { register as registerSystem } from './admin-system.js';
 
 db.exec(`
@@ -140,6 +141,7 @@ export const registerAdminExtras = (app) => {
   registerTranslate(app);
   registerCommunity(app);
   registerAliasRoutes(app);
+  registerAdminTools(app);
   registerSystem(app);
 };
 

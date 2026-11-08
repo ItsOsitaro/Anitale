@@ -73,6 +73,27 @@ export default function AnimeList() {
     }
   };
 
+  // Several titles at once: tick rows, then refresh or delete them one after another (the source allows ~1.5 requests a second).
+  const [picked, setPicked] = useState(() => new Set());
+  const [bulkBusy, setBulkBusy] = useState('');
+  const togglePick = (slug) => setPicked((current) => { const next = new Set(current); if (next.has(slug)) next.delete(slug); else next.add(slug); return next; });
+  const runPicked = async (kind) => {
+    const chosen = (data?.items || []).filter((item) => picked.has(item.slug));
+    const targets = kind === 'refresh' ? chosen.filter((item) => item.malId) : chosen;
+    if (!targets.length) { toast(t('refreshNothing'), 'error'); return; }
+    if (kind === 'delete' && !await confirm(t('bulkDeleteConfirm', { n: targets.length }), { danger: true })) return;
+    setBulkBusy(kind);
+    let ok = 0;
+    let bad = 0;
+    for (const item of targets) {
+      try { if (kind === 'refresh') await api.refresh(item.slug); else await api.remove(item.slug); ok += 1; } catch { bad += 1; }
+    }
+    setBulkBusy('');
+    setPicked(new Set());
+    toast(t('bulkDone', { ok, bad }), bad ? 'error' : undefined);
+    load();
+  };
+
   // Human text for one change ({field, from, to}).
   const changeText = (change) => {
     if (!change) return '';
@@ -157,15 +178,24 @@ export default function AnimeList() {
           </button>
         ))}
       </div>
+      {picked.size > 0 && (
+        <div className="adm-bulkbar" role="region" aria-label={t('bulkBar')}>
+          <strong>{t('bulkPicked', { n: num(picked.size) })}</strong>
+          <button className="adm-btn" type="button" disabled={Boolean(bulkBusy)} onClick={() => runPicked('refresh')}>{bulkBusy === 'refresh' ? t('refreshing') : t('refreshBtn')}</button>
+          <button className="adm-btn is-danger" type="button" disabled={Boolean(bulkBusy)} onClick={() => runPicked('delete')}>{t('delete')}</button>
+          <button className="adm-btn" type="button" disabled={Boolean(bulkBusy)} onClick={() => setPicked(new Set())}>{t('bulkClear')}</button>
+        </div>
+      )}
       {error && <p className="adm-error" role="alert">{error} <button className="adm-btn" type="button" onClick={load}>{t('mangaRetry')}</button></p>}
       <div className={`adm-card adm-table-wrap al-wrap${loading && data ? ' is-loading' : ''}`} aria-busy={loading}>
         <table className="adm-table al-table">
           <thead>
-            <tr><th>{t('cover')}</th><th>{t('title')}</th><th>{t('type')}</th><th>{t('year')}</th><th>{t('score')}</th><th>{t('updated')}</th><th>{t('actions')}</th></tr>
+            <tr>{canEdit && <th><input type="checkbox" aria-label={t('bulkAll')} checked={Boolean(data?.items.length) && data.items.every((item) => picked.has(item.slug))} onChange={(e) => setPicked(e.target.checked ? new Set(data.items.map((item) => item.slug)) : new Set())} /></th>}<th>{t('cover')}</th><th>{t('title')}</th><th>{t('type')}</th><th>{t('year')}</th><th>{t('score')}</th><th>{t('updated')}</th><th>{t('actions')}</th></tr>
           </thead>
           <tbody>
             {data?.items.map((item) => (
               <tr key={item.slug}>
+                {canEdit && <td><input type="checkbox" aria-label={item.title} checked={picked.has(item.slug)} onChange={() => togglePick(item.slug)} /></td>}
                 <td className="al-cover">{item.image ? <img className="adm-thumb" src={item.image} alt="" width="42" height="58" loading="lazy" onError={(e) => { e.currentTarget.style.visibility = 'hidden'; }} /> : <span className="adm-thumb adm-thumb-empty" title={t('noCover')} />}</td>
                 <td className="al-title"><Link to={`/admin/edit/${item.slug}`} dir="auto"><strong>{item.title}</strong></Link><div className="adm-muted al-slug" dir="ltr">{item.slug}</div>
                   <div className="al-meta" aria-hidden="true">{[item.format, item.year && yearText(item.year), item.score && `★ ${scoreText(item.score)}`].filter(Boolean).join(' · ')}</div>

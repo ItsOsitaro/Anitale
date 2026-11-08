@@ -143,7 +143,10 @@ export const createUser = async ({ username, password, bio = '', email = null })
 export const verifySiteCredentials = async (username, password) => {
   const row = getUserByUsername(username);
   if (!row) return { ok: false };
-  return { ok: await bcrypt.compare(password, row.password_hash), username: row.username };
+  const ok = await bcrypt.compare(password, row.password_hash);
+  // Say "suspended" only to someone who knows the password, so the login form cannot be used to probe accounts.
+  if (ok && row.banned_until && row.banned_until > new Date().toISOString()) return { ok: false, banned: row.banned_until, reason: row.ban_reason || '' };
+  return { ok, username: row.username };
 };
 
 // ---------- Personal list entries ----------

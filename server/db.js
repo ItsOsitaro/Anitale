@@ -225,6 +225,13 @@ if (!db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('users') WHERE name
   db.exec(`ALTER TABLE users ADD COLUMN about TEXT NOT NULL DEFAULT ''`);
 }
 
+// Suspension (admin): banned_until is an ISO time ('' = not banned); the account cannot log in or write until then.
+for (const column of ['banned_until', 'ban_reason']) {
+  if (!db.prepare('SELECT COUNT(*) AS n FROM pragma_table_info(\'users\') WHERE name = ?').get(column).n) {
+    db.exec(`ALTER TABLE users ADD COLUMN ${column} TEXT NOT NULL DEFAULT ''`);
+  }
+}
+
 // List privacy per media type: 'public' | 'friends' (people the owner follows) | 'private'.
 for (const column of ['privacy_anime', 'privacy_manga']) {
   if (!db.prepare('SELECT COUNT(*) AS n FROM pragma_table_info(\'users\') WHERE name = ?').get(column).n) {
