@@ -12,7 +12,9 @@ export const register = (app) => {
   app.post('/api/admin/x/system/chat', requireAdmin, (req, res) => {
     const body = req.body || {};
     if (!PROVIDERS[body.provider]) return bad(res, 'Unknown messenger');
-    if (body.token != null && (typeof body.token !== 'string' || body.token.length > 200 || /s/.test(body.token))) return bad(res, 'The token looks wrong');
+    // A pasted token often carries a trailing space or newline: trim it. A bot token is printable ASCII without spaces.
+    if (typeof body.token === 'string') body.token = body.token.trim();
+    if (body.token != null && (typeof body.token !== 'string' || body.token.length > 200 || /[^!-~]/.test(body.token))) return bad(res, 'The token looks wrong');
     if (body.username != null && !/^@?[A-Za-z0-9_]{0,64}$/.test(String(body.username))) return bad(res, 'The bot username looks wrong');
     saveBotSettings(body.provider, { token: body.token, username: body.username, clear: body.clear === true });
     return res.json({ providers: botSettings() });
