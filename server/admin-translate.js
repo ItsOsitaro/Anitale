@@ -106,26 +106,65 @@ const createZip = (res) => {
   };
 };
 
-const README = (opts) => `ANITALE TRANSLATION FILES
-=========================
-Each .json file holds up to ${opts.size} items. For every item:
-  id    = identifier (never change it)
-  title = English title (for context)
-  en    = the English text to translate
-  fa    = EMPTY: put the Persian translation here
+// The README tells the translator (Claude) what the text is for, who reads it and how to return the file.
+const README_COMMON_FA = `درباره‌ی پروژه
+=============
+«انی‌تیل» یک سایت فارسی‌زبان برای کاتالوگ انیمه و مانگا است (شبیه MyAnimeList، با رابط راست‌به‌چپ). داده‌ها از MyAnimeList گرفته شده و به انگلیسی است. هدف این کار، فارسی‌کردن متن‌هاست تا کاربر ایرانی بتواند انیمه یا مانگا را بشناسد و تصمیم بگیرد ببیند یا نه. مخاطب: دوستداران عادی انیمه و مانگا؛ نه متخصص و نه کودک.
 
-Prompt for Claude (attach one or several .json files):
-  "Translate the "en" text of every item into natural, fluent Persian and write it in "fa".
-   Return the SAME JSON file (same structure, same ids, only "fa" filled in), nothing else.
-   Keep names of characters/places as commonly written in Persian, keep line breaks."
-
-Then import the returned files in the admin panel: Translation > Import / Export > Import.
-What this export holds: ${opts.kind === 'title' ? 'TITLES' : 'SYNOPSES'}, ${opts.media.join(' + ')}, ${opts.scope === 'all' ? 'all items' : 'only items without Persian yet'}.
-
-متن فارسی راهنما:
-هر فایل را (یا چند فایل را با هم) به Claude بدهید و بنویسید: «مقدار en هر مورد را به فارسی روان ترجمه کن و در fa بگذار؛ همین فایل JSON را با همان ساختار و همان id ها برگردان.»
-بعد فایل‌های برگشتی را در پنل: ترجمه ← ورود و خروج ← «وارد کردن» بدهید.
+دستور کار برای مترجم (Claude)
+==============================
+۱. فقط مقدار "fa" هر مورد را پر کن. "id"، "title"، "en" و بقیهٔ ساختار را هرگز تغییر نده، ترتیب موارد را عوض نکن، مورد را جا نینداز و دو مورد را ادغام نکن.
+۲. اگر "en" خالی است، "fa" را هم خالی بگذار.
+۳. خروجی باید دقیقاً همان فایل JSON معتبر باشد (کاراکتر " داخل متن را با \\" بنویس، خط جدید داخل متن را با \\n). هیچ توضیح اضافه، مقدمه یا نتیجه‌گیری ننویس. بهتر است نتیجه را به‌صورت فایل قابل‌دانلود بدهی؛ اگر نشد، فقط یک بلوک JSON کامل.
+۴. حتماً همهٔ موارد فایل را کامل برگردان؛ اگر فایل طولانی است ناقص نفرست.
 `;
+
+const README_SYNOPSIS_FA = `چه چیزی ترجمه می‌شود: «خلاصهٔ داستان» (synopsis)
+------------------------------------------------
+- این متن در صفحهٔ هر انیمه/مانگا زیر عنوان «خلاصهٔ داستان» نمایش داده می‌شود و خواننده را متقاعد می‌کند ببیند/بخواند. پس باید روان، طبیعی و جذاب باشد، نه ترجمهٔ کلمه‌به‌کلمه و سنگین.
+- معنا و لحن را حفظ کن؛ چیزی اضافه نکن، چیزی حذف نکن و داستان را لو نده (اگر منبع لو نداده، تو هم نده).
+- نام شخصیت‌ها: به همان شکلی که در فارسی رایج است بنویس (مثلاً ناروتو، لوفی، ایرن). اگر شکل رایجی ندارد، آوانگاری ساده و خوانا با حروف فارسی بنویس. نام‌های خاص (جاها، گروه‌ها، قدرت‌ها) هم همین‌طور؛ اگر ترجمهٔ معنایی خوبی دارند همان را به کار ببر.
+- نام آثار دیگری که در متن آمده (مثلاً «اقتباس از مانگای …») را با اسم لاتین/ژاپنی اصلی (انگلیسی) نگه دار و در صورت نیاز توضیح کوتاه فارسی کنارش بگذار.
+- اصطلاحات رایج را رایج بنویس (مثلاً ایسکای، شونن). «MAL»، «OVA»، «TV» و مانند آن‌ها را لاتین نگه دار.
+- جمله‌های منبع/اعتبار مثل «(Source: …)» یا «[Written by MAL Rewrite]» را ترجمه نکن و حذف کن؛ در "fa" نیایند.
+- نگارش فارسی درست: «ي/ك» عربی ننویس (ی و ک فارسی)، نیم‌فاصله را درست به کار ببر (می‌شود، کتاب‌ها)، نشانه‌گذاری فارسی (، ؛ ؟ «»)، اعداد را با ارقام فارسی (۰-۹) بنویس.
+- پاراگراف‌بندی متن اصلی (خط خالی بین پاراگراف‌ها) را حفظ کن.
+`;
+
+const README_TITLE_FA = `چه چیزی ترجمه می‌شود: «عنوان» (title)
+-----------------------------------------
+- این عنوان فارسی فقط به‌عنوان «عنوان جایگزین فارسی» زیر مشخصات هر اثر نشان داده می‌شود و در جستجو حساب می‌شود؛ عنوان اصلی سایت انگلیسی می‌ماند. هدف این است که کسی که اثر را با نام فارسی می‌شناسد و جستجو می‌کند آن را پیدا کند.
+- اگر عنوان فارسیِ رایج و شناخته‌شده‌ای دارد (مثلاً نام معروف در میان طرفداران ایرانی)، همان را بنویس.
+- وگرنه: عنوان‌های کوتاه و اسمی (مثل Naruto) را با آوانگاری فارسی بنویس (ناروتو)؛ عنوان‌های توصیفی (مثل «Attack on Titan») را به‌صورت معنایی و طبیعی ترجمه کن (حملهٔ تایتان‌ها).
+- فقط خود عنوان را بنویس؛ بدون توضیح و بدون پرانتز. اگر زیرعنوان یا شمارهٔ فصل در عنوان انگلیسی هست، همان را به همان شکل ترجمه یا آوانگاری کن؛ چیزی اضافه نکن.
+- نیم‌فاصله و «ی/ک» فارسی را رعایت کن؛ اعداد را فارسی بنویس.
+- اگر ترجمهٔ معنایی عنوان بی‌معنا یا نامفهوم می‌شود، آوانگاریِ ساده بنویس؛ از ترجمهٔ خلاقانه یا بی‌ربط پرهیز کن.
+`;
+
+const README = (opts) => {
+  const synopsis = opts.kind !== 'title';
+  return `ANITALE TRANSLATION FILES / فایل‌های ترجمهٔ انی‌تیل
+=======================================================
+${README_COMMON_FA}
+${synopsis ? README_SYNOPSIS_FA : README_TITLE_FA}
+ساختار هر مورد داخل فایل‌های .json
+-----------------------------------
+  id    = شناسهٔ مورد (هرگز عوض نشود)
+${synopsis ? '  title = عنوان انگلیسی (فقط برای فهم زمینه؛ ترجمه نشود)\n' : ''}  en    = متن انگلیسیِ مورد ترجمه
+  fa    = جای نوشتن ترجمهٔ فارسی (الان خالی${opts.scope === 'all' ? ' یا شامل ترجمهٔ فعلی؛ اگر پر است، بهتر کن و بازنویسی کن' : ''})
+
+متن آمادهٔ پیام (کپی کن و همراه فایل‌های .json و همین README.txt به Claude بده)
+-------------------------------------------------------
+«من مدیر سایت فارسی انی‌تیل (کاتالوگ انیمه و مانگا) هستم. فایل‌های پیوست را بر اساس راهنمای README.txt ترجمه کن: فقط مقدار "fa" هر مورد را با ترجمهٔ فارسی روان و مناسب این سایت پر کن، همهٔ موارد را کامل و بدون هیچ تغییری در "id" و ساختار برگردان، و فقط فایل JSON نهایی را بده.»
+
+ENGLISH SUMMARY
+---------------
+Anitale is a Persian (RTL) anime/manga catalogue modelled on MyAnimeList; the English texts come from MyAnimeList. Fill ONLY the "fa" field of every item with a fluent, natural Persian translation suited to ${synopsis ? 'a synopsis page (engaging, no spoilers added, common Persian spellings of names, source credits like "(Source: ...)" dropped)' : 'an alternative Persian title used for display and search (the established Persian name if one exists, otherwise a simple transliteration or meaning-based translation; title only, no explanations)'}. Never change "id", never reorder or skip items, return the same valid JSON and nothing else.
+
+Export: ${synopsis ? 'SYNOPSES' : 'TITLES'}, ${opts.media.join(' + ')}, ${opts.scope === 'all' ? 'all items' : 'only items without Persian yet'}, up to ${opts.size} items per file.
+After translating: admin panel > Translation > Import / Export > Import (choose the returned .json files).
+`;
+};
 
 export const register = (app) => {
   app.get('/api/admin/x/translate/export-info', requireAdmin, (req, res) => {
