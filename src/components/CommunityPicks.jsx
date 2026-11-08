@@ -46,7 +46,7 @@ export default function CommunityPicks() {
                 </li>
               ))}
             </ul>
-            <Link className="section-link" to="/stacks">{t('more')}</Link>
+            <Link className="section-link" to="/stacks">{t('stacksTitle')}</Link>
           </div>
         )}
       </div>

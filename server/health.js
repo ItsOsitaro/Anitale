@@ -23,6 +23,11 @@ for (const level of ['error', 'warn']) {
   console[level] = (...args) => { try { remember(level, args); } catch { /* never break logging */ } original(...args); };
 }
 
+// Browser-side crashes reported by the site itself (POST /api/client-error): kept as a list of timestamps so the
+// health alert can tell "one odd browser" from "the new release broke the page".
+const clientHits = [];
+export const clientErrorsLast = (ms = 600_000) => { const cut = Date.now() - ms; while (clientHits.length && clientHits[0] < cut) clientHits.shift(); return clientHits.length; };
+
 const safe = (fn, fallback = null) => { try { return fn(); } catch { return fallback; } };
 const count = (sql) => safe(() => db.prepare(sql).get().n, 0);
 const fileSize = (file) => safe(() => fs.statSync(file).size, 0);
@@ -93,6 +98,7 @@ const buildSnapshot = () => {
       tenraiPaused: tenraiCircuitOpen(), tenraiDisabled: String(process.env.TENRAI_DISABLED) === '1', provider: process.env.PROVIDER || '',
       proxy: Boolean(process.env.PROXY_URL), vpnActive: vpn.active || '', vpnRunning: Boolean(vpn.running), vpnError: vpn.error || '',
     },
+    clientErrors: clientErrorsLast(),
     autoImport: safe(() => getAutoImportState(), null),
     errors: recent.slice(0, 25),
   };
@@ -109,6 +115,21 @@ const timed = async (task) => {
 };
 
 export const registerHealthRoutes = (app, { requireAdmin, writeLimiter }) => {
+  // Public on purpose (visitors are not logged in), so it is tiny, strictly capped per IP and never trusted:
+  // only short plain strings are kept, and nothing is stored in the database.
+  const seen = new Map();
+  app.post('/api/client-error', (req, res) => {
+    res.status(204).end();
+    const ip = req.ip || '';
+    const now = Date.now();
+    const mine = (seen.get(ip) || []).filter((t) => now - t < 60_000);
+    if (mine.length >= 5 || seen.size > 5000) { if (seen.size > 5000) seen.clear(); return; }
+    mine.push(now);
+    seen.set(ip, mine);
+    const clip = (v, n) => String(v ?? '').replace(/[^ -~؀-ۿ]+/g, ' ').slice(0, n);
+    clientHits.push(now);
+    console.warn(`[client] ${clip(req.body?.message, 200)} @ ${clip(req.body?.page, 80)} (${clip(req.body?.source, 60)})`);
+  });
   app.get('/api/admin/health', requireAdmin, (_req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.json(healthSnapshot());

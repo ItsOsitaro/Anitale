@@ -1,0 +1,20 @@
+// Self-check for server/continue-series.js. Run on a COPY of a database: DB_FILE=/tmp/copy.db node scripts/dev/continue-series-check.mjs
+import assert from 'node:assert/strict';
+const { db } = await import('../../server/db.js');
+const { continueFor } = await import('../../server/continue-series.js');
+const rows = db.prepare("SELECT slug, mal_id, genres FROM anime WHERE mal_id IS NOT NULL AND genres NOT LIKE '%Ecchi%' AND genres NOT LIKE '%Hentai%' AND genres NOT LIKE '%Erotica%' LIMIT 3").all();
+const [a, b, c] = rows;
+db.prepare("INSERT OR IGNORE INTO users (username, email, password_hash) VALUES ('contchk', 'c@x.io', 'x')").run();
+const uid = db.prepare("SELECT id FROM users WHERE username='contchk'").get().id;
+db.prepare("DELETE FROM user_entries WHERE user_id=?").run(uid);
+db.prepare("INSERT INTO user_entries (user_id, media_type, slug, status) VALUES (?, 'anime', ?, 'completed')").run(uid, a.slug);
+db.prepare("INSERT OR REPLACE INTO title_extras (type, mal_id, data, fetched_at) VALUES ('anime', ?, ?, ?)").run(a.mal_id, JSON.stringify({ relations: [{ relation: 'Sequel', entries: [{ type: 'anime', id: b.mal_id, name: 'B' }, { type: 'manga', id: 5, name: 'm' }] }, { relation: 'Prequel', entries: [{ type: 'anime', id: c.mal_id, name: 'C' }] }] }), Date.now());
+let out = continueFor(uid);
+assert.deepEqual(out.map((x) => x.slug), [b.slug], 'only the anime sequel');
+assert.equal(out[0].from.slug, a.slug);
+db.prepare("INSERT INTO user_entries (user_id, media_type, slug, status) VALUES (?, 'anime', ?, 'planned')").run(uid, b.slug);
+assert.equal(continueFor(uid).length, 0, 'sequel already on the list is not suggested');
+db.prepare("DELETE FROM user_entries WHERE user_id=?").run(uid);
+db.prepare("DELETE FROM users WHERE id=?").run(uid);
+db.prepare("DELETE FROM title_extras WHERE mal_id=? AND type='anime'").run(a.mal_id);
+console.log('continue-series ok');

@@ -35,6 +35,9 @@ export const problems = (snap, cfg, streak = {}) => {
   if ((loopLagMs || 0) > 2000 && (streak.lag || 0) >= CONFIRM.lag) {
     out.push({ key: 'lag', text: `🐌 سرور چند دقیقه است که کند جواب می‌دهد (تأخیر ${Math.round(loopLagMs)} میلی‌ثانیه).` });
   }
+  if ((snap.clientErrors || 0) >= 15) {
+    out.push({ key: 'client', text: `🧩 در ۱۰ دقیقه‌ی اخیر ${snap.clientErrors} خطای جاوااسکریپت از مرورگر بازدیدکننده‌ها گزارش شد؛ شاید نسخه‌ی تازه صفحه‌ای را خراب کرده (جزئیات در ادمین ← سلامت سایت ← خطاهای اخیر).` });
+  }
   if (snap.sources.tenraiPaused && !snap.sources.tenraiDisabled && (streak.tenrai || 0) >= CONFIRM.tenrai) {
     out.push({ key: 'tenrai', text: '🔌 منبع داده (Tenrai) حدود نیم ساعت است که در دسترس نیست؛ ایمپورت و اطلاعات تازه متوقف است.' });
   }

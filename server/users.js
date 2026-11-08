@@ -278,6 +278,23 @@ export const friendFeed = (userId, limit = 30) => db.prepare(`
   added: row.created_at,
 }));
 
+// Who among the people the viewer follows has this title on their list (privacy respected), newest first.
+export const friendsOn = (userId, mediaType, slug, limit = 12) => db.prepare(`
+  SELECT u.username, u.avatar_color, e.status, e.rating, e.progress
+  FROM follows f
+  JOIN user_entries e ON e.user_id = f.following_id
+  JOIN users u ON u.id = e.user_id
+  WHERE f.follower_id = ? AND e.media_type = ? AND e.slug = ? AND ${VISIBLE_ENTRY_SQL}
+  ORDER BY COALESCE(NULLIF(e.updated_at, ''), e.created_at) DESC
+  LIMIT ?
+`).all(userId, mediaType, slug, userId, userId, userId, userId, limit).map((row) => ({
+  username: row.username,
+  bloom: Number.parseInt(row.avatar_color, 10) || 12,
+  status: row.status,
+  rating: row.rating ?? null,
+  progress: row.progress ?? null,
+}));
+
 export const setBio = (userId, bio) => {
   db.prepare('UPDATE users SET bio = ? WHERE id = ?').run(String(bio || '').slice(0, 300), userId);
 };

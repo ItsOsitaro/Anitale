@@ -15,9 +15,11 @@ import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { animeRowsBy, coreAnimeRows, deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, listMangaCore, mangaItemsBy, mangaRowToItem, updateAnime, updateManga } from './repo.js';
-import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, setAbout, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, friendsOn, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, setAbout, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { registerChatBotRoutes } from './chat-bots.js';
 import { registerCalendarRoutes } from './calendar.js';
+import { registerContinueRoutes } from './continue-series.js';
+import { logMiss } from './search-aliases.js';
 import { registerHomeCommunityRoute } from './home-community.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
@@ -91,11 +93,13 @@ export const createApp = () => {
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // nobody else may frame the site (clickjacking on login/admin)
     next();
   });
   app.use(express.json({ limit: '1mb' }));
-  registerAdminExtras(app);
+  // The same-origin (CSRF) check must run before ANY /api route, including the admin extras registered next.
   app.use('/api', sameOriginOnly);
+  registerAdminExtras(app);
 
   // ---------- Auth ----------
   const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many login attempts. Try again later.' } });
@@ -505,6 +509,7 @@ export const createApp = () => {
   };
   registerChatBotRoutes(app, botDeps);
   registerCalendarRoutes(app, botDeps);
+  registerContinueRoutes(app, botDeps);
   registerHomeCommunityRoute(app);
   app.get('/api/favorites/:kind/:ref', (req, res) => {
     const { kind, ref } = favParams(req);
@@ -661,6 +666,14 @@ export const createApp = () => {
     const viewer = getUserByUsername(currentSiteUser(req));
     if (!viewer) throw httpError(401, 'Not logged in');
     res.json({ items: friendFeed(viewer.id) });
+  });
+
+  app.get('/api/user/friends-on/:type/:slug', requireSiteUser, (req, res) => {
+    const viewer = getUserByUsername(currentSiteUser(req));
+    if (!viewer) throw httpError(401, 'Not logged in');
+    if (!['anime', 'manga'].includes(req.params.type)) throw httpError(400, 'Bad type');
+    res.setHeader('Cache-Control', 'private, no-store');
+    res.json({ items: friendsOn(viewer.id, req.params.type, String(req.params.slug).slice(0, 200)) });
   });
 
   // ---------- Public catalog ----------
@@ -837,6 +850,7 @@ export const createApp = () => {
     const query = foldTitle(text);
     if (!query) { res.json({ items: [] }); return; }
     const found = searchCatalog({ q: text, type: 'all', limit: 8, sfw: req.query.sfw === '1' });
+    if (!found.items.length) logMiss(text, req.ip);
     const hits = found.items.map((row) => ({ kind: row.kind, slug: row.slug, malId: row.malId, title: row.title, year: row.year, format: row.format, image: row.image }));
 
     // Site users match too — the header combobox shows them after the titles.
@@ -895,6 +909,8 @@ export const createApp = () => {
       page: Math.max(1, Number.parseInt(req.query.page, 10) || 1),
       sfw: req.query.sfw === '1',
     });
+    const plain = Object.keys(req.query).every((key) => ['q', 'type', 'sort', 'page', 'sfw'].includes(key));
+    if (plain && result.total === 0 && result.page === 1) logMiss(text, req.ip);
     const needle = foldTitle(text.trim());
     const users = needle
       ? db.prepare('SELECT username, bio, avatar_color FROM users ORDER BY id ASC').all()
@@ -1820,11 +1836,13 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
     res.json(getAutoImportState());
   });
   // ---------- One-click import of all MyAnimeList anime ----------
-  app.get('/api/admin/import-all', requireAdmin, (req, res) => res.json(importAllState()));
+  const importKind = (value) => (value === 'manga' ? 'manga' : 'anime');
+  app.get('/api/admin/import-all', requireAdmin, (req, res) => res.json(importAllState(importKind(req.query.kind))));
   app.post('/api/admin/import-all', requireAdmin, writeLimiter, (req, res) => {
     const action = req.body?.action;
-    if (action === 'stop') return res.json(stopImportAll());
-    if (action === 'start' || action === 'restart') return res.json(startImportAll(bulkImportHandler, { restart: action === 'restart' }));
+    const kind = importKind(req.body?.kind);
+    if (action === 'stop') return res.json(stopImportAll(kind));
+    if (action === 'start' || action === 'restart') return res.json(startImportAll(bulkImportHandler, { restart: action === 'restart', kind }));
     throw httpError(400, 'Unknown action');
   });
   app.post('/api/admin/auto-import/run', requireAdmin, writeLimiter, async (req, res) => {

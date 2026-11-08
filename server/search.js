@@ -3,6 +3,7 @@ import { foldTitle, rowToItem } from './shape.js';
 import { mangaRowToItem } from './repo.js';
 import { coverUrlFor } from './images.js';
 import { isSensitiveItem } from './sensitive.js';
+import { aliasFor } from './search-aliases.js';
 
 // Full catalog search: relevance-ranked, typo tolerant, filterable. The folded index
 // lives in memory, but each entry is SLIM (a card + folded text + a few numbers) so
@@ -340,6 +341,14 @@ export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], e
         rel.set(doc, doc.ph.startsWith(wanted) ? 12 : 8);
       }
     }
+  }
+
+  // An alias the owner set for this exact query (a nickname or spelling the index cannot guess) goes first.
+  const alias = needle && aliasFor(needle);
+  const target = alias && findDoc(alias.kind, alias.slug);
+  if (target && (type === 'all' || target.kind === type) && !(sfw && target.sensitive)) {
+    if (!rel.has(target)) matched.push(target);
+    rel.set(target, 1000);
   }
 
   // Facets describe what the text matched, before the other filters narrow it.

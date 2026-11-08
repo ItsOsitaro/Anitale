@@ -194,7 +194,7 @@ export const registerExtrasRoutes = (app) => {
         send(raw.subarray(1), MIME[raw[0]] || 'image/jpeg');
         return;
       }
-      const upstream = await fetch(url, { dispatcher: getDispatcher(), signal: AbortSignal.timeout(15_000) });
+      const upstream = await fetch(url, { dispatcher: getDispatcher(), signal: AbortSignal.timeout(15_000), redirect: 'error' });
       const ctype = upstream.headers.get('content-type') || '';
       if (!upstream.ok || !MIME.includes(ctype)) { res.status(404).end(); return; }
       const buffer = Buffer.from(await upstream.arrayBuffer());

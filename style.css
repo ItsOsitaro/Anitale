@@ -4873,3 +4873,11 @@ small { font-size: max(12px, 0.8em); }
 .achievements small { display: block; color: var(--muted-foreground); font-size: 12px; }
 .achievements__bar { display: block; height: 5px; margin-block: 7px 5px; border-radius: 5px; background: var(--muted); overflow: hidden; }
 .achievements__bar i { display: block; height: 100%; background: var(--primary); }
+
+/* People you follow who have this title (community block) */
+.friends-watched { margin-block: 14px; }
+.friends-watched h3 { margin: 0 0 8px; font-size: 14px; }
+.friends-watched ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.friends-watched a { display: inline-flex; align-items: center; gap: 8px; padding-block: 6px; padding-inline: 10px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: inherit; text-decoration: none; min-height: 36px; }
+.friends-watched__name { font-weight: 600; font-size: 13px; }
+.friends-watched small { color: var(--muted-foreground); font-size: 12px; }

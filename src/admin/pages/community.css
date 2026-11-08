@@ -55,3 +55,11 @@ a.adm-btn[aria-disabled="true"] { opacity: .5; pointer-events: none; }
   .cm-pass { flex-wrap: wrap; }
 }
 @media (prefers-reduced-motion: reduce) { .cm-stale { transition: none; } }
+
+/* Empty searches page */
+.sm-form { display: flex; flex-wrap: wrap; gap: 8px; margin-block: 12px; }
+.sm-form input, .sm-form select { padding-block: 8px; padding-inline: 10px; border: 1px solid var(--border); border-radius: 8px; background: var(--card); color: inherit; min-width: 0; flex: 1 1 160px; }
+.sm-list { list-style: none; margin: 12px 0; padding: 0; display: grid; gap: 6px; }
+.sm-list li { display: flex; align-items: center; gap: 10px; padding-block: 6px; padding-inline: 10px; border: 1px solid var(--border); border-radius: 8px; }
+.sm-list li .adm-btn { margin-inline-start: auto; }
+.sm-phrase { background: none; border: 0; color: inherit; font: inherit; font-weight: 600; cursor: pointer; padding: 0; }

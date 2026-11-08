@@ -69,6 +69,17 @@ export default function MobileHomePage({ picks, lang, t }) {
       <IntroStrip />
       <OnboardingPicker />
       <QuickChips />
+      {picks.continueSeries?.length > 0 && (
+        <>
+          <SectionHeader title={t('continueSeries')} />
+          <p className="for-you-why">{t('continueSeriesWhy')}</p>
+          <Rail>
+            {picks.continueSeries.map((item) => (
+              <PosterCard key={item.slug} item={item} mediaType="anime" />
+            ))}
+          </Rail>
+        </>
+      )}
       {picks.forYou?.items.length > 0 && (
         <>
           <SectionHeader title={t('forYou')} />

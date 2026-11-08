@@ -59,6 +59,7 @@ import { SchedulePageBody, SeasonPageBody } from './airingBoard.jsx';
 import UserRecs from './components/Recommendations.jsx';
 import InstallButton from '@/components/InstallButton';
 import { useForYou } from '@/hooks/use-for-you';
+import { useContinueSeries } from '@/hooks/use-continue-series';
 import ShareCardDialog from '@/components/ShareCardDialog';
 import OnboardingPicker from '@/components/OnboardingPicker';
 import { BrowsePage, GenresIndex } from './landingPages.jsx';
@@ -555,6 +556,7 @@ function HomePage() {
   const mangaCatalog = useVisibleMangaCatalog();
   const picks = selectHomePicks({ animeCatalog, mangaCatalog });
   const forYou = useForYou();
+  const continueSeries = useContinueSeries();
   const { topAnime, currentSeason, topAiring, mangaItems, freshManga, popularAnime, upcomingAnime } = picks;
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
   // visit, and manually re-rollable with the dice action in the hero.
@@ -590,7 +592,7 @@ function HomePage() {
   }, [t]);
 
   if (isMobile) {
-    return <MobileHomePage lang={lang} t={t} picks={{ ...picks, animeCatalog, forYou }} />;
+    return <MobileHomePage lang={lang} t={t} picks={{ ...picks, animeCatalog, forYou, continueSeries }} />;
   }
 
   return (
@@ -626,6 +628,13 @@ function HomePage() {
                     </button>
                   </div>
                 </div>
+              </section>
+            )}
+            {continueSeries.length > 0 && (
+              <section id="continueSeries">
+                <SectionHeading title={t('continueSeries')} />
+                <p className="for-you-why">{t('continueSeriesWhy')}</p>
+                <AnimeShelf items={continueSeries} />
               </section>
             )}
             {forYou.items.length > 0 && (

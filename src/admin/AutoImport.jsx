@@ -77,13 +77,14 @@ export default function AutoImport() {
 
   // One-click full import: polls while it runs.
   const [all, setAll] = useState(null);
+  const [allKind, setAllKind] = useState('anime'); // each kind has its own job and resume page
   const [allError, setAllError] = useState('');
   const loadAll = useCallback(async () => {
-    const next = await api.importAllGet();
+    const next = await api.importAllGet(allKind);
     setAll(next);
     setAllError('');
     return next;
-  }, []);
+  }, [allKind]);
   useEffect(() => { loadAll().catch((err) => setAllError(friendly(errText(err, t), t))); }, [loadAll, t]);
   usePoll(Boolean(all?.running), loadAll);
   usePoll(Boolean(all) && !all.running, loadAll, IDLE_POLL_MS);
@@ -92,7 +93,7 @@ export default function AutoImport() {
     if (action === 'start' && !(all?.page > 1) && !await confirm(t('allConfirm'))) return;
     if (action === 'restart' && !await confirm(t('allRestartConfirm'))) return;
     setBusy(`all-${action}`);
-    try { setAll(await api.importAllDo(action)); } catch (err) { toast(friendly(errText(err, t), t), 'error'); } finally { setBusy(''); }
+    try { setAll(await api.importAllDo(action, allKind)); } catch (err) { toast(friendly(errText(err, t), t), 'error'); } finally { setBusy(''); }
   };
 
   const last = state?.last;
@@ -163,6 +164,11 @@ export default function AutoImport() {
           <div>
             <h2 className="imp-card-title">{t('allTitle')}</h2>
             <p className="imp-card-sub">{t('allSub')}</p>
+            <div role="group" aria-label={t('quickAnime')}>
+              {['anime', 'manga'].map((k) => (
+                <button key={k} type="button" className={`adm-btn${allKind === k ? ' adm-primary' : ''}`} aria-pressed={allKind === k} disabled={allKind !== k && Boolean(all?.running)} onClick={() => { setAll(null); setAllKind(k); }}>{t(k === 'anime' ? 'quickAnime' : 'quickManga')}</button>
+              ))}
+            </div>
           </div>
           {all && <span className={`adm-chip ${all.running ? 'is-live' : all.completed ? 'is-ok' : ''}`} aria-live="polite">{t(all.running ? (all.stop ? 'allStopping' : 'allRunning') : (all.completed ? 'allCompleted' : all.page > 1 ? 'allPaused' : 'allIdle'))}</span>}
         </header>

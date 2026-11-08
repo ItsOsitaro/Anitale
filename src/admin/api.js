@@ -52,6 +52,10 @@ export const api = {
     form.append('cover', file);
     return request('POST', `/api/anime/${encodeURIComponent(slug)}/cover`, form);
   },
+  searchMisses: () => request('GET', '/api/admin/x/community/search-misses'),
+  searchAliasAdd: (body) => request('POST', '/api/admin/x/community/search-aliases', body),
+  searchAliasDelete: (alias) => request('DELETE', '/api/admin/x/community/search-aliases', { alias }),
+  searchMissDelete: (q) => request('DELETE', '/api/admin/x/community/search-misses', q ? { q } : { all: true }),
   missingTitles: () => request('GET', '/api/admin/missing-titles'),
   missingDismiss: (items) => request('POST', '/api/admin/missing-titles/dismiss', { items }),
   catalogSearch: (q, type = 'anime') => request('GET', `/api/admin/catalog/search?q=${encodeURIComponent(q)}&type=${type}`),
@@ -91,8 +95,8 @@ export const api = {
   autoImportGet: () => request('GET', '/api/admin/auto-import'),
   autoImportSet: (enabled) => request('POST', '/api/admin/auto-import', { enabled }),
   autoImportRun: () => request('POST', '/api/admin/auto-import/run'),
-  importAllGet: () => request('GET', '/api/admin/import-all'),
-  importAllDo: (action) => request('POST', '/api/admin/import-all', { action }),
+  importAllGet: (kind = 'anime') => request('GET', `/api/admin/import-all?kind=${kind}`),
+  importAllDo: (action, kind = 'anime') => request('POST', '/api/admin/import-all', { action, kind }),
   backfill: (body = {}) => request('POST', '/api/admin/translate/backfill', body),
   // Site-user management
   reviewsList: (q, page) => request('GET', `/api/admin/reviews?q=${encodeURIComponent(q)}&page=${page}&limit=15`),

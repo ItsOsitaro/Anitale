@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import FriendsWatched from '@/components/FriendsWatched';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { useSiteLang } from '@/i18n';
@@ -213,6 +214,7 @@ export default function CommunitySection({ mediaType, slug, withRecs = true }) {
       <ScoreSummary stats={data.stats} />
       <StatusCounts stats={data.stats} mediaType={mediaType} />
       <MyRating mediaType={mediaType} slug={slug} onRated={() => load(1)} />
+      <FriendsWatched mediaType={mediaType} slug={slug} />
 
       {user.me && !mine && <ReviewForm mediaType={mediaType} slug={slug} onSaved={refreshAfterSave} />}
       {!user.me && <p className="community-hint"><Link to="/login">{t('communityLoginToReview')}</Link></p>}
