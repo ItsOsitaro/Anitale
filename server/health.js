@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import express from 'express';
 import os from 'node:os';
 import path from 'node:path';
 import { db, ROOT_DIR, SERVER_DIR, COVERS_DIR } from './db.js';
@@ -118,6 +119,16 @@ export const registerHealthRoutes = (app, { requireAdmin, writeLimiter }) => {
   // Public on purpose (visitors are not logged in), so it is tiny, strictly capped per IP and never trusted:
   // only short plain strings are kept, and nothing is stored in the database.
   const seen = new Map();
+  // Browsers send CSP violation reports as application/csp-report; they land in the same recent-errors list, a few per minute.
+  let cspSeen = { at: 0, n: 0 };
+  app.post('/api/csp-report', express.json({ type: ['application/csp-report', 'application/reports+json', 'application/json'], limit: '8kb' }), (req, res) => {
+    res.status(204).end();
+    const now = Date.now();
+    if (now - cspSeen.at > 60_000) cspSeen = { at: now, n: 0 };
+    if (++cspSeen.n > 10) return;
+    const r = req.body?.['csp-report'] || {};
+    console.warn(`[csp] ${String(r['violated-directive'] || '').slice(0, 60)} blocked ${String(r['blocked-uri'] || '').slice(0, 120)} on ${String(r['document-uri'] || '').slice(0, 80)}`);
+  });
   app.post('/api/client-error', (req, res) => {
     res.status(204).end();
     const ip = req.ip || '';

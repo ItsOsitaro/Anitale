@@ -41,9 +41,24 @@ const topStacks = () => db.prepare(`
   WHERE s.is_public = 1 AND item_count > 0
   ORDER BY likes DESC, s.id DESC LIMIT 4`).all().map((row) => ({ id: row.id, title: row.title, owner: row.username, itemCount: row.item_count, likes: row.likes }));
 
+// Anime that the most members put on their (public) lists in the last 7 days; hidden until at least 3 titles qualify.
+const trendingThisWeek = () => {
+  const rows = db.prepare(`
+    SELECT e.slug, COUNT(DISTINCT e.user_id) AS adds FROM user_entries e JOIN users u ON u.id = e.user_id
+    WHERE e.media_type = 'anime' AND u.privacy_anime = 'public' AND e.created_at >= datetime('now', '-7 days')
+    GROUP BY e.slug ORDER BY adds DESC, MAX(e.created_at) DESC LIMIT 24`).all();
+  const out = [];
+  for (const row of rows) {
+    const media = titleOf('anime', row.slug);
+    if (media) out.push({ ...media, adds: row.adds });
+    if (out.length === 8) break;
+  }
+  return out.length >= 3 ? out : [];
+};
+
 export const registerHomeCommunityRoute = (app) => {
   app.get('/api/home/community', (req, res) => {
-    if (!cache.value || Date.now() - cache.at > TTL_MS) cache = { at: Date.now(), value: { review: reviewOfTheWeek(), stacks: topStacks() } };
+    if (!cache.value || Date.now() - cache.at > TTL_MS) cache = { at: Date.now(), value: { review: reviewOfTheWeek(), stacks: topStacks(), trending: trendingThisWeek() } };
     res.setHeader('Cache-Control', 'public, max-age=300');
     res.json(cache.value);
   });

@@ -53,6 +53,9 @@ export default function SearchMisses() {
               <li key={row.q}>
                 <button type="button" className="sm-phrase" onClick={() => setAlias(row.q)}>{row.q}</button>
                 <span className="adm-muted">{t('smCount', { n: row.n })}</span>
+                {canEdit && row.suggestion && (
+                  <button type="button" className="adm-btn" dir="auto" onClick={() => run(() => api.searchAliasAdd({ alias: row.q, kind: row.suggestion.kind, slug: row.suggestion.slug }))}>{t('smAccept', { title: row.suggestion.title })}</button>
+                )}
                 {canEdit && <button type="button" className="adm-btn" onClick={() => run(() => api.searchMissDelete(row.q))} aria-label="×">×</button>}
               </li>
             ))}

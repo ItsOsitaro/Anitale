@@ -19,6 +19,8 @@ import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminLi
 import { registerChatBotRoutes } from './chat-bots.js';
 import { registerCalendarRoutes } from './calendar.js';
 import { registerContinueRoutes } from './continue-series.js';
+import { registerOgRoutes } from './og-image.js';
+import { registerTogetherRoute } from './together.js';
 import { logMiss } from './search-aliases.js';
 import { registerHomeCommunityRoute } from './home-community.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
@@ -94,6 +96,9 @@ export const createApp = () => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
     res.setHeader('X-Frame-Options', 'SAMEORIGIN'); // nobody else may frame the site (clickjacking on login/admin)
+    // Report-only for now: violations are logged at /api/csp-report (admin health page) and nothing is blocked.
+    // shortcut: once the log stays quiet for a few days, rename the header to Content-Security-Policy.
+    res.setHeader('Content-Security-Policy-Report-Only', "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self'; frame-src https://www.youtube-nocookie.com https://www.youtube.com; object-src 'none'; base-uri 'self'; frame-ancestors 'self'; report-uri /api/csp-report");
     next();
   });
   app.use(express.json({ limit: '1mb' }));
@@ -510,6 +515,7 @@ export const createApp = () => {
   registerChatBotRoutes(app, botDeps);
   registerCalendarRoutes(app, botDeps);
   registerContinueRoutes(app, botDeps);
+  registerTogetherRoute(app, botDeps);
   registerHomeCommunityRoute(app);
   app.get('/api/favorites/:kind/:ref', (req, res) => {
     const { kind, ref } = favParams(req);
@@ -1872,6 +1878,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));
   app.get('/covers/:name', coverResizeHandler(COVERS_DIR));
   app.use('/covers', express.static(COVERS_DIR, { maxAge: '1d' }));
+  registerOgRoutes(app);
   registerSeoRoutes(app);
   const dist = path.join(ROOT_DIR, 'dist');
   if (fs.existsSync(path.join(dist, 'index.html'))) {

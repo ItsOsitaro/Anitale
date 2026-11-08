@@ -10,11 +10,27 @@ export default function CommunityPicks() {
   const { t, lang } = useSiteLang();
   const [data, setData] = useState(null);
   useEffect(() => { fetch('/api/home/community').then((r) => (r.ok ? r.json() : null)).then(setData).catch(() => {}); }, []);
-  if (!data || (!data.review && !data.stacks?.length)) return null;
-  const { review, stacks } = data;
+  if (!data || (!data.review && !data.stacks?.length && !data.trending?.length)) return null;
+  const { review, stacks, trending } = data;
   return (
     <section className="community-picks" aria-labelledby="cpTitle">
       <h2 id="cpTitle">{t('cpTitle')}</h2>
+      {trending?.length > 0 && (
+        <div className="cp-trending">
+          <p className="cp-label">{t('cpTrending')}</p>
+          <ul>
+            {trending.map((media) => (
+              <li key={media.slug}>
+                <Link to={mediaHref({ slug: media.slug }, 'anime')}>
+                  {media.image ? <img src={coverUrl(media.image, 240)} alt="" loading="lazy" decoding="async" /> : null}
+                  <strong dir="auto">{media.title}</strong>
+                  <small>{t('cpTrendingAdds', { n: formatNumber(media.adds, lang) })}</small>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       <div className="community-picks__grid">
         {review && (
           <article className="cp-review">

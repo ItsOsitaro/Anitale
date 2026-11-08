@@ -99,6 +99,21 @@ if (me) {
   check('followed member with the title is listed', seen.json?.items?.[0]?.username === b.username && seen.json.items[0].rating === 8);
   await call('PUT', '/api/user/me', { cookie: b.cookie, body: { privacy: { anime: 'private' } } });
   const hidden = await call('GET', `/api/user/friends-on/anime/${sample.slug}`, { cookie: a.cookie });
+  // together: b loved the sample title and a does not have it -> a sees it (while b's list is public)
+  await call('PUT', '/api/user/me', { cookie: b.cookie, body: { privacy: { anime: 'public' } } });
+  await call('DELETE', `/api/user/entries/anime/${sample.slug}`, { cookie: a.cookie });
+  const together = await call('GET', `/api/users/${b.username}/together`, { cookie: a.cookie });
+  check('watch-together lists what they loved', together.status === 200 && together.json?.theyLoved?.includes(sample.slug), JSON.stringify(together.json));
+  check('watch-together needs login', (await call('GET', `/api/users/${b.username}/together`)).status === 401);
+  await call('PUT', '/api/user/me', { cookie: b.cookie, body: { privacy: { anime: 'private' } } });
+  check('watch-together hides a private list', (await call('GET', `/api/users/${b.username}/together`, { cookie: a.cookie })).json?.hidden === true);
+  check('continue (manga) answers', (await call('GET', '/api/user/continue?type=manga', { cookie: a.cookie })).status === 200);
+  const trending = await call('GET', '/api/home/community');
+  check('home community has a trending list', Array.isArray(trending.json?.trending));
+  const og = await fetch(`${BASE}/og/anime/${sample.slug}.png`);
+  check('share image is a PNG (or 404 when the title has no cover or is sensitive)', og.status === 404 || (og.status === 200 && og.headers.get('content-type') === 'image/png'), `status ${og.status}`);
+  check('CSP is report-only', Boolean((await fetch(`${BASE}/`)).headers.get('content-security-policy-report-only')));
+  check('CSP report endpoint accepts a report', (await fetch(`${BASE}/api/csp-report`, { method: 'POST', headers: { 'content-type': 'application/csp-report' }, body: JSON.stringify({ 'csp-report': { 'violated-directive': 'script-src', 'blocked-uri': 'inline' } }) })).status === 204);
   check('a private list is not shown', hidden.json?.items?.length === 0, JSON.stringify(hidden.json));
   globalThis.extraUsers = [a.username, b.username];
 }

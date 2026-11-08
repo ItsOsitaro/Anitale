@@ -60,6 +60,7 @@ import UserRecs from './components/Recommendations.jsx';
 import InstallButton from '@/components/InstallButton';
 import { useForYou } from '@/hooks/use-for-you';
 import { useContinueSeries } from '@/hooks/use-continue-series';
+import ContinueManga from '@/components/ContinueManga';
 import ShareCardDialog from '@/components/ShareCardDialog';
 import OnboardingPicker from '@/components/OnboardingPicker';
 import { BrowsePage, GenresIndex } from './landingPages.jsx';
@@ -603,6 +604,7 @@ function HomePage() {
           <main className="main-column">
             <IntroStrip />
             <OnboardingPicker />
+            {!featured && animeCatalog.length === 0 && <section className="hero panel hero-skeleton" aria-hidden="true" />}
             {featured && (
               <section className="hero panel" style={{ '--hero-image': `url("${featured.image}")` }}>
                 <div className="hero-poster" aria-hidden="true">
@@ -637,6 +639,7 @@ function HomePage() {
                 <AnimeShelf items={continueSeries} />
               </section>
             )}
+            <ContinueManga />
             {forYou.items.length > 0 && (
               <section id="forYou">
                 <SectionHeading title={t('forYou')} />

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom';
+import ContinueManga from '../ContinueManga';
 import { L, useSiteLang } from '@/i18n';
 import { mediaHref } from '@/catalog';
 import { displayTitle, selectCurrentSeasonPicks } from '@/home-data';
@@ -80,6 +81,7 @@ export default function MobileHomePage({ picks, lang, t }) {
           </Rail>
         </>
       )}
+      <ContinueManga />
       {picks.forYou?.items.length > 0 && (
         <>
           <SectionHeader title={t('forYou')} />

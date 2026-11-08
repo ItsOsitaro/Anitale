@@ -143,6 +143,7 @@ export const userTokenValid = (userRow, req) => {
 // same-origin Origin or Referer header (browsers always send one).
 export const sameOriginOnly = (req, res, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(req.method)) return next();
+  if (req.path === '/csp-report') return next(); // browsers send violation reports without an Origin; the endpoint only logs, capped
   const source = req.headers.origin || req.headers.referer;
   if (!source) return res.status(403).json({ error: 'Missing Origin/Referer header' });
   try {

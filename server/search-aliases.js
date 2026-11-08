@@ -1,6 +1,7 @@
 import { db } from './db.js';
 import { requireAdmin } from './auth.js';
 import { foldTitle } from './shape.js';
+import { searchCatalog } from './search.js';
 
 // Searches that found nothing are counted, and the owner can answer a miss with an alias ("ایمپورت" style Persian
 // spellings, nicknames, abbreviations) that points to a title. searchCatalog() puts alias targets first.
@@ -45,13 +46,22 @@ const aliases = () => {
 // Target (kind + slug) of an alias for an already-folded query, or undefined.
 export const aliasFor = (needle) => aliases().get(needle);
 
+// A guess for the owner to accept with one click: the best title for the longest word of the phrase (the phrase
+// itself already found nothing). Only a guess: nothing is saved until the owner confirms.
+const suggestionFor = (phrase) => {
+  const word = phrase.split(' ').filter((w) => w.length >= 4).sort((a, b) => b.length - a.length)[0];
+  if (!word) return null;
+  const top = searchCatalog({ q: word, type: 'all', limit: 1, sfw: true }).items[0];
+  return top ? { kind: top.kind, slug: top.slug, title: top.title } : null;
+};
+
 const bad = (res, message, status = 400) => res.status(status).json({ error: message });
 
 export const registerAliasRoutes = (app) => {
   // Everything under /api/admin/x/community/... is gated by the "community" area (GET = view, other = edit).
   app.get('/api/admin/x/community/search-misses', requireAdmin, (_req, res) => {
     res.json({
-      misses: db.prepare('SELECT q, n, last_at AS lastAt FROM search_misses ORDER BY n DESC, last_at DESC LIMIT 100').all(),
+      misses: db.prepare('SELECT q, n, last_at AS lastAt FROM search_misses ORDER BY n DESC, last_at DESC LIMIT 100').all().map((row, i) => ({ ...row, suggestion: i < 30 ? suggestionFor(row.q) : null })),
       aliases: db.prepare('SELECT alias, kind, slug, created_at AS createdAt FROM search_aliases ORDER BY created_at DESC LIMIT 500').all(),
     });
   });

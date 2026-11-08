@@ -6,6 +6,7 @@
 // description, Open Graph / Twitter tags and JSON-LD, and serves /sitemap.xml.
 //
 import fs from 'node:fs';
+import { ogImageFor } from './og-image.js';
 import path from 'node:path';
 import { db, ROOT_DIR } from './db.js';
 import { getBySlug, getByMalId, getMangaBySlug, getMangaByMalId, mangaRowToItem } from './repo.js';
@@ -249,7 +250,7 @@ export const registerSeoRoutes = (app) => {
       const description = clip(synopsisOf(item), 200)
         || `${name} — ${type === 'manga' ? 'مانگا' : 'انیمه'}${item.year ? ` ${item.year}` : ''} در ${SITE_NAME}`;
       const url = `${origin}/${type}/${item.malId ?? item.slug}`;
-      const image = item.image ? `${origin}${item.image}` : '';
+      const image = ogImageFor(type, item, origin);
       const infoRow = (label) => (Array.isArray(item.information) ? item.information.find((row) => String(row?.label).toLowerCase() === label)?.value : '') || '';
       const episodes = Number(String(infoRow('episodes')).replace(/[^0-9]/g, '')) || 0;
       const started = /([A-Z][a-z]{2}) (\d{1,2}), (\d{4})/.exec(infoRow('aired') || infoRow('published'));

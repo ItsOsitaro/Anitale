@@ -4881,3 +4881,21 @@ small { font-size: max(12px, 0.8em); }
 .friends-watched a { display: inline-flex; align-items: center; gap: 8px; padding-block: 6px; padding-inline: 10px 12px; border: 1px solid var(--border); border-radius: 999px; background: var(--card); color: inherit; text-decoration: none; min-height: 36px; }
 .friends-watched__name { font-weight: 600; font-size: 13px; }
 .friends-watched small { color: var(--muted-foreground); font-size: 12px; }
+
+/* Holds the hero's space until the catalog arrives, so the page below does not jump (CLS). */
+.hero-skeleton { background: var(--card); border: 1px solid var(--border); }
+.hero-skeleton::before { display: none; }
+
+/* Home: trending this week */
+.cp-trending { margin-block-end: 18px; }
+.cp-trending ul { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 12px; }
+.cp-trending a { display: grid; gap: 4px; color: inherit; text-decoration: none; }
+.cp-trending img { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 10px; background: var(--secondary); }
+.cp-trending strong { font-size: 13px; line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cp-trending small { color: var(--muted-foreground); font-size: 12px; }
+
+/* Profile: what to watch together */
+.together { margin-block: 14px; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+.together h3 { margin: 0 0 8px; font-size: 14px; }
+.together ul { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.together li a { display: inline-block; padding-block: 5px; padding-inline: 10px; border-radius: 999px; background: var(--secondary); color: inherit; text-decoration: none; font-size: 13px; min-height: 28px; }
