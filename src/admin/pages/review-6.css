@@ -72,3 +72,19 @@ input[aria-invalid='true'] { border-color: var(--danger); }
   .adm-tr-stats { grid-template-columns: repeat(2, 1fr); }
   .adm-tr-stats .adm-tr-refresh { grid-column: 1 / -1; justify-self: stretch; }
 }
+
+/* Translation import/export */
+.tf-body { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; }
+.tf-col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+.tf-h { margin: 0; font-size: .98rem; font-weight: 800; }
+.tf-row { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.tf-drop { display: grid; place-items: center; min-height: 84px; padding: 14px; border: 2px dashed var(--line-2); border-radius: var(--r-md); color: var(--ink-2); font-weight: 650; cursor: pointer; text-align: center; }
+.tf-drop:hover, .tf-drop:focus-within { border-color: var(--accent); color: var(--accent-text); background: var(--accent-soft); }
+.tf-drop input { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.tf-files { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 220px; overflow: auto; }
+.tf-files li { display: flex; justify-content: space-between; gap: 12px; padding: 6px 10px; border-radius: var(--r-sm); background: var(--panel-2); font-size: .85rem; }
+.tf-files li.is-bad { background: var(--danger-soft); color: var(--danger); }
+.tf-progress { display: grid; gap: 4px; }
+.tf-report p { margin: 0 0 4px; }
+.adm-btn.is-disabled { opacity: .5; pointer-events: none; }
+@media (max-width: 820px) { .tf-body { grid-template-columns: 1fr; } }

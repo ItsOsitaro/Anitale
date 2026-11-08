@@ -2,6 +2,7 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
+import TranslationFiles from './TranslationFiles.jsx';
 
 const MEDIA = [['both', 'translateMediaAll'], ['anime', 'translateMediaAnime'], ['manga', 'translateMediaManga']];
 const clock = (seconds, lang) => `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`.replace(/\d/g, (d) => (lang === 'fa' ? '۰۱۲۳۴۵۶۷۸۹'[d] : d));
@@ -216,6 +217,7 @@ export default function Translation() {
             )}
           </section>
         )}
+        <TranslationFiles />
       </div>
     </div>
   );

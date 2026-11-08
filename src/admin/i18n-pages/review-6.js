@@ -1,6 +1,13 @@
 // Texts added by review pass 6 (merged into src/admin/i18n.js).
 export default {
   en: {
+    tfTitle: 'Import / export translations', tfSub: 'Export English titles or synopses, give the files to Claude to translate into Persian, then import the Persian files back.',
+    tfExport: 'Export', tfImport: 'Import', tfKind: 'What', tfKindSynopsis: 'Synopses', tfKindTitle: 'Titles', tfMedia: 'Type', tfScope: 'Which items', tfScopeMissing: 'Only without Persian', tfScopeAll: 'All (with existing Persian)', tfSize: 'Items per file',
+    tfInfo: '{n} items in {files} files', tfDownload: 'Download zip', tfHowTo: 'Unzip, give one or several .json files to Claude with the prompt in README.txt, and save the files it returns.',
+    tfPick: 'Choose the Persian .json files…', tfFileInfo: '{filled} of {total} translated', tfNotOurs: 'Not an Anitale translation file', tfBadJson: 'Not valid JSON', tfNothing: 'No Persian text found in these files.',
+    tfRun: 'Import', tfConfirm: 'Import {n} Persian texts? They replace the current Persian text of those titles, even ones you edited by hand.', tfDone: '{n} texts imported.',
+    tfReport: 'Empty: {empty} · Rejected: {invalid} · Title not found: {missing}', tfReadOnly: 'You can export, but importing needs permission to change translations.',
+    tfWhy_does_not_look_Persian: 'Does not look Persian', tfWhy_no_such_title: 'No such title', tfWhy_not_translated: 'Same as English', tfWhy_title_too_long: 'Title too long', tfWhy_synopsis_too_long: 'Synopsis too long', tfWhy_missing_id: 'Missing id',
     uSearchHint: 'Search username or email… (press /)', uCopyEmail: 'Copy email', uView: 'View',
     trCoverage: '{done} of {total} synopses have an approved Persian text',
     trRunningSoFar: '{n} translated so far, {left} left.',
@@ -8,6 +15,13 @@ export default {
     rqSortQueue: 'Queue order', rqSortShort: 'Most suspicious first (shortest)',
   },
   fa: {
+    tfTitle: 'ورود و خروج ترجمه‌ها', tfSub: 'عنوان یا خلاصهٔ انگلیسی را خروجی بگیر، فایل‌ها را به Claude بده تا فارسی کند، بعد فایل‌های فارسی را وارد کن.',
+    tfExport: 'خروجی', tfImport: 'ورودی', tfKind: 'چه چیزی', tfKindSynopsis: 'خلاصه‌ها', tfKindTitle: 'عنوان‌ها', tfMedia: 'نوع', tfScope: 'کدام موارد', tfScopeMissing: 'فقط بدون فارسی', tfScopeAll: 'همه (با فارسیِ موجود)', tfSize: 'تعداد در هر فایل',
+    tfInfo: '{n} مورد در {files} فایل', tfDownload: 'دانلود زیپ', tfHowTo: 'زیپ را باز کن، یک یا چند فایل .json را همراه متنی که در README.txt هست به Claude بده و فایل‌های برگشتی را ذخیره کن.',
+    tfPick: 'فایل‌های .json فارسی را انتخاب کن…', tfFileInfo: '{filled} از {total} ترجمه شده', tfNotOurs: 'فایل ترجمهٔ انی‌تیل نیست', tfBadJson: 'JSON معتبر نیست', tfNothing: 'در این فایل‌ها متن فارسی پیدا نشد.',
+    tfRun: 'وارد کن', tfConfirm: '{n} متن فارسی وارد شود؟ این متن‌ها جای فارسیِ فعلی همان عنوان‌ها را می‌گیرند، حتی اگر دستی ویرایش کرده باشی.', tfDone: '{n} متن وارد شد.',
+    tfReport: 'خالی: {empty} · ردشده: {invalid} · عنوان پیدا نشد: {missing}', tfReadOnly: 'می‌توانی خروجی بگیری، ولی وارد کردن اجازهٔ تغییر ترجمه می‌خواهد.',
+    tfWhy_does_not_look_Persian: 'فارسی به نظر نمی‌رسد', tfWhy_no_such_title: 'چنین عنوانی نیست', tfWhy_not_translated: 'با انگلیسی یکی است', tfWhy_title_too_long: 'عنوان خیلی بلند است', tfWhy_synopsis_too_long: 'خلاصه خیلی بلند است', tfWhy_missing_id: 'شناسه ندارد',
     uSearchHint: 'جستجوی نام کاربری یا ایمیل… (کلید /)', uCopyEmail: 'کپی ایمیل', uView: 'مشاهده',
     trCoverage: '{done} از {total} خلاصه، فارسیِ تأییدشده دارند',
     trRunningSoFar: 'تا اینجا {n} ترجمه شد، {left} مانده.',
