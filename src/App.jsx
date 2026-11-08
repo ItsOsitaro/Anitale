@@ -55,6 +55,7 @@ import MobileHomePage from '@/components/mobile/MobileHomePage';
 import MobileCatalogPage from '@/components/mobile/MobileCatalogPage';
 import MobileRankingPage from '@/components/mobile/MobileRankingPage';
 import MobileSeasonalPage from '@/components/mobile/MobileSeasonalPage';
+import { SchedulePageBody, SeasonPageBody } from './airingBoard.jsx';
 import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 import { coverUrl } from '@/lib/cover';
 
@@ -538,63 +539,6 @@ function SchedulePanel() {
   );
 }
 
-// Full week, one block per weekday, today highlighted; titles without a day go last.
-function WeeklySchedule({ items }) {
-  const { t } = useSiteLang();
-  const today = useMemo(() => currentWeekday(), []);
-  const days = useMemo(() => WEEKDAY_ORDER.map((day) => ({ day, list: items.filter((item) => item.airingDay === day) })), [items]);
-  if (days.every((d) => d.list.length === 0)) return <div className="sample-data-note">{t('scheduleEmpty')}</div>;
-  return (
-    <div className="week-schedule">
-      {days.map(({ day, list }) => (
-        <section key={day} className={`week-day${day === today ? ' is-today' : ''}`} aria-labelledby={`wd-${day}`}>
-          <h2 id={`wd-${day}`}>{t(dayMessages[day])}{day === today && <strong className="today-chip">{t('todayBadge')}</strong>}</h2>
-          {list.length === 0 ? <p className="media-note">{t('nothingToday')}</p> : (
-            <ul>
-              {list.map((item) => (
-                <li key={item.slug}>
-                  <Link className="airing-today-item" to={mediaHref(item)} dir="auto">
-                    <img src={coverUrl(item.image, 240)} alt="" loading="lazy" />
-                    <span>{item.title}</span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
-      ))}
-    </div>
-  );
-}
-
-// Weekly schedule strip for the seasonal page: the titles that air on the
-// viewer's current weekday, or nothing when the day has no premieres.
-function AiringToday() {
-  const { t } = useSiteLang();
-  const animeCatalog = useVisibleCatalog();
-  const today = useMemo(() => currentWeekday(), []);
-  const items = useMemo(() => animeCatalog.filter((item) => item.airingDay === today), [animeCatalog, today]);
-  if (items.length === 0) return null;
-  return (
-    <div className="airing-today" role="note" aria-label={t('airingToday')}>
-      <span className="airing-today-label">
-        <strong>{t('airingToday')}</strong>
-        <span className="airing-today-day" dir="auto">{t(dayMessages[today])}</span>
-      </span>
-      <ul>
-        {items.map((item) => (
-          <li key={item.slug}>
-            <Link className="airing-today-item" to={mediaHref(item)} dir="auto">
-              <img src={coverUrl(item.image, 240)} alt="" loading="lazy" />
-              <span>{item.title}</span>
-            </Link>
-          </li>
-        ))}
-      </ul>
-    </div>
-  );
-}
-
 function HomePage() {
   const { lang, t } = useSiteLang();
   const isMobile = useIsMobile();
@@ -955,9 +899,7 @@ function SectionPage({ theme, onThemeChange }) {
 
   if (isMobile && page.kind === 'seasonal') {
     return (
-      <MobileSeasonalPage title={title} items={seasonItems.length ? seasonItems : filteredItems}>
-        <AiringToday />
-      </MobileSeasonalPage>
+      <MobileSeasonalPage title={title} items={seasonItems.length ? seasonItems : filteredItems} fallback={seasonItems.length === 0} />
     );
   }
 
@@ -974,23 +916,22 @@ function SectionPage({ theme, onThemeChange }) {
           <h1>{L(title, lang)}</h1>
           <p>{L(description, lang)}</p>
         </header>
-        <div className={`section-page-layout${page.kind === 'schedule' ? ' is-wide' : ''}`}>
+        <div className={`section-page-layout${['schedule', 'seasonal'].includes(page.kind) ? ' is-wide' : ''}`}>
           <main className="section-main">
             {isCatalogPage && (
               <CatalogControls query={query} onQueryChange={setQuery} genre={genre} onGenreChange={setGenre} genres={genres} count={displayedItems.length} format={format} onFormatChange={setFormat} formats={formats} year={year} onYearChange={setYear} years={years} sort={sort} onSortChange={setSort} />
             )}
-            {page.kind === 'seasonal' && seasonItems.length === 0 && <div className="sample-data-note">{t('seasonEmpty')}</div>}
-            {page.kind === 'seasonal' && <AiringToday />}
-            {page.kind === 'schedule' && <WeeklySchedule items={animeCatalog} />}
+            {page.kind === 'seasonal' && <SeasonPageBody items={seasonItems.length ? seasonItems : filteredItems} fallback={seasonItems.length === 0} />}
+            {page.kind === 'schedule' && <SchedulePageBody items={animeCatalog} />}
             {page.kind === 'anime-ranking' && <div className="sample-data-note">{t('animeRankingNote')}</div>}
             {page.kind === 'manga-ranking' && <div className="sample-data-note">{t('mangaRankingNote')}</div>}
-            {['anime', 'anime-ranking', 'manga', 'manga-ranking', 'seasonal', 'adapted'].includes(page.kind) && (
+            {['anime', 'anime-ranking', 'manga', 'manga-ranking', 'adapted'].includes(page.kind) && (
               page.kind.includes('ranking')
                 ? <RankedList items={filteredItems} toPrefix={page.kind === 'manga-ranking' ? '/manga' : '/anime'} />
                 : <AnimeGrid items={displayedItems} />
             )}
           </main>
-          {page.kind !== 'schedule' && <aside className="section-rail panel">
+          {!['schedule', 'seasonal'].includes(page.kind) && <aside className="section-rail panel">
             <h2>{t('exploreSections')}</h2>
             {sidebarSections.map((section) => (
               <div className="rail-group" key={L(section.title, lang)}>
