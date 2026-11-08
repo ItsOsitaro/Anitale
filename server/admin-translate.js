@@ -233,7 +233,8 @@ export const register = (app) => {
           setTitle.run(fa, row.id);
         } else {
           if (fa.length > MAX_SYNOPSIS) { result.invalid += 1; problem(id, 'synopsis too long'); continue; }
-          if (persianChars < Math.min(20, fa.length * 0.2)) { result.invalid += 1; problem(id, 'does not look Persian'); continue; }
+          // Only reject text that is clearly not Persian: texts full of Latin names or digits are still valid.
+          if (persianChars < Math.min(8, Math.max(1, fa.length * 0.05)) || fa === readSynopsis(row.synopsis).en) { result.invalid += 1; problem(id, 'does not look Persian'); continue; }
           // No "auto" flag: a person (or Claude, reviewed by a person) wrote this, so it counts as approved.
           setSynopsis.run(JSON.stringify({ fa, en: readSynopsis(row.synopsis).en }), row.id);
         }
