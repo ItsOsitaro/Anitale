@@ -16,6 +16,7 @@ import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdmin
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { animeRowsBy, coreAnimeRows, deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, listMangaCore, mangaItemsBy, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, setAbout, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
+import { registerChatBotRoutes } from './chat-bots.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
@@ -477,6 +478,16 @@ export const createApp = () => {
     if (!FAVORITE_KINDS.includes(kind) || !ref) throw httpError(404, 'Not found');
     return { kind, ref };
   };
+  registerChatBotRoutes(app, {
+    requireSiteUser,
+    userIdOf: (req) => {
+      const row = getUserByUsername(currentSiteUser(req));
+      if (!row) throw httpError(401, 'Not logged in');
+      return row.id;
+    },
+    httpError,
+    limiter: favLimiter,
+  });
   app.get('/api/favorites/:kind/:ref', (req, res) => {
     const { kind, ref } = favParams(req);
     res.setHeader('Cache-Control', 'no-cache');

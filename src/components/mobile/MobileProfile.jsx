@@ -17,7 +17,7 @@ import FollowListSheet from '../FollowListSheet';
 const TABS = ['list', 'activity', 'about'];
 const TAB_KEYS = { list: 'dbTabList', activity: 'dbTabActivity', about: 'dbTabAbout' };
 
-export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [], favorites, hidden, similarity }) {
+export default function MobileProfile({ onOpenFollows, followSheet, profile, entries, animeBySlug, mangaBySlug, followCounts, isOwner, followButton, reviews = [], favorites, hidden, similarity, onShareCard }) {
   const { t, lang } = useSiteLang();
   const [tab, setTab] = useState('list');
   const [media, setMedia] = useState('anime');
@@ -67,7 +67,10 @@ export default function MobileProfile({ onOpenFollows, followSheet, profile, ent
         </p>
         <TasteMatch similarity={similarity} />
         {isOwner ? (
-          <Link className="mprofile__own" to="/dashboard">{t('ownProfile')}</Link>
+          <>
+            <Link className="mprofile__own" to="/dashboard">{t('ownProfile')}</Link>
+            {onShareCard && <button type="button" className="mprofile__own" onClick={onShareCard}>{t('cardMyStats')}</button>}
+          </>
         ) : followButton}
       </header>
 

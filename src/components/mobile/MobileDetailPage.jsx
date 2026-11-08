@@ -8,7 +8,7 @@ import WatchOrder from '../WatchOrder';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useNavigate } from 'react-router-dom';
-import { Check, ChevronRight, Plus, Share2, SlidersHorizontal, X } from 'lucide-react';
+import { Check, ChevronRight, ImageDown, Plus, Share2, SlidersHorizontal, X } from 'lucide-react';
 import { L, useSiteLang } from '@/i18n';
 import PosterCard from './PosterCard';
 import SectionHeader from './SectionHeader';
@@ -110,7 +110,7 @@ function StatusSheet({ open, onClose, statuses, current, onPick, onRemove }) {
 
 export default function MobileDetailPage({
   item, mediaType, related, extras, informationRows, statisticsRows, alternativeTitles, romajiTitle,
-  isSaved, currentStatus, progress, listStatuses, onToggleSaved, onSetStatus, onShare, shareNote,
+  isSaved, currentStatus, progress, listStatuses, onToggleSaved, onSetStatus, onShare, onShareCard, shareNote,
 }) {
   const { t, lang } = useSiteLang();
   const navigate = useNavigate();
@@ -166,6 +166,9 @@ export default function MobileDetailPage({
           </button>
           <button type="button" className="mobile-detail__glass" onClick={onShare} aria-label={t('shareTitle')}>
             <Share2 width={18} height={18} aria-hidden="true" />
+          </button>
+          <button type="button" className="mobile-detail__glass" onClick={onShareCard} aria-label={t('cardOpen')}>
+            <ImageDown width={18} height={18} aria-hidden="true" />
           </button>
         </div>
         <div className="mobile-detail__head">

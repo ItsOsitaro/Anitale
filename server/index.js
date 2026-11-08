@@ -8,6 +8,7 @@ import { startAutoImportScheduler } from './auto-import.js';
 import { startMagazineBackfill } from './magazines.js';
 import { startScoreBackfill } from './score-backfill.js';
 import { startExtrasBackfill } from './extras-backfill.js';
+import { startChatBots } from './chat-bots.js';
 import { initVpn } from './vpn.js';
 
 const added = seedIfEmpty();
@@ -26,6 +27,7 @@ startAutoImportScheduler(app.locals.bulkImport);
 startMagazineBackfill();
 startScoreBackfill();
 startExtrasBackfill();
+startChatBots();
 startMaintenance();
 app.listen(port, host, () => {
   warmSearch(); // build the (slim) search index in the background

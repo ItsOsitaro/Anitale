@@ -4695,3 +4695,51 @@ small { font-size: max(12px, 0.8em); }
 .dx .rec-section { margin: 0 0 8px; }
 .dx-more > .rec-section + * { margin-block-start: 28px; }
 .extras-more.is-chip { margin: 0; min-height: 32px; padding-inline: 14px; font-size: 12.5px; }
+
+/* Install button (PWA) */
+.install-button { display: inline-flex; align-items: center; justify-content: center; min-height: 40px; padding-inline: 18px; border: 1px solid var(--primary); border-radius: 999px; background: transparent; color: var(--primary-text); font: inherit; font-size: 13px; font-weight: 700; cursor: pointer; }
+.install-button:hover { background: color-mix(in oklch, var(--primary) 10%, transparent); }
+.install-hint { margin: 0; color: var(--muted-foreground); font-size: 12.5px; line-height: 1.8; }
+.site-footer .install-button { margin-block-end: 12px; }
+.for-you-why { margin: -4px 0 12px; color: var(--muted-foreground); font-size: 13px; }
+
+/* Share card dialog */
+.share-card__scrim { position: fixed; inset: 0; z-index: 90; display: grid; place-items: center; padding: 16px; background: color-mix(in oklch, var(--foreground) 55%, transparent); backdrop-filter: blur(4px); }
+.share-card { width: min(440px, 100%); max-height: calc(100dvh - 32px); display: flex; flex-direction: column; gap: 14px; padding: 18px; border-radius: 22px; background: var(--card); box-shadow: 0 30px 70px -20px rgba(0, 0, 0, .5); overflow: hidden; }
+.share-card__head { display: flex; align-items: center; justify-content: space-between; }
+.share-card__head h2 { margin: 0; font-size: 17px; font-weight: 800; }
+.share-card__close { width: 40px; height: 40px; border: 0; border-radius: 12px; background: var(--muted); color: var(--foreground); font-size: 24px; line-height: 1; cursor: pointer; }
+.share-card__sizes { display: flex; gap: 8px; }
+.share-card__sizes button { flex: 1; min-height: 40px; border: 1px solid var(--border); border-radius: 12px; background: var(--background); color: var(--foreground); font: inherit; font-weight: 700; cursor: pointer; }
+.share-card__sizes button[aria-pressed="true"] { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.share-card__preview { display: grid; place-items: center; min-height: 0; flex: 1; overflow: auto; border-radius: 16px; background: var(--muted); }
+.share-card__preview img { display: block; width: 100%; max-height: 52dvh; object-fit: contain; }
+.share-card__preview p { margin: 40px 16px; color: var(--muted-foreground); }
+.share-card__actions { display: flex; gap: 10px; }
+.share-card__btn { flex: 1; display: inline-flex; align-items: center; justify-content: center; min-height: 46px; border: 1px solid var(--border); border-radius: 14px; background: var(--background); color: var(--foreground); font: inherit; font-weight: 700; text-decoration: none; cursor: pointer; }
+.share-card__btn.is-primary { background: var(--primary); border-color: var(--primary); color: var(--primary-foreground); }
+.share-card__btn.is-disabled { opacity: .5; pointer-events: none; }
+.share-card__close:focus-visible, .share-card__btn:focus-visible, .share-card__sizes button:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+
+/* Messenger links (account page) */
+.chat-link { display: grid; gap: 10px; padding-block: 14px; border-block-start: 1px solid var(--border); }
+.chat-link:first-of-type { border-block-start: 0; }
+.chat-link__row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.chat-link__state { padding: 3px 12px; border-radius: 999px; background: var(--muted); color: var(--muted-foreground); font-size: 12.5px; font-weight: 700; }
+.chat-link__state.is-on { background: color-mix(in oklch, oklch(0.58 0.13 152) 16%, var(--card)); color: var(--foreground); }
+.chat-link__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.chat-link__code { display: grid; gap: 8px; }
+.chat-link__code p { margin: 0; font-size: 13.5px; line-height: 1.9; }
+.chat-link__open { justify-self: start; display: inline-flex; align-items: center; min-height: 44px; padding-inline: 20px; border-radius: 14px; background: var(--primary); color: var(--primary-foreground); font-weight: 700; text-decoration: none; }
+.chat-link__manual code { display: inline-block; padding: 3px 10px; border-radius: 8px; background: var(--muted); font-size: 13px; user-select: all; }
+
+/* Search page: filters as one tidy panel instead of loose selects */
+.search-page { max-width: 1240px; }
+.search-page__filters {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 14px 16px; align-items: end;
+  padding: 18px; border: 1px solid color-mix(in oklch, var(--border) 80%, transparent); border-radius: 18px; background: var(--card);
+}
+.search-page__filters .search-filter { display: grid; gap: 6px; min-width: 0; color: var(--muted-foreground); font-size: 12.5px; font-weight: 600; }
+.search-page__filters .search-filter select, .search-page__filters .search-filter input { width: 100%; min-height: 42px; }
+.search-page__filters .sensitive-toggle { grid-column: 1 / -1; padding-block-start: 4px; border-block-start: 1px solid color-mix(in oklch, var(--border) 60%, transparent); }
+.search-page__types button { min-height: 40px; }

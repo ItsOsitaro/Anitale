@@ -15,6 +15,10 @@ import MobileProfile from '@/components/mobile/MobileProfile';
 import { coverUrl } from '@/lib/cover';
 import { isEmail } from './accountPages.jsx';
 import { profileInsights } from '@/lib/profile-insights';
+import ShareCardDialog from '@/components/ShareCardDialog';
+import { profileCardData } from '@/lib/share-card';
+import { formatNumber, formatScore } from '@/lib/digits.js';
+import { genreLabel } from '@/lib/genre-kinds';
 import { ProfileFavorites } from '@/components/Favorites';
 import { ProfileStacks } from '@/stacksPages.jsx';
 import TasteMatch from '@/components/TasteMatch';
@@ -669,6 +673,7 @@ export function UserPublicProfile() {
   const [loadFailed, setLoadFailed] = useState(false);
   const [tab, setTab] = useState('anime');
   const [followSheet, setFollowSheet] = useState(null); // 'followers' | 'following' | null
+  const [card, setCard] = useState(null);
   // Follow-graph state: null until the profile loads, then a local override
   // { followers, following, isFollowing } after a follow/unfollow action.
   const [followCountsState, setFollowCountsState] = useState(null);
@@ -725,10 +730,14 @@ export function UserPublicProfile() {
 
   const resolve = (entry) => (tab === 'anime' ? animeBySlug : mangaBySlug).get(entry.slug);
   const insights = profileInsights(entries, animeBySlug, mangaBySlug);
+  const openCard = () => setCard(profileCardData({ profile, insights, lang, t, formatNumber, formatScore, genreLabel, coverUrl }));
+  const cardDialog = card && <ShareCardDialog kind="profile" data={card} fileName={`anitale-${profile.username}`} onClose={() => setCard(null)} />;
 
   if (isMobile) {
     return (
+      <>
       <MobileProfile
+        onShareCard={isOwner ? openCard : null}
         onOpenFollows={setFollowSheet}
         followSheet={followSheet}
         profile={profile}
@@ -750,6 +759,8 @@ export function UserPublicProfile() {
           />
         )}
       />
+      {cardDialog}
+      </>
     );
   }
 
@@ -777,6 +788,7 @@ export function UserPublicProfile() {
               setFollowCountsState({ followers: followTotal, following: followCounts.following, isFollowing: nextFlag });
             }}
           />
+          {isOwner && <Button type="button" variant="outline" size="sm" onClick={openCard}>{t('cardMyStats')}</Button>}
         </div>
         {profile.bio && <p className="profile-bio">{profile.bio}</p>}
         {profile.about && <section className="profile-about panel" aria-label={t('aboutTitle')}><h2>{t('aboutTitle')}</h2><AboutRich text={profile.about} /></section>}
@@ -831,6 +843,7 @@ export function UserPublicProfile() {
           </div>
         </section>
       )}
+      {cardDialog}
     </main>
   );
 }

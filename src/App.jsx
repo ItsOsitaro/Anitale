@@ -57,6 +57,9 @@ import MobileRankingPage from '@/components/mobile/MobileRankingPage';
 import MobileSeasonalPage from '@/components/mobile/MobileSeasonalPage';
 import { SchedulePageBody, SeasonPageBody } from './airingBoard.jsx';
 import UserRecs from './components/Recommendations.jsx';
+import InstallButton from '@/components/InstallButton';
+import { useForYou } from '@/hooks/use-for-you';
+import ShareCardDialog from '@/components/ShareCardDialog';
 import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 import { coverUrl } from '@/lib/cover';
 
@@ -546,6 +549,7 @@ function HomePage() {
   const animeCatalog = useVisibleCatalog();
   const mangaCatalog = useVisibleMangaCatalog();
   const picks = selectHomePicks({ animeCatalog, mangaCatalog });
+  const forYou = useForYou();
   const { topAnime, currentSeason, topAiring, mangaItems, freshManga, popularAnime, upcomingAnime } = picks;
   // «پیشنهادی»: a fully random pick from the catalog — re-rolled on every
   // visit, and manually re-rollable with the dice action in the hero.
@@ -581,7 +585,7 @@ function HomePage() {
   }, [t]);
 
   if (isMobile) {
-    return <MobileHomePage lang={lang} t={t} picks={{ ...picks, animeCatalog }} />;
+    return <MobileHomePage lang={lang} t={t} picks={{ ...picks, animeCatalog, forYou }} />;
   }
 
   return (
@@ -616,6 +620,13 @@ function HomePage() {
                     </button>
                   </div>
                 </div>
+              </section>
+            )}
+            {forYou.items.length > 0 && (
+              <section id="forYou">
+                <SectionHeading title={t('forYou')} />
+                <p className="for-you-why">{t('forYouWhy', { genres: forYou.genres.map((g) => genreLabel(g, lang)).join(lang === 'fa' ? '، ' : ', ') })}</p>
+                <AnimeShelf items={forYou.items} />
               </section>
             )}
             <section id="topAnimeGrid">
@@ -654,6 +665,7 @@ function HomePage() {
           </aside>
         </div>
         <footer className="site-footer">
+          <InstallButton />
           <p>{t('footerCopyright')}</p>
         </footer>
       </div>
@@ -992,6 +1004,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   // Share / copy link for this title (Web Share API when available, clipboard
   // fallback otherwise). The note clears itself after a beat.
   const [shareNote, setShareNote] = useState('');
+  const [card, setCard] = useState(null);
   const noteTimer = useRef(null);
   const shareTitle = async () => {
     clearTimeout(noteTimer.current);
@@ -1138,9 +1151,23 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   ];
 
 
+  const openCard = () => setCard({
+    title: item.title,
+    facts: heroFacts.slice(0, 3).join(' · '),
+    score: scoreValue ? formatScore(scoreValue, lang) : '',
+    scoreLabel: t('scoreLabel'),
+    genres: (item.genres || []).slice(0, 4).map((genre) => genreLabel(genre, lang)),
+    cover: coverUrl(item.image, 720),
+    rtl: lang === 'fa',
+    tagline: t('cardTagline'),
+  });
+  const cardDialog = card && <ShareCardDialog kind="title" data={card} fileName={`anitale-${item.slug}`} onClose={() => setCard(null)} />;
+
   if (isMobile) {
     return (
+      <>
       <MobileDetailPage
+        onShareCard={openCard}
         item={item}
         mediaType={mediaType}
         related={related}
@@ -1158,6 +1185,8 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         onShare={shareTitle}
         shareNote={shareNote}
       />
+      {cardDialog}
+      </>
     );
   }
 
@@ -1239,6 +1268,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                   </svg>
                   {t('shareTitle')}
                 </Button>
+                <Button className="detail-share-button" variant="outline" size="sm" type="button" onClick={openCard}>{t('cardOpen')}</Button>
                 {shareNote && <span className="detail-share-note" role="status">{shareNote}</span>}
               </div>
                 </div>
@@ -1361,6 +1391,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
           </div>
         </main>
       </div>
+      {cardDialog}
     </>
   );
 }

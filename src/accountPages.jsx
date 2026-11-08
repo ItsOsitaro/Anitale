@@ -5,6 +5,7 @@ import { Input } from '@/components/ui/input';
 import { useSiteLang } from './i18n.js';
 import { useUser, userApi } from './user.jsx';
 import SensitiveToggle from './components/SensitiveToggle.jsx';
+import MessengerLinks from './components/MessengerLinks.jsx';
 
 // Email-based account recovery: a verified email gets a one-hour, single-use
 // link to choose a new password.
@@ -301,6 +302,8 @@ export function AccountSecurityPage() {
           <Button type="button" variant="outline" size="sm" onClick={() => setEditing(true)}>{t('accountEmailChange')}</Button>
         )}
       </section>
+
+      <MessengerLinks />
 
       <section className="auth-card" aria-labelledby="prHeading">
         <h1 id="prHeading">{t('privacyHead')}</h1>

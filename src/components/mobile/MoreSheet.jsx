@@ -4,6 +4,7 @@ import { sidebarSections } from '@/sectionData';
 import { L, useSiteLang } from '@/i18n';
 import { useUser } from '@/user';
 import { cn } from 'cn';
+import InstallButton from '@/components/InstallButton';
 
 export default function MoreSheet({ open, onClose }) {
   const { t, lang, setLang } = useSiteLang();
@@ -58,6 +59,7 @@ export default function MoreSheet({ open, onClose }) {
           ))}
         </div>
         <div className="more-sheet__footer">
+          <InstallButton className="more-sheet__footer-btn" />
           <button
             type="button"
             className="more-sheet__footer-btn"

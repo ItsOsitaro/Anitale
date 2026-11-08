@@ -10,6 +10,7 @@ import Rail from './Rail';
 import PosterCard from './PosterCard';
 import RankRow from './RankRow';
 import { coverUrl } from '@/lib/cover';
+import { genreLabel } from '@/lib/genre-kinds';
 
 function WideCard({ item }) {
   const { lang, t } = useSiteLang();
@@ -65,6 +66,17 @@ export default function MobileHomePage({ picks, lang, t }) {
       {heroItems && heroItems.length > 0 && <HeroCarousel items={heroItems} />}
       <IntroStrip />
       <QuickChips />
+      {picks.forYou?.items.length > 0 && (
+        <>
+          <SectionHeader title={t('forYou')} />
+          <p className="for-you-why">{t('forYouWhy', { genres: picks.forYou.genres.map((g) => genreLabel(g, lang)).join(lang === 'fa' ? '، ' : ', ') })}</p>
+          <Rail>
+            {picks.forYou.items.map((item) => (
+              <PosterCard key={item.slug} item={item} mediaType="anime" />
+            ))}
+          </Rail>
+        </>
+      )}
       <SectionHeader title={t('homeSeason')} to="/seasonal" />
       <Rail>
         {picks.currentSeason.map((item) => (
