@@ -19,6 +19,7 @@ import { formatNumber, formatScore } from '@/lib/digits.js';
 import { infoLabel, infoValue } from '@/lib/info-labels.js';
 import CommunitySection from '../CommunitySection';
 import UserRecs from '../Recommendations.jsx';
+import { genreHref } from '@/lib/landing';
 import { hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
 
 const TAB_IDS = ['summary', 'media', 'reviews', 'info', 'team', 'related'];
@@ -197,7 +198,7 @@ export default function MobileDetailPage({
       {item.genres?.length > 0 && (
         <ul className="mobile-detail__chips" aria-label={t('genresLabel')}>
           {item.genres.map((genre) => (
-            <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genreLabel(genre, lang)}</Link></li>
+            <li key={genre}><Link to={genreHref(genre)}>{genreLabel(genre, lang)}</Link></li>
           ))}
         </ul>
       )}

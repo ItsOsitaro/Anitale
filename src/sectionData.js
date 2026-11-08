@@ -27,6 +27,8 @@ export const sidebarSections = [
       { label: { fa: 'کاتالوگ مانگا', en: 'Manga catalog' }, to: '/manga' },
       { label: { fa: 'فصل پخش', en: 'Seasonal lineup' }, to: '/seasonal' },
       { label: { fa: 'جدول پخش هفتگی', en: 'Weekly schedule' }, to: '/schedule' },
+      { label: { fa: 'امروز چی ببینم؟', en: 'What to watch?' }, to: '/pick' },
+      { label: { fa: 'ژانرها و فصل‌ها', en: 'Genres & seasons' }, to: '/genres' },
       { label: { fa: 'برترین انیمه‌ها', en: 'Top anime' }, to: '/top/anime' },
       { label: { fa: 'برترین مانگا', en: 'Top manga' }, to: '/top/manga' },
       { label: { fa: 'برترین شخصیت‌ها', en: 'Top characters' }, to: '/top/characters' },

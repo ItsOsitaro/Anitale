@@ -34,6 +34,8 @@ export default function ImportListPage() {
   const [progress, setProgress] = useState(0);
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [alName, setAlName] = useState('');
+  const [alBusy, setAlBusy] = useState(false);
 
   useEffect(() => { document.title = `${t('importListTitle')} · ${t('siteName')}`; }, [t]);
 
@@ -55,6 +57,21 @@ export default function ImportListPage() {
     } catch (failure) {
       setError(failure.message === 'EMPTY' ? t('importErrEmpty') : failure.message === 'GZIP_UNSUPPORTED' ? t('importErrGzip') : t('importErrXml'));
     }
+  };
+
+  // AniList: the server reads the public list; from here on it is the same preview-and-import flow as an uploaded file.
+  const fetchAnilist = async () => {
+    const name = alName.trim();
+    if (!name || alBusy) return;
+    setError(''); setItems(null); setResult(null); setPhase('idle'); setAlBusy(true);
+    try {
+      const res = await fetch('/api/user/anilist-list', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: name }) });
+      const body = await res.json().catch(() => ({}));
+      if (!res.ok) { setError(res.status === 404 ? t('anilistNotFound') : res.status === 429 ? t('importErrLimit') : res.status === 400 ? t('anilistBadName') : t('anilistFail')); return; }
+      if (!body.items?.length) { setError(t('importErrEmpty')); return; }
+      setFileName(`AniList: ${name}`);
+      setItems(body.items);
+    } catch { setError(t('anilistFail')); } finally { setAlBusy(false); }
   };
 
   const run = async () => {
@@ -99,6 +116,14 @@ export default function ImportListPage() {
           <input type="file" accept=".xml,.gz,.xml.gz,application/xml,text/xml,application/gzip" onChange={onFile} disabled={phase === 'running'} />
           <span>{fileName || t('importChoose')}</span>
         </label>
+        <div className="anilist-box">
+          <h2>{t('anilistTitle')}</h2>
+          <p className="import-lead">{t('anilistHint')}</p>
+          <form className="anilist-row" onSubmit={(event) => { event.preventDefault(); fetchAnilist(); }}>
+            <input type="text" dir="ltr" value={alName} onChange={(event) => setAlName(event.target.value)} placeholder="AniList username" aria-label={t('anilistTitle')} maxLength={40} autoComplete="off" />
+            <Button type="submit" variant="outline" disabled={alBusy || !alName.trim() || phase === 'running'}>{alBusy ? t('anilistFetching') : t('anilistFetch')}</Button>
+          </form>
+        </div>
         {error && <p className="import-error" role="alert">{error}</p>}
 
         {items && phase !== 'done' && (

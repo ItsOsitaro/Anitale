@@ -55,11 +55,36 @@ const factsOf = (item, kind) => {
     producers: list('Producers'),
     magazines: kind === 'manga' && item.serialization?.length ? item.serialization.map(intern) : NONE,
     rating: intern(infoValue(item, 'Rating').split(' - ')[0].trim()),
+    premiered: intern(infoValue(item, 'Premiered').toLowerCase()), // "fall 2025"; the season landing pages filter on it
     members: countOf(item.statistics?.members) || Number(item.members) || 0,
     votes: countOf(item.statistics?.scoredBy),
     episodes: kind === 'manga' ? (Number(item.chapters) || 0) : countOf(infoValue(item, 'Episodes')),
     letter: /^[A-Z]$/.test(first) ? first : '#',
   };
+};
+
+// Persian speakers type titles by sound ("ناروتو" for Naruto). Persian and Latin text both reduce to the same coarse
+// consonant skeleton (vowels dropped, similar consonants merged), so "nrt" finds Naruto from either spelling.
+const PH_FA = {
+  'ب': 'b', 'پ': 'b', 'ت': 't', 'ط': 't', 'د': 't', 'ث': 's', 'س': 's', 'ص': 's', 'ز': 's', 'ذ': 's', 'ض': 's', 'ظ': 's', 'ژ': 's',
+  'ج': 'j', 'چ': 'j', 'ش': 'j', 'ح': 'h', 'ه': 'h', 'خ': 'k', 'ک': 'k', 'ق': 'k', 'گ': 'k', 'غ': 'k', 'ر': 'r', 'ل': 'l', 'م': 'm', 'ن': 'n', 'ف': 'f',
+};
+const PH_LA = { b: 'b', p: 'b', t: 't', d: 't', s: 's', z: 's', x: 's', j: 'j', c: 'k', g: 'k', k: 'k', q: 'k', h: 'h', r: 'r', l: 'l', m: 'm', n: 'n', f: 'f', v: 'f' };
+// Words are kept apart (a space between each word's skeleton) so a match must start at a word, not in the middle of one.
+export const skeleton = (text) => {
+  const latin = foldTitle(text).replace(/sh|ch/g, 'j').replace(/kh/g, 'k').replace(/ph/g, 'f')
+    .replace(/(\p{L})\1/gu, '$1'); // doubled letters ("full") sound like one, as Persian writes them
+  const words = [];
+  for (const word of latin.split(/[^\p{L}\p{N}]+/u)) {
+    let out = '';
+    for (const ch of word) {
+      const code = PH_FA[ch] || PH_LA[ch];
+      if (code) out += code;
+      else if (/[0-9]/.test(ch)) out += ch;
+    }
+    if (out) words.push(out);
+  }
+  return words.join(' ');
 };
 
 // One flat object per title. `item` points back at it, so code that reads doc.item.title
@@ -82,6 +107,7 @@ const makeDoc = (kind, item, image) => {
     t: [item.title, item.titleFa, alt.english, alt.romaji, alt.japanese, ...(alt.synonyms || [])].filter(Boolean).map(foldTitle).join(''),
     g: genres.map((name) => intern(foldTitle(name))),
     sensitive: isSensitiveItem(item),
+    ph: skeleton([item.title, alt.english, alt.romaji].filter(Boolean).join(' ')),
     ...factsOf(item, kind),
   };
   doc.item = doc;
@@ -275,7 +301,7 @@ const buildFacets = (matched) => ({
 // genres / excludeGenres are arrays (a title must have every included genre and none of the excluded);
 // the old single `genre` and `year` still work. fromYear/toYear bound the year, inclusive.
 // producer / magazine narrow by those company names (company pages).
-export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], excludeGenres = [], year = '', fromYear = 0, toYear = 0, format = '', status = '', studio = '', producer = '', magazine = '', rating = '', letter = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false, raw = false }) => {
+export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], excludeGenres = [], year = '', fromYear = 0, toYear = 0, format = '', status = '', studio = '', producer = '', magazine = '', rating = '', premiered = '', minEps = 0, maxEps = 0, letter = '', minScore = 0, sort = '', page = 1, limit = 24, sfw = false, raw = false }) => {
   const needle = foldTitle(String(q).trim());
   const docs = getDocs();
 
@@ -300,6 +326,21 @@ export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], e
     }
   }
   const relevanceOf = (doc) => rel.get(doc) ?? 1;
+
+  // Persian letters and few plain matches: try the sound-alike skeleton (needs 3+ consonants to stay specific).
+  if (/[\u0600-\u06FF]/.test(needle) && matched.length < 8) {
+    const wanted = skeleton(needle);
+    if (wanted.replace(/ /g, '').length >= 3) {
+      const probe = ` ${wanted}`;
+      const flat = wanted.replace(/ /g, ''); // Persian writes "فول متال" with a space where Latin has "Fullmetal"
+      for (const doc of docs) {
+        if ((type !== 'all' && doc.kind !== type) || (sfw && doc.sensitive) || rel.has(doc)) continue;
+        if (!` ${doc.ph}`.includes(probe) && !(flat.length >= 5 && doc.ph.replace(/ /g, '').startsWith(flat))) continue;
+        matched.push(doc);
+        rel.set(doc, doc.ph.startsWith(wanted) ? 12 : 8);
+      }
+    }
+  }
 
   // Facets describe what the text matched, before the other filters narrow it.
   // The no-text case (the whole catalog) is cached until the index is rebuilt.
@@ -328,6 +369,9 @@ export const searchCatalog = ({ q = '', type = 'all', genre = '', genres = [], e
       && (!producer || (doc.producers || []).includes(producer))
       && (!magazine || (doc.magazines || []).includes(magazine))
       && (!rating || doc.rating === rating)
+      && (!premiered || doc.premiered === premiered)
+      && (!minEps || doc.episodes >= minEps)
+      && (!maxEps || (doc.episodes > 0 && doc.episodes <= maxEps))
       && (!letter || doc.letter === letter)
       && (!minScore || (doc.item.sampleScore ?? 0) >= minScore)
     );

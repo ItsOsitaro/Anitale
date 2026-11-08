@@ -2,7 +2,7 @@ import './config.js';
 import { fetch } from 'undici';
 import { getDispatcher, viaProxy } from './proxy.js';
 
-const BASE = 'https://graphql.anilist.co';
+const BASE = process.env.ANILIST_URL || 'https://graphql.anilist.co'; // the override is for tests
 const MIN_GAP_MS = 700; // AniList allows ~90 requests/minute
 const timeoutMs = () => (viaProxy() ? 25_000 : 10_000);
 
@@ -49,6 +49,7 @@ const gql = async (query, variables, retried = false) => {
     if (/temporarily disabled/i.test(text)) {
       throw fail('AniList has temporarily disabled its API (their current outage). Try again later, or add the title manually.', 503);
     }
+    if (response.status === 404) throw fail('Not found', 404); // AniList answers an unknown user/title with a real 404
     throw fail(`AniList data provider returned HTTP ${response.status}`);
   }
   const body = await response.json();
@@ -354,4 +355,53 @@ export const anilistMangaDraft = async (malId) => {
   const draft = found.get(Number(malId));
   if (!draft) throw fail('Not found on MyAnimeList', 404);
   return draft;
+};
+
+// ---- A member's public AniList list (for the "import my list" page) ---------------------------------
+const LIST_QUERY = `query ($name: String, $type: MediaType) {
+  MediaListCollection(userName: $name, type: $type) {
+    user { mediaListOptions { scoreFormat } }
+    lists { entries { status score progress repeat startedAt { year month day } completedAt { year month day } media { idMal title { romaji english } } } }
+  }
+}`;
+const STATUS = { CURRENT: 'watching', REPEATING: 'watching', COMPLETED: 'completed', PAUSED: 'on_hold', DROPPED: 'dropped', PLANNING: 'planned' };
+// AniList lets each member pick a score scale; everything is brought to our 1-10 whole numbers (0 = not scored).
+const toTen = (score, format) => {
+  const n = Number(score) || 0;
+  if (n <= 0) return 0;
+  if (format === 'POINT_100') return Math.max(1, Math.min(10, Math.round(n / 10)));
+  if (format === 'POINT_5') return Math.min(10, Math.round(n * 2));
+  if (format === 'POINT_3') return [0, 3, 6, 9][Math.min(3, Math.round(n))];
+  return Math.max(1, Math.min(10, Math.round(n))); // POINT_10 and POINT_10_DECIMAL
+};
+const pad2 = (n) => String(n).padStart(2, '0');
+const dateOf = (d) => (d?.year && d?.month && d?.day ? `${d.year}-${pad2(d.month)}-${pad2(d.day)}` : null);
+
+export const anilistUserList = async (name) => {
+  const items = [];
+  let withoutMalId = 0;
+  for (const [type, mediaType] of [['anime', 'ANIME'], ['manga', 'MANGA']]) {
+    const data = await enqueue(() => gql(LIST_QUERY, { name, type: mediaType }));
+    const collection = data?.MediaListCollection;
+    const format = collection?.user?.mediaListOptions?.scoreFormat;
+    const seen = new Set();
+    for (const list of collection?.lists || []) {
+      for (const entry of list.entries || []) {
+        const malId = entry.media?.idMal;
+        if (!malId) { withoutMalId += 1; continue; }
+        if (seen.has(malId)) continue; // a title can sit in a custom list as well as its status list
+        seen.add(malId);
+        const score = toTen(entry.score, format);
+        items.push({
+          type, malId, status: STATUS[entry.status] || 'planned',
+          ...(score ? { score } : {}),
+          progress: Math.min(5000, Number(entry.progress) || 0),
+          startDate: dateOf(entry.startedAt), finishDate: dateOf(entry.completedAt),
+          rewatch: Math.min(99, Number(entry.repeat) || 0),
+          title: String(entry.media?.title?.english || entry.media?.title?.romaji || '').slice(0, 200),
+        });
+      }
+    }
+  }
+  return { items, withoutMalId };
 };

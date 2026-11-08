@@ -70,6 +70,19 @@ await bots.handleUpdate('telegram', { chat: { id: 778 }, text: `/start ${alertCo
 assert.equal(bots.alertInfo().find((p) => p.id === 'telegram').linked, true, 'a used alert code does not move the link');
 assert.ok(sent.at(-1).text.includes('معتبر نیست'));
 
+// 6. weekly digest: Tehran day and time, once a week
+assert.deepEqual(bots.tehranSlot('Sun', 'Sundays at 00:00 (JST)'), { day: 'Sat', time: '18:30' });
+assert.deepEqual(bots.tehranSlot('Mon', 'Mondays at 06:00 (JST)'), { day: 'Mon', time: '00:30' });
+db.prepare("INSERT OR REPLACE INTO chat_links (user_id, provider, chat_id) VALUES (1, 'telegram', '555')").run();
+const digest = bots.digestFor(1);
+assert.ok(digest.includes('شنبه ۱۸:۳۰') && digest.includes('Test Show'), 'the digest lists the show in Tehran time');
+const saturday = Date.UTC(2026, 10, 7, 6, 0); // Sat 2026-11-07 09:30 Tehran
+const beforeDigest = sent.length;
+assert.equal(await bots.sendWeeklyDigest(saturday - 5 * 3600000), 0, 'not before Saturday 09:00 Tehran');
+assert.equal(await bots.sendWeeklyDigest(saturday), 1);
+assert.equal(await bots.sendWeeklyDigest(saturday + 3600000), 0, 'only once per week');
+assert.equal(sent.length, beforeDigest + 1);
+
 console.log('chat-bots: all checks passed');
 server.close();
 process.exit(0);

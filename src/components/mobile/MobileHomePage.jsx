@@ -5,6 +5,7 @@ import { displayTitle, selectCurrentSeasonPicks } from '@/home-data';
 import HeroCarousel from './HeroCarousel';
 import IntroStrip from '@/components/IntroStrip';
 import OnboardingPicker from '@/components/OnboardingPicker';
+import CommunityPicks from '@/components/CommunityPicks';
 import QuickChips from './QuickChips';
 import SectionHeader from './SectionHeader';
 import Rail from './Rail';
@@ -117,6 +118,7 @@ export default function MobileHomePage({ picks, lang, t }) {
           </Rail>
         </>
       )}
+      <CommunityPicks />
       {picks.freshManga && picks.freshManga.length > 0 && (
         <>
           <SectionHeader title={t('freshManga')} to="/manga" />

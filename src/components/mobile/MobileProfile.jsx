@@ -1,5 +1,6 @@
 import { ProfileFavorites } from '../Favorites';
 import { ProfileStacks } from '@/stacksPages.jsx';
+import Achievements from '@/components/Achievements';
 import TasteMatch from '../TasteMatch';
 import { AboutRich } from '@/lib/safe-markup.jsx';
 import { useMemo, useState } from 'react';
@@ -168,6 +169,7 @@ export default function MobileProfile({ onOpenFollows, followSheet, profile, ent
           <p className="mprofile__joined"><time dateTime={profile.joinedAt}>{t('dashJoined', { date: joined })}</time></p>
           <ProfileFavorites favorites={favorites} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
           <ProfileStacks username={profile.username} />
+          <Achievements insights={insights} reviews={reviews} />
           <StatusBreakdown insights={insights} />
           <FavoriteGenres insights={insights} />
           <TopRated insights={insights} />

@@ -76,4 +76,6 @@ const FA = {
   josei: 'جوسی', kids: 'کودکان', seinen: 'سینن', shoujo: 'شوجو', shounen: 'شونن',
 };
 
+export const GENRE_KEYS = Object.keys(FA);
+
 export const genreLabel = (name, lang) => (lang === 'fa' ? FA[String(name || '').trim().toLowerCase()] || name : name);

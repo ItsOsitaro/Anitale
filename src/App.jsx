@@ -61,6 +61,10 @@ import InstallButton from '@/components/InstallButton';
 import { useForYou } from '@/hooks/use-for-you';
 import ShareCardDialog from '@/components/ShareCardDialog';
 import OnboardingPicker from '@/components/OnboardingPicker';
+import { BrowsePage, GenresIndex } from './landingPages.jsx';
+import PickPage from './pickPage.jsx';
+import CommunityPicks from '@/components/CommunityPicks';
+import { genreHref } from '@/lib/landing';
 import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 import { coverUrl } from '@/lib/cover';
 
@@ -653,6 +657,7 @@ function HomePage() {
               <SectionHeading title={t('mostPopular')} to="/anime" action="browseAll" />
               <AnimeShelf items={popularAnime} />
             </section>
+            <CommunityPicks />
             {freshManga.length > 0 && (
               <section id="freshManga">
                 <SectionHeading title={t('freshManga')} to="/manga" action="browseAll" />
@@ -1231,7 +1236,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                   {item.genres?.length > 0 && (
                     <ul className="detail-genre-chips" aria-label={t('genresLabel')}>
                       {item.genres.map((genre) => (
-                        <li key={genre}><Link to={`/search?genre=${encodeURIComponent(genre)}`}>{genreLabel(genre, lang)}</Link></li>
+                        <li key={genre}><Link to={genreHref(genre)}>{genreLabel(genre, lang)}</Link></li>
                       ))}
                     </ul>
                   )}
@@ -1514,6 +1519,10 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="/admin/*" element={<Suspense fallback={<CatalogLoadingFallback />}><AdminApp theme={theme} onThemeChange={onThemeChange} /></Suspense>} />
       <Route path="/anime/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} />} />
       <Route path="/manga/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} mediaType="manga" />} />
+      <Route path="/pick" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PickPage /></WithHeader>} />
+      <Route path="/genres" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><GenresIndex /></WithHeader>} />
+      <Route path="/genre/:slug" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><BrowsePage kind="genre" /></WithHeader>} />
+      <Route path="/season/:year/:season" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><BrowsePage kind="season" /></WithHeader>} />
       <Route path="/search" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><SearchPage /></WithHeader>} />
       <Route path="/login" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="login" /></WithHeader>} />
       <Route path="/register" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="register" /></WithHeader>} />

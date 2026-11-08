@@ -204,6 +204,52 @@ const broadcastOf = (information) => {
   try { return (JSON.parse(information) || []).find((row) => row?.label === 'Broadcast')?.value || ''; } catch { return ''; }
 };
 
+// ---- weekly digest (Saturday morning, Tehran time) --------------------------------------------------
+const FA_DAYS = { Sat: 'شنبه', Sun: 'یک‌شنبه', Mon: 'دوشنبه', Tue: 'سه‌شنبه', Wed: 'چهارشنبه', Thu: 'پنجشنبه', Fri: 'جمعه' };
+const TEHRAN_ORDER = ['Sat', 'Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
+const JS_DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const TEHRAN_MS = (3 * 60 + 30) * 60000;
+const faDigits = (text) => String(text).replace(/[0-9]/g, (d) => '۰۱۲۳۴۵۶۷۸۹'[d]);
+
+// Broadcast day/time (Japan) -> day/time in Tehran (UTC+3:30, no daylight saving), the same maths as the schedule page.
+export const tehranSlot = (airingDay, broadcast) => {
+  const match = /(\d{1,2}):(\d{2})/.exec(String(broadcast || ''));
+  const day = DAYS[String(airingDay || '').slice(0, 3).toLowerCase()];
+  if (!match || day === undefined) return null;
+  let minutes = Number(match[1]) * 60 + Number(match[2]) - (9 * 60 - (3 * 60 + 30));
+  let shift = 0;
+  if (minutes < 0) { minutes += 1440; shift = -1; }
+  return { day: JS_DAYS[(day + shift + 7) % 7], time: `${String(Math.floor(minutes / 60)).padStart(2, '0')}:${String(minutes % 60).padStart(2, '0')}` };
+};
+
+export const digestFor = (userId) => {
+  const rows = db.prepare(`
+    SELECT a.slug, a.title, a.airing_day, a.information FROM user_entries e JOIN anime a ON a.slug = e.slug
+    WHERE e.user_id = ? AND e.media_type = 'anime' AND e.status = 'watching' AND a.airing_day != ''`).all(userId);
+  const slots = rows.map((row) => ({ title: row.title, slug: row.slug, slot: tehranSlot(row.airing_day, broadcastOf(row.information)) })).filter((r) => r.slot);
+  if (!slots.length) return '';
+  slots.sort((a, b) => TEHRAN_ORDER.indexOf(a.slot.day) - TEHRAN_ORDER.indexOf(b.slot.day) || a.slot.time.localeCompare(b.slot.time));
+  const lines = slots.map((r) => `• ${FA_DAYS[r.slot.day]} ${faDigits(r.slot.time)} — ${r.title}`);
+  return `📅 برنامه‌ی این هفته‌ی تو (به وقت تهران)\n\n${lines.join('\n')}\n\nقسمت‌ها در ژاپن همان ساعت پخش می‌شوند و زیرنویس‌ها کمی بعد می‌آیند.\n${siteUrl()}/schedule`;
+};
+
+// Once a week, from Saturday 09:00 Tehran: one message per linked member who is watching something that airs.
+export const sendWeeklyDigest = async (now = Date.now()) => {
+  const tehran = new Date(now + TEHRAN_MS);
+  if (tehran.getUTCDay() !== 6 || tehran.getUTCHours() < 9) return 0;
+  const week = tehran.toISOString().slice(0, 10);
+  if (getSetting('digest.lastWeek', '') === week) return 0;
+  setSetting('digest.lastWeek', week); // before sending, so a restart halfway never sends twice
+  let sent = 0;
+  for (const link of db.prepare('SELECT user_id, provider, chat_id FROM chat_links').all()) {
+    if (!configured(link.provider)) continue;
+    const text = digestFor(link.user_id);
+    if (!text) continue;
+    try { await sendMessage(link.provider, link.chat_id, text); sent += 1; await new Promise((r) => setTimeout(r, 120)); } catch { /* blocked chats are cleaned up by the episode notices */ }
+  }
+  return sent;
+};
+
 let notifying = false;
 export const notifyDue = async (now = Date.now()) => {
   if (notifying) return 0;
@@ -249,6 +295,7 @@ export const startChatBots = () => {
   for (const id of Object.keys(PROVIDERS)) poll(id).catch((error) => console.error(`[chat:${id}] stopped: ${error.message}`));
   // The notice job is cheap, so it always runs; without a token it finds no configured provider and sends nothing.
   setInterval(() => notifyDue().catch((error) => console.error(`[chat] ${error.message}`)), 10 * 60000).unref();
+  setInterval(() => sendWeeklyDigest().catch((error) => console.error(`[chat] ${error.message}`)), 30 * 60000).unref();
 };
 
 // ---- routes ----------------------------------------------------------------------------------

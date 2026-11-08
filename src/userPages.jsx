@@ -17,6 +17,7 @@ import { isEmail } from './accountPages.jsx';
 import { profileInsights } from '@/lib/profile-insights';
 import ShareCardDialog from '@/components/ShareCardDialog';
 import EntryTable from '@/components/EntryTable';
+import Achievements from '@/components/Achievements';
 import { profileCardData } from '@/lib/share-card';
 import { formatNumber, formatScore } from '@/lib/digits.js';
 import { genreLabel } from '@/lib/genre-kinds';
@@ -820,6 +821,7 @@ export function UserPublicProfile() {
 
       <ProfileFavorites favorites={data.favorites} animeBySlug={animeBySlug} mangaBySlug={mangaBySlug} />
       <ProfileStacks username={profile.username} />
+      <Achievements insights={insights} reviews={data.reviews || []} />
 
       {insights.total > 0 && (
         <div className="pi-grid">

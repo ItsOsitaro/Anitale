@@ -17,17 +17,20 @@ import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
 import { animeRowsBy, coreAnimeRows, deleteAnime, deleteManga, adminUpdateManga, getMangaByMalId, getMangaBySlug, getByMalId, getBySlug, insertAnime, insertManga, listManga, listMangaCore, mangaItemsBy, mangaRowToItem, updateAnime, updateManga } from './repo.js';
 import { adminDeleteUser, adminAllUsers, adminGetUser, adminGetUserById, adminListUsers, adminRenameUser, adminSetUserPassword, consumeToken, createUser, ownUser, getUserByEmail, issueToken, markEmailVerified, setUserEmail, setUserPassword, tokenIssuedRecently, deleteEntry, followCounts, followUser, friendFeed, getUserByUsername, isFollowing, listEntries, canSeeList, setPrivacy, setAbout, tasteSimilarity, listFollowers, listFollowing, publicUser, setAvatarColor, setBio, unfollowUser, upsertEntry, verifySiteCredentials } from './users.js';
 import { registerChatBotRoutes } from './chat-bots.js';
+import { registerCalendarRoutes } from './calendar.js';
+import { registerHomeCommunityRoute } from './home-community.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
 import { listNotifications, markNotificationsRead, notifyFollow, notifyFollowersOfReview } from './notifications.js';
 import { isSensitiveItem } from './sensitive.js';
 import { searchCatalog } from './search.js';
+import { recentSeasons, premieredKey } from '../src/lib/landing.js';
 import { exportData } from './export-data.js';
 import { coverUrlFor,  cleanupTemp, MAX_IMAGE_BYTES, promoteTempCover, removeCoversForSlug, saveCoverBuffer, saveTempCover,
 } from './images.js';
 import { downloadImage, fetchAnimeFull, fetchMangaFull, tenraiCircuitOpen, mapTenraiMangaToDraft, mapTenraiToDraft, searchAnime, searchManga } from './tenrai.js';
-import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch } from './anilist.js';
+import { anilistFacetSearch, anilistImport, anilistImportMany, anilistMangaDraft, anilistMangaDraftMany, anilistSearch, anilistUserList } from './anilist.js';
 import { mapPool } from './pool.js';
 import { activateVpn, applyVpn, deleteVpnProfile, testVpn, turnOffVpn, vpnStatus } from './vpn.js';
 import { getAutoImportState, runAutoImport, setAutoImportEnabled } from './auto-import.js';
@@ -315,6 +318,18 @@ export const createApp = () => {
   // Import a chunk of a MyAnimeList export. Titles are matched by MAL id against the local catalog;
   // existing entries are kept unless overwrite is set. Unmatched ids are returned so the page can list them.
   const malImportLimiter = rateLimit({ windowMs: 60 * 60 * 1000, limit: 30, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many imports. Try again later.' } });
+  // AniList: fetch a public list by username and hand it back in the MyAnimeList-import shape; the page then imports it
+  // through /api/user/import-mal like an uploaded file.
+  app.post('/api/user/anilist-list', requireSiteUser, malImportLimiter, async (req, res) => {
+    const name = String((req.body || {}).username || '').trim();
+    if (!/^[A-Za-z0-9_]{2,40}$/.test(name)) throw httpError(400, 'That does not look like an AniList username');
+    try {
+      res.json(await anilistUserList(name));
+    } catch (error) {
+      if (error?.status === 404) throw httpError(404, 'No public AniList list found for that username');
+      throw httpError(502, 'AniList could not be reached right now. Try again later.');
+    }
+  });
   app.post('/api/user/import-mal', requireSiteUser, malImportLimiter, (req, res) => {
     const input = malImportInput.parse(req.body);
     const row = getUserByUsername(currentSiteUser(req));
@@ -478,7 +493,7 @@ export const createApp = () => {
     if (!FAVORITE_KINDS.includes(kind) || !ref) throw httpError(404, 'Not found');
     return { kind, ref };
   };
-  registerChatBotRoutes(app, {
+  const botDeps = {
     requireSiteUser,
     userIdOf: (req) => {
       const row = getUserByUsername(currentSiteUser(req));
@@ -487,7 +502,10 @@ export const createApp = () => {
     },
     httpError,
     limiter: favLimiter,
-  });
+  };
+  registerChatBotRoutes(app, botDeps);
+  registerCalendarRoutes(app, botDeps);
+  registerHomeCommunityRoute(app);
   app.get('/api/favorites/:kind/:ref', (req, res) => {
     const { kind, ref } = favParams(req);
     res.setHeader('Cache-Control', 'no-cache');
@@ -836,6 +854,18 @@ export const createApp = () => {
 
   // Full search page: relevance ranking, typo tolerance, filters and facets.
   const searchLimiter = rateLimit({ windowMs: 60_000, limit: 90, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many searches' } });
+  // Seasons that actually have titles, for the "Genres and seasons" page (cached: 32 cheap in-memory searches).
+  let seasonCache = { at: 0, list: [] };
+  app.get('/api/landing', (req, res) => {
+    if (Date.now() - seasonCache.at > 10 * 60000) {
+      seasonCache = {
+        at: Date.now(),
+        list: recentSeasons(6).map(({ year, season }) => ({ year, season, total: searchCatalog({ type: 'anime', premiered: premieredKey(year, season), limit: 1, sfw: true }).total })).filter((row) => row.total >= 3),
+      };
+    }
+    res.setHeader('Cache-Control', 'public, max-age=600');
+    res.json({ seasons: seasonCache.list });
+  });
   app.get('/api/search/full', searchLimiter, cacheSearch, (req, res) => {
     const pick = (value, allowed, fallback) => (allowed.includes(value) ? value : fallback);
     const text = String(req.query.q || '').slice(0, 80);
@@ -856,6 +886,9 @@ export const createApp = () => {
       producer: String(req.query.producer || '').slice(0, 80),
       magazine: String(req.query.magazine || '').slice(0, 80),
       rating: String(req.query.rating || '').slice(0, 12),
+      premiered: String(req.query.premiered || '').toLowerCase().slice(0, 16),
+      minEps: Math.min(5000, Math.max(0, Number.parseInt(req.query.minEps, 10) || 0)),
+      maxEps: Math.min(5000, Math.max(0, Number.parseInt(req.query.maxEps, 10) || 0)),
       letter: /^[A-Za-z#]$/.test(String(req.query.letter || '')) ? String(req.query.letter).toUpperCase() : '',
       minScore: Math.min(10, Math.max(0, Number(req.query.min) || 0)),
       sort: pick(String(req.query.sort || ''), ['score', 'new', 'old', 'az', 'pop', 'votes', 'eps'], ''),

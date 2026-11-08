@@ -11,6 +11,9 @@ import { db, ROOT_DIR } from './db.js';
 import { getBySlug, getByMalId, getMangaBySlug, getMangaByMalId, mangaRowToItem } from './repo.js';
 import { rowToItem } from './shape.js';
 import { isSensitiveItem } from './sensitive.js';
+import { searchCatalog } from './search.js';
+import { genreLabel } from '../src/lib/genre-kinds.js';
+import { genreFromSlug, landingGenres, slugOfGenre, validSeason, premieredKey, genreTitleFa, seasonTitleFa, recentSeasons, SEASON_FA } from '../src/lib/landing.js';
 import { canSeeList, getUserByUsername, listEntries } from './users.js';
 
 const SITE_NAME = 'انی‌تیل';
@@ -174,6 +177,42 @@ export const registerSeoRoutes = (app) => {
     '/seasonal': ['انیمه‌های فصل', 'انیمه‌هایی که در فصل جاری پخش می‌شوند و کدام‌ها امروز قسمت تازه دارند.'],
     '/schedule': ['جدول پخش هفتگی', 'هر انیمه در کدام روز هفته قسمت تازه دارد.'],
   };
+  // Landing pages built from the catalog: best anime per genre and per season (indexable lists with a text body for crawlers).
+  const landing = (build) => async (req, res, next) => {
+    try {
+      const shell = (await loadShell()) || FALLBACK_SHELL;
+      res.setHeader('Content-Type', 'text/html; charset=utf-8');
+      const page = build(req);
+      if (!page) { res.status(404).setHeader('Cache-Control', 'no-cache'); res.send(shell); return; }
+      const origin = originOf(req);
+      const url = `${origin}${req.path}`;
+      res.setHeader('Cache-Control', EDGE_CACHE);
+      res.send(injectMeta(shell, {
+        title: `${page.name} | ${SITE_NAME}`, description: page.description, url, image: `${origin}/logo-512.png`,
+        jsonLd: {
+          '@context': 'https://schema.org', '@type': 'CollectionPage', name: page.name, description: page.description, url, inLanguage: 'fa',
+          mainEntity: { '@type': 'ItemList', numberOfItems: page.total, itemListElement: page.items.map((it, i) => ({ '@type': 'ListItem', position: i + 1, url: `${origin}/anime/${it.malId ?? it.slug}`, name: it.title })) },
+        },
+        body: staticBody({ heading: page.name, lines: [page.description, ...page.items.map((it) => it.title)] }),
+      }));
+    } catch (error) { next(error); }
+  };
+  app.get('/genre/:slug', landing((req) => {
+    const key = genreFromSlug(req.params.slug);
+    if (!key) return null;
+    const result = searchCatalog({ type: 'anime', genres: [key], sort: 'score', limit: 12, sfw: true });
+    if (!result.total) return null;
+    const fa = genreLabel(key, 'fa');
+    return { name: genreTitleFa(key), total: result.total, items: result.items, description: `فهرست برترین انیمه‌های ژانر ${fa} بر اساس امتیاز، همراه با کاور و خلاصهٔ داستان فارسی؛ ${result.total} عنوان در انی‌تیل.` };
+  }));
+  app.get('/season/:year/:season', landing((req) => {
+    const { year, season } = req.params;
+    if (!validSeason(year, season)) return null;
+    const result = searchCatalog({ type: 'anime', premiered: premieredKey(year, season), sort: 'pop', limit: 12, sfw: true });
+    if (!result.total) return null;
+    return { name: seasonTitleFa(year, season), total: result.total, items: result.items, description: `همهٔ انیمه‌هایی که در ${SEASON_FA[season]} ${year} پخش شدند: ${result.total} عنوان به ترتیب محبوبیت، با کاور، امتیاز و خلاصهٔ داستان.` };
+  }));
+  app.get('/genres', landing(() => ({ name: 'ژانرها و فصل‌ها', total: landingGenres().length, items: [], description: 'انیمه‌ها را بر اساس ژانر یا فصل پخش مرور کنید: اکشن، کمدی، درام، فانتزی و بقیهٔ ژانرها، به‌علاوهٔ انیمه‌های هر فصل.' })));
   app.get(Object.keys(DISCOVERY), async (req, res, next) => {
     try {
       const [name, description] = DISCOVERY[req.path];
@@ -339,7 +378,11 @@ export const registerSeoRoutes = (app) => {
   });
   app.get('/sitemap-pages.xml', (req, res) => {
     const origin = originOf(req);
-    sendXml(res, cached(`pages|${origin}`, () => `${SET_OPEN}${['/', ...Object.keys(DISCOVERY)].map((p) => `<url><loc>${escapeHtml(origin + p)}</loc></url>`).join('\n')}\n</urlset>\n`));
+    sendXml(res, cached(`pages|${origin}`, () => {
+      const seasons = recentSeasons().filter(({ year, season }) => searchCatalog({ type: 'anime', premiered: premieredKey(year, season), limit: 1, sfw: true }).total >= 3).map(({ year, season }) => `/season/${year}/${season}`);
+      const paths = ['/', ...Object.keys(DISCOVERY), '/genres', ...landingGenres().map((key) => `/genre/${slugOfGenre(key)}`), ...seasons];
+      return `${SET_OPEN}${paths.map((p) => `<url><loc>${escapeHtml(origin + p)}</loc></url>`).join('\n')}\n</urlset>\n`;
+    }));
   });
   app.get('/sitemap-:table-:page.xml', (req, res, next) => {
     const { table } = req.params;
