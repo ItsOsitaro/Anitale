@@ -109,7 +109,6 @@ export function SeasonPageBody({ items, fallback }) {
   const [day, setDay] = useState('all');
   const [sort, setSort] = useState('pop');
   const { season, year } = getCurrentSeasonInfo();
-  const todayItems = useMemo(() => items.filter((item) => item.airingDay === today).sort(byTimeThenScore), [items, today]);
   const shown = useMemo(() => {
     const base = day === 'all' ? [...items] : items.filter((item) => item.airingDay === day);
     return base.sort(sort === 'score' ? (a, b) => (Number(b.sampleScore) || 0) - (Number(a.sampleScore) || 0) : (a, b) => membersOf(b) - membersOf(a));
@@ -121,15 +120,9 @@ export function SeasonPageBody({ items, fallback }) {
         <span>{t('titlesCount', { n: formatNumber(items.length, lang) })}</span>
       </div>
       {fallback && <div className="sample-data-note">{t('seasonEmpty')}</div>}
-      {todayItems.length > 0 && (
-        <section aria-labelledby="air-today-title" className="air-today">
-          <header className="air-head"><h2 id="air-today-title">{t('airingToday')}<strong className="today-chip">{t(DAY_KEYS[today])}</strong></h2></header>
-          <ul className="air-strip">{todayItems.map((item) => <AirCard key={item.slug} item={item} />)}</ul>
-        </section>
-      )}
       <section aria-labelledby="air-all-title">
-        <header className="air-head">
-          <h2 id="air-all-title">{t('seasonAllHead')}</h2>
+        <header className="air-head air-head--end">
+          <h2 id="air-all-title" className="sr-only">{t('seasonAllHead')}</h2>
           <label className="air-sort"><span>{t('sortLabel')}</span>
             <select value={sort} onChange={(e) => setSort(e.target.value)}>
               <option value="pop">{t('seasonSortPop')}</option>
