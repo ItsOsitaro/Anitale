@@ -1166,69 +1166,14 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
           { to: mediaType === 'manga' ? '/manga' : '/anime', label: mediaType === 'manga' ? t('breadcrumbManga') : t('breadcrumbAnime') },
           { label: item.title },
         ]} />
-        <main className="anime-detail-shell">
-          <div className="anime-detail-layout">
-            <aside className="detail-sidebar panel">
-              <figure className="detail-cover"><img src={coverUrl(item.image, 720)} alt={item.title} /></figure>
-              <SuggestEdit item={item} mediaType={mediaType} />
-              <div className="detail-sidebar-sections">
-                {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english || item.titleFa) && (
-                  <DetailSection id="detailAlternativeTitles" title={t('alternativeTitles')} className="detail-sidebar-section">
-                    <SidebarDataList rows={[
-                      { label: t('synonyms'), value: (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ') },
-                      { label: t('japaneseTitle'), value: alternativeTitles.japanese },
-                      { label: t('englishTitle'), value: alternativeTitles.english },
-                      { label: t('persianTitle'), value: item.titleFa },
-                    ]} />
-                  </DetailSection>
-                )}
-                <DetailSection id="detailInformation" title={t('information')} className="detail-sidebar-section">
-                  <SidebarDataList rows={informationRows} />
-                </DetailSection>
-                {item.availableAt?.length > 0 && (
-                  <DetailSection id="detailAvailableAt" title={t('availableAt')} className="detail-sidebar-section">
-                    <ul className="sidebar-link-list">
-                      {item.availableAt.map((entry) => (
-                        <li key={entry.label}>
-                          <span className="sidebar-resource-icon" aria-hidden="true">{entry.icon || '↗'}</span>
-                          {entry.href ? <a href={entry.href} target="_blank" rel="noreferrer">{entry.label}</a> : <span>{entry.label}</span>}
-                        </li>
-                      ))}
-                    </ul>
-                  </DetailSection>
-                )}
-                {item.resources?.length > 0 && (
-                  <DetailSection id="detailResources" title={t('resources')} className="detail-sidebar-section">
-                    <ul className="sidebar-link-list">
-                      {item.resources.map((resource) => (
-                        <li key={resource.label}>
-                          <span className="sidebar-resource-icon" aria-hidden="true">{resource.icon}</span>
-                          <span>{resource.label}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  </DetailSection>
-                )}
-                {item.streamingPlatforms?.length > 0 && (
-                  <DetailSection id="detailStreaming" title={t('streaming')} className="detail-sidebar-section">
-                    <ul className="streaming-platform-list">
-                      {item.streamingPlatforms.map((platform) => (
-                        <li key={platform}><span className="platform-mark" aria-hidden="true">{platform[0]}</span><span dir="ltr">{platform}</span></li>
-                      ))}
-                    </ul>
-                    {item.streamingNotice && <p className="streaming-notice">{item.streamingNotice}</p>}
-                  </DetailSection>
-                )}
-              </div>
-            </aside>
-
-            <div className="detail-main-column">
-              <section className="anime-profile">
+        <main className="anime-detail-shell dx">
+              <section className="anime-profile dx-hero">
                 <div className="detail-hero-backdrop" aria-hidden="true"><img src={coverUrl(item.image, 720)} alt="" /></div>
+                <figure className="dx-cover"><img src={coverUrl(item.image, 720)} alt={item.title} /></figure>
                 <div className="detail-copy">
-                  <h1 dir="auto">{item.title}</h1>
+                  <h1>{item.title}</h1>
                   {romajiTitle && romajiTitle !== item.title && (
-                    <p className="detail-romaji" dir="ltr" lang="ja-Latn">{romajiTitle}</p>
+                    <p className="detail-romaji" lang="ja-Latn">{romajiTitle}</p>
                   )}
                   {heroFacts.length > 0 && (
                     <p className="detail-facts-line">
@@ -1304,6 +1249,8 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 {sectionNav.map((entry) => <a key={entry.id} href={`#${entry.id}`} className={activeSection === entry.id ? 'is-active' : undefined} aria-current={activeSection === entry.id ? 'true' : undefined}>{entry.label}</a>)}
               </nav>
 
+          <div className="dx-layout">
+            <div className="detail-main-column">
               <div className="detail-section-grid">
                 <DetailSection id="detailSynopsis" title={t('synopsis')}>
                   {item.detailLoading
@@ -1341,6 +1288,58 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 )}
               </div>
             </div>
+            <aside className="dx-aside">
+              <SuggestEdit item={item} mediaType={mediaType} />
+              <div className="detail-sidebar-sections">
+                {(alternativeTitles.synonyms?.length || alternativeTitles.japanese || alternativeTitles.english || item.titleFa) && (
+                  <DetailSection id="detailAlternativeTitles" title={t('alternativeTitles')} className="detail-sidebar-section">
+                    <SidebarDataList rows={[
+                      { label: t('synonyms'), value: (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ') },
+                      { label: t('japaneseTitle'), value: alternativeTitles.japanese },
+                      { label: t('englishTitle'), value: alternativeTitles.english },
+                      { label: t('persianTitle'), value: item.titleFa },
+                    ]} />
+                  </DetailSection>
+                )}
+                <DetailSection id="detailInformation" title={t('information')} className="detail-sidebar-section">
+                  <SidebarDataList rows={informationRows} />
+                </DetailSection>
+                {item.availableAt?.length > 0 && (
+                  <DetailSection id="detailAvailableAt" title={t('availableAt')} className="detail-sidebar-section">
+                    <ul className="sidebar-link-list">
+                      {item.availableAt.map((entry) => (
+                        <li key={entry.label}>
+                          <span className="sidebar-resource-icon" aria-hidden="true">{entry.icon || '↗'}</span>
+                          {entry.href ? <a href={entry.href} target="_blank" rel="noreferrer">{entry.label}</a> : <span>{entry.label}</span>}
+                        </li>
+                      ))}
+                    </ul>
+                  </DetailSection>
+                )}
+                {item.resources?.length > 0 && (
+                  <DetailSection id="detailResources" title={t('resources')} className="detail-sidebar-section">
+                    <ul className="sidebar-link-list">
+                      {item.resources.map((resource) => (
+                        <li key={resource.label}>
+                          <span className="sidebar-resource-icon" aria-hidden="true">{resource.icon}</span>
+                          <span>{resource.label}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </DetailSection>
+                )}
+                {item.streamingPlatforms?.length > 0 && (
+                  <DetailSection id="detailStreaming" title={t('streaming')} className="detail-sidebar-section">
+                    <ul className="streaming-platform-list">
+                      {item.streamingPlatforms.map((platform) => (
+                        <li key={platform}><span className="platform-mark" aria-hidden="true">{platform[0]}</span><span dir="ltr">{platform}</span></li>
+                      ))}
+                    </ul>
+                    {item.streamingNotice && <p className="streaming-notice">{item.streamingNotice}</p>}
+                  </DetailSection>
+                )}
+              </div>
+            </aside>
           </div>
 
           <section className="related-section" aria-labelledby="relatedHeading">
