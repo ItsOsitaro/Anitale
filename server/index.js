@@ -6,6 +6,7 @@ import { seedIfEmpty, seedMangaIfEmpty } from './seed.js';
 import { cleanupTemp } from './images.js';
 import { startAutoImportScheduler } from './auto-import.js';
 import { startMagazineBackfill } from './magazines.js';
+import { startScoreBackfill } from './score-backfill.js';
 import { initVpn } from './vpn.js';
 
 const added = seedIfEmpty();
@@ -22,6 +23,7 @@ initVpn();
 const app = createApp();
 startAutoImportScheduler(app.locals.bulkImport);
 startMagazineBackfill();
+startScoreBackfill();
 startMaintenance();
 app.listen(port, host, () => {
   warmSearch(); // build the (slim) search index in the background
