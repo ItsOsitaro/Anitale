@@ -62,3 +62,8 @@
   .sys-bar .sys-grow { margin-inline-start: 0; }
   .sys-log-filters { grid-template-columns: 1fr 1fr; }
 }
+
+/* Messenger bot settings */
+.chb-row { display: grid; gap: 12px; padding-block: 16px; border-block-start: 1px solid var(--line); }
+.chb-row:first-child { border-block-start: 0; padding-block-start: 0; }
+.chb-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }

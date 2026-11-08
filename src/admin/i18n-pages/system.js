@@ -22,6 +22,11 @@ export default {
     vpnReplaceConfirm: 'The VPN is on now. Replace it with the new {name} config? If the new one fails, the old one is restored.', vpnUnsavedConfirm: 'The text you pasted will be lost. Continue?', vpnSwitchConfirm: 'Switch the site to {name}? Imports pause for a few seconds.',
     vpnServerMasked: 'Server (partly hidden)', vpnTestedAt: 'Tested {time}', vpnShortcut: 'Ctrl+Enter applies', vpnStatusLoadFail: 'Could not load the VPN status.', vpnRetry: 'Try again', vpnChecking: 'Checking…',
     vpnSlow: 'slow', vpnTargets: 'Sites tested through the VPN', vpnProfiles: 'Saved profiles', vpnNoProfile: 'Nothing saved', vpnBusyNote: 'Working… this can take up to a minute.',
+    chbTitle: 'Messenger bots', chbSub: 'Telegram and Bale bots that message members when a new episode of an anime they are watching airs. Saved here, so no file editing is needed.',
+    chbTelegram: 'Telegram', chbBale: 'Bale', chbTokenSet: 'Token saved (…{hint})', chbTokenMissing: 'No token', chbFromEnv: 'Taken from server/.env — saving here overrides it.',
+    chbToken: 'Bot token', chbTokenKeep: 'Leave empty to keep the saved token', chbUsername: 'Bot username (without @)',
+    chbProxyNote: 'Telegram is blocked from Iran: the server reaches it through the proxy set on the VPN page.',
+    chbSave: 'Save', chbSaved: 'Saved.', chbTest: 'Test the token', chbTestOk: 'Connected to the bot {name}.', chbClear: 'Remove saved token', chbCleared: 'Saved token removed.',
   },
   fa: {
     loginSub: 'برای ادامه، حساب مدیر را وارد کن.', loginShow: 'نمایش گذرواژه', loginHide: 'پنهان کردن گذرواژه', loginCaps: 'Caps Lock روشن است', loginEmpty: 'نام کاربری و گذرواژه را وارد کن.',
@@ -41,5 +46,10 @@ export default {
     vpnReplaceConfirm: 'الان وی‌پی‌ان روشن است. با تنظیمات جدید {name} جایگزین شود؟ اگر جدید کار نکند، قبلی برمی‌گردد.', vpnUnsavedConfirm: 'متنی که چسباندی از بین می‌رود. ادامه بدهیم؟', vpnSwitchConfirm: 'سایت به {name} تغییر کند؟ ایمپورت چند ثانیه متوقف می‌شود.',
     vpnServerMasked: 'سرور (بخشی پنهان)', vpnTestedAt: 'تست شد {time}', vpnShortcut: 'Ctrl+Enter اعمال می‌کند', vpnStatusLoadFail: 'وضعیت وی‌پی‌ان بارگذاری نشد.', vpnRetry: 'دوباره امتحان کن', vpnChecking: 'در حال بررسی…',
     vpnSlow: 'کند', vpnTargets: 'سایت‌هایی که از طریق وی‌پی‌ان تست شدند', vpnProfiles: 'پروفایل‌های ذخیره‌شده', vpnNoProfile: 'چیزی ذخیره نشده', vpnBusyNote: 'در حال انجام… تا یک دقیقه طول می‌کشد.',
+    chbTitle: 'بات‌های پیام‌رسان', chbSub: 'بات تلگرام و بله که وقتی قسمت تازه‌ی انیمه‌ای که عضو «در حال تماشا» دارد پخش شد برایش پیام می‌فرستد. همین‌جا ذخیره می‌شود و نیازی به ویرایش فایل نیست.',
+    chbTelegram: 'تلگرام', chbBale: 'بله', chbTokenSet: 'توکن ذخیره شده (…{hint})', chbTokenMissing: 'توکن ندارد', chbFromEnv: 'از server/.env خوانده شده؛ ذخیره در اینجا جایگزینش می‌شود.',
+    chbToken: 'توکن بات', chbTokenKeep: 'برای نگه‌داشتن توکن فعلی خالی بگذار', chbUsername: 'نام‌کاربری بات (بدون @)',
+    chbProxyNote: 'تلگرام از ایران بسته است: سرور از پراکسی صفحه‌ی VPN به آن وصل می‌شود.',
+    chbSave: 'ذخیره', chbSaved: 'ذخیره شد.', chbTest: 'آزمایش توکن', chbTestOk: 'به بات {name} وصل شد.', chbClear: 'حذف توکن ذخیره‌شده', chbCleared: 'توکن ذخیره‌شده حذف شد.',
   },
 };

@@ -39,8 +39,9 @@ export const PROVIDERS = {
   telegram: { name: 'Telegram', tokenEnv: 'TELEGRAM_BOT_TOKEN', userEnv: 'TELEGRAM_BOT_USERNAME', base: process.env.TELEGRAM_API_BASE || 'https://api.telegram.org', proxy: true, link: (u, code) => `https://t.me/${u}?start=${code}` },
   bale: { name: 'Bale', tokenEnv: 'BALE_BOT_TOKEN', userEnv: 'BALE_BOT_USERNAME', base: process.env.BALE_API_BASE || 'https://tapi.bale.ai', proxy: false, link: (u, code) => `https://ble.ir/${u}?start=${code}` },
 };
-const token = (id) => String(process.env[PROVIDERS[id].tokenEnv] || '').trim();
-const username = (id) => String(process.env[PROVIDERS[id].userEnv] || '').trim().replace(/^@/, '');
+// A value saved in the admin panel wins over server/.env, so the owner can change a bot without editing files.
+const token = (id) => String(getSetting(`chat.${id}.token`, '') || process.env[PROVIDERS[id].tokenEnv] || '').trim();
+const username = (id) => String(getSetting(`chat.${id}.username`, '') || process.env[PROVIDERS[id].userEnv] || '').trim().replace(/^@/, '');
 export const configured = (id) => Boolean(PROVIDERS[id] && token(id));
 
 const call = async (id, method, body, timeoutMs = 20000) => {
@@ -59,6 +60,26 @@ const call = async (id, method, body, timeoutMs = 20000) => {
     throw error;
   }
   return data.result;
+};
+
+// ---- admin panel settings (the token itself is never returned) ---------------------------------
+export const botSettings = () => Object.keys(PROVIDERS).map((id) => {
+  const t = token(id);
+  const fromPanel = Boolean(getSetting(`chat.${id}.token`, ''));
+  return { id, name: PROVIDERS[id].name, tokenSet: Boolean(t), tokenHint: t ? t.slice(-4) : '', source: !t ? '' : fromPanel ? 'panel' : 'env', username: username(id), needsProxy: PROVIDERS[id].proxy };
+});
+
+export const saveBotSettings = (id, { token: next, username: name, clear }) => {
+  if (clear) setSetting(`chat.${id}.token`, '');
+  else if (typeof next === 'string' && next.trim()) setSetting(`chat.${id}.token`, next.trim());
+  if (typeof name === 'string') setSetting(`chat.${id}.username`, name.trim().replace(/^@/, ''));
+};
+
+// Asks the messenger who the bot is (getMe): proves the token works, and fills in the username when it is empty.
+export const verifyBot = async (id) => {
+  const me = await call(id, 'getMe', {}, 20000);
+  if (me?.username && !getSetting(`chat.${id}.username`, '') && !process.env[PROVIDERS[id].userEnv]) setSetting(`chat.${id}.username`, me.username);
+  return me?.username || '';
 };
 
 export const sendMessage = (id, chatId, text) => call(id, 'sendMessage', { chat_id: chatId, text, disable_web_page_preview: true });
@@ -112,7 +133,7 @@ const poll = async (id) => {
   let failures = 0;
   // Runs for the life of the process; a bad token or a blocked network only slows it down.
   for (;;) {
-    if (!configured(id)) { await new Promise((r) => setTimeout(r, 60000)); continue; }
+    if (!configured(id)) { await new Promise((r) => setTimeout(r, 20000)); continue; }
     try {
       const updates = await call(id, 'getUpdates', { offset, timeout: 25, allowed_updates: ['message'] }, 40000);
       failures = 0;
@@ -194,7 +215,8 @@ export const notifyDue = async (now = Date.now()) => {
 };
 
 export const startChatBots = () => {
-  for (const id of Object.keys(PROVIDERS)) if (configured(id)) poll(id).catch((error) => console.error(`[chat:${id}] stopped: ${error.message}`));
+  // Every loop starts: one without a token just waits, so a token saved in the admin panel works without a restart.
+  for (const id of Object.keys(PROVIDERS)) poll(id).catch((error) => console.error(`[chat:${id}] stopped: ${error.message}`));
   // The notice job is cheap, so it always runs; without a token it finds no configured provider and sends nothing.
   setInterval(() => notifyDue().catch((error) => console.error(`[chat] ${error.message}`)), 10 * 60000).unref();
 };
