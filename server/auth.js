@@ -66,6 +66,25 @@ CREATE TABLE IF NOT EXISTS admin_ips (
 );
 `);
 const seenAt = new Map(); // sid -> last time last_seen was written (at most once a minute per session)
+// Failed admin sign-ins are written to the activity log, and five from one address within 15 minutes (a password being
+// guessed) send one alert to the owner's chat (at most once an hour per address).
+const failures = new Map(); // ip -> { n, at, alertedAt }
+export const recordFailedLogin = (req, username, why = '') => {
+  const ip = String(req.ip || '').slice(0, 64);
+  try {
+    db.prepare("INSERT INTO admin_log (method, path, status, ms, admin, label) VALUES ('POST', ?, 401, 0, ?, '')").run(`/api/auth/login${why ? `#${why}` : ''}`, String(username || '').slice(0, 60));
+  } catch { /* the log is a nicety, never block a login answer */ }
+  const now = Date.now();
+  const entry = failures.get(ip);
+  const fresh = entry && now - entry.at < 15 * 60000 ? entry : { n: 0, at: now, alertedAt: entry?.alertedAt || 0 };
+  fresh.n += 1;
+  failures.set(ip, fresh);
+  if (failures.size > 2000) failures.clear();
+  if (fresh.n >= 5 && now - fresh.alertedAt > 3600000) {
+    fresh.alertedAt = now;
+    import('./chat-bots.js').then((m) => m.sendAlert(`⚠️ ${fresh.n} تلاش ناموفق برای ورود به پنل ادمین از نشانی ${ip} (نام: «${String(username || '').slice(0, 30)}»).`)).catch(() => {});
+  }
+};
 export const listAdminSessions = () => db.prepare("SELECT sid, admin, ip, ua, created_at AS createdAt, last_seen AS lastSeen FROM admin_sessions WHERE revoked = 0 AND created_at >= datetime('now', '-1 day') ORDER BY last_seen DESC LIMIT 100").all();
 export const revokeAdminSession = (sid) => db.prepare('UPDATE admin_sessions SET revoked = 1 WHERE sid = ?').run(String(sid)).changes;
 export const revokeOtherAdminSessions = (keepSid) => db.prepare('UPDATE admin_sessions SET revoked = 1 WHERE sid != ? AND revoked = 0').run(String(keepSid || '')).changes;

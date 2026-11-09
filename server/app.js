@@ -9,7 +9,7 @@ import path from 'node:path';
 import { db, COVERS_DIR, ROOT_DIR, TMP_DIR } from './db.js';
 import {
   clearSession, clearUserSession, currentAdmin, currentSiteUser, currentUser, isAuthConfigured, requireAdmin, requireSiteUser,
-  sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials, currentSid, revokeAdminSession } from './auth.js';
+  sameOriginOnly, setSession, setUserSession, userTokenValid, verifyCredentials, currentSid, recordFailedLogin, revokeAdminSession } from './auth.js';
 import { sendMail, siteUrl, verifyEmailMail, resetPasswordMail } from './mailer.js';
 import { animeInput, loginInput, mangaAdminPatch, siteAdminUserCreate, siteAdminUserPatch, siteChangePasswordInput, siteEmailChangeInput, siteForgotInput, siteProfileInput, siteRegisterInput, siteRecInput, siteReviewInput, siteResetInput, siteVerifyInput, siteUserEntryInput, malImportInput, WEEKDAYS } from './schemas.js';
 import { foldTitle, parseSynopsis, rowToItem, slugify } from './shape.js';
@@ -19,6 +19,7 @@ import { registerChatBotRoutes } from './chat-bots.js';
 import { registerCalendarRoutes } from './calendar.js';
 import { registerContinueRoutes } from './continue-series.js';
 import { registerOgRoutes } from './og-image.js';
+import { checkTotp, totpRequired } from './totp.js';
 import { registerTogetherRoute } from './together.js';
 import { registerReportRoutes } from './reports.js';
 import { registerAnnouncementRoutes } from './announcement.js';
@@ -108,14 +109,20 @@ export const createApp = () => {
   registerAdminExtras(app);
 
   // ---------- Auth ----------
-  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many login attempts. Try again later.' } });
+  const loginLimiter = rateLimit({ windowMs: 15 * 60 * 1000, limit: Number(process.env.ADMIN_LOGIN_LIMIT) || 10, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many login attempts. Try again later.' } });
   // Moderate limiter for the heavy write endpoints (bulk imports + refreshes).
   const writeLimiter = rateLimit({ windowMs: 60_000, limit: 120, standardHeaders: true, legacyHeaders: false, message: { error: 'Too many write requests' } });
   app.post('/api/auth/login', loginLimiter, async (req, res) => {
     const { username, password } = loginInput.parse(req.body);
     if (!isAuthConfigured() && !db.prepare('SELECT 1 FROM admins LIMIT 1').get()) throw httpError(503, 'Admin login is not configured. Run: npm run setup-admin');
     const who = await verifyCredentials(username, password);
-    if (!who) throw httpError(401, 'Wrong username or password');
+    if (!who) { recordFailedLogin(req, username); throw httpError(401, 'Wrong username or password'); }
+    // Two-step sign-in (optional per admin): the password was right, now the 6-digit code.
+    if (totpRequired(who.username)) {
+      const code = String(req.body?.code || '');
+      if (!code) return res.status(401).json({ error: 'Code required', needCode: true });
+      if (!checkTotp(who.username, code)) { recordFailedLogin(req, username, '2fa'); return res.status(401).json({ error: 'Wrong code', needCode: true }); }
+    }
     setSession(req, res, who.username, { v: who.version });
     res.json({ user: who.username });
   });

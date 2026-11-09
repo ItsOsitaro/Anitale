@@ -1,7 +1,11 @@
+// (Start the server with ADMIN_LOGIN_LIMIT=100: this script signs in as admin many times, and the real limit is 10 per 15 minutes.)
 // Regression checks over HTTP for the flows people actually use: pages, search, landing pages, SEO, a member's list,
 // calendar feed, bot/admin settings. Run it against a running server before every deploy:
 //   SMOKE_ADMIN_USER=<user> SMOKE_ADMIN_PASS=<plaintext> node scripts/regression.mjs [baseUrl]
 // It creates one throw-away member and removes it at the end. Nothing here needs Tenrai or AniList.
+import crypto from 'node:crypto';
+const unbase32 = (text) => { const A = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'; let bits = 0; let value = 0; const out = []; for (const ch of text) { value = (value << 5) | A.indexOf(ch); bits += 5; if (bits >= 8) { out.push((value >>> (bits - 8)) & 255); bits -= 8; } } return Buffer.from(out); };
+const totp = (secret, offsetSteps = 0) => { const c = Buffer.alloc(8); c.writeBigUInt64BE(BigInt(Math.floor(Date.now() / 30000) + offsetSteps)); const h = crypto.createHmac('sha1', unbase32(secret)).update(c).digest(); const o = h[h.length - 1] & 15; return String((((h[o] & 127) << 24) | (h[o + 1] << 16) | (h[o + 2] << 8) | h[o + 3]) % 1000000).padStart(6, '0'); };
 const BASE = process.argv[2] || 'http://127.0.0.1:3000';
 const ORIGIN = new URL(BASE).origin;
 const adminUser = process.env.SMOKE_ADMIN_USER;
@@ -205,7 +209,9 @@ if (admin) {
       const queue = await call('GET', '/api/admin/x/reports', { cookie: admin });
       const item = queue.json?.items?.find((r) => r.ref === String(rv.id));
       check('the owner sees the report with its text', Boolean(item?.subject?.text?.includes('regression script')));
-      check('the report can be closed', item && (await call('POST', `/api/admin/x/reports/${item.id}`, { cookie: admin, body: { status: 'done' } })).status === 200);
+      check('the report can be closed with a note', item && (await call('POST', `/api/admin/x/reports/${item.id}`, { cookie: admin, body: { status: 'done', note: 'removed, thanks' } })).status === 200);
+      const inbox = await call('GET', '/api/user/notifications', { cookie: loginA.cookie });
+      check('the reporter is told, with the note', inbox.status === 200 && inbox.json?.items?.some((n) => n.kind === 'report_result' && n.report?.note === 'removed, thanks'), JSON.stringify(inbox.json?.items?.[0]));
     }
   }
 
@@ -259,6 +265,48 @@ if (admin) {
   check('weekly report preview has text', weekly.status === 200 && String(weekly.json?.text || '').includes('گزارش هفتگی'));
   const found = await call('GET', `/api/admin/x/system/revisions?q=${encodeURIComponent(one.slug.slice(0, 6))}`, { cookie: admin });
   check('revisions can be searched by title', found.status === 200 && found.json?.items?.every((r) => r.slug.includes(one.slug.slice(0, 6)) || r.title.toLowerCase().includes(one.slug.slice(0, 6).toLowerCase())));
+  // eighth admin round: log titles, report notes, shared views, failed-login log, my work, data export, two-step sign-in
+  await call('PATCH', `/api/admin/anime/${one.slug}/airing-day`, { cookie: admin, body: { airingDay: '' } }); // a title write that the log should label with the title name
+  const logHit = await call('GET', `/api/admin/log?q=${encodeURIComponent(one.title.slice(0, 8))}`, { cookie: admin });
+  check('the activity log can be searched by title name', logHit.status === 200 && logHit.json?.items?.some((r) => r.label === one.title || (r.label || '').toLowerCase().includes(one.title.slice(0, 8).toLowerCase())), `${logHit.json?.items?.length} rows`);
+  const view = await call('POST', '/api/admin/x/catalog/views', { cookie: admin, body: { scope: 'anime', name: 'no cover 2025', search: 'filter=noCover&q=2025' } });
+  const views = await call('GET', '/api/admin/x/catalog/views?scope=anime', { cookie: admin });
+  check('a saved view is stored for everyone', view.status === 200 && views.json?.items?.some((v) => v.name === 'no cover 2025' && v.search.includes('noCover')));
+  const userView = await call('POST', '/api/admin/x/users/views', { cookie: admin, body: { scope: 'users', name: 'listed', search: '{"q":"","filter":"listed","sort":"new"}' } });
+  check('a saved view for members works', userView.status === 200 && (await call('GET', '/api/admin/x/users/views?scope=users', { cookie: admin })).json?.items?.length >= 1);
+  check('a view scope is checked', (await call('POST', '/api/admin/x/catalog/views', { cookie: admin, body: { scope: 'users', name: 'x' } })).status === 400);
+  for (const v of views.json.items) await call('DELETE', `/api/admin/x/catalog/views/${v.id}`, { cookie: admin });
+
+  const wrong = await call('POST', '/api/auth/login', { body: { username: adminUser, password: 'definitely-wrong-password' } });
+  const failedLog = await call('GET', '/api/admin/log?q=auth%2Flogin', { cookie: admin });
+  check('a failed admin sign-in is written to the log', wrong.status === 401 && failedLog.json?.items?.some((r) => r.status === 401 && r.admin === adminUser));
+  const ov = await call('GET', '/api/admin/overview', { cookie: admin });
+  check('the dashboard has my work of the week', typeof ov.json?.mine?.all === 'number' && ov.json.mine.all >= 1);
+  if (globalThis.extraUsers?.[0]) {
+    const exp = await call('GET', `/api/admin/x/users/${globalThis.extraUsers[0]}/export.json`, { cookie: admin });
+    check('a member data export has the account and lists', exp.status === 200 && exp.json?.account?.username === globalThis.extraUsers[0] && Array.isArray(exp.json?.list) && !exp.text.includes('password_hash'));
+  }
+
+  // two-step sign-in on a throw-away extra admin
+  const tfName = `${name}t`;
+  const tfMade = await call('POST', '/api/admin/admins', { cookie: admin, body: { username: tfName, password: 'regression-admin-pass-1', permissions: { reports: 'view' } } });
+  const tfLogin = await call('POST', '/api/auth/login', { body: { username: tfName, password: 'regression-admin-pass-1' } });
+  const started = await call('POST', '/api/admin/me/2fa/start', { cookie: tfLogin.cookie, body: {} });
+  check('two-step setup gives a secret and a link', started.status === 200 && /^[A-Z2-7]{32}$/.test(started.json?.secret || '') && started.json.uri.startsWith('otpauth://totp/'));
+  check('a wrong code does not turn it on', (await call('POST', '/api/admin/me/2fa/enable', { cookie: tfLogin.cookie, body: { code: '000000' } })).status === 400);
+  const good = totp(started.json.secret);
+  check('the right code turns it on', (await call('POST', '/api/admin/me/2fa/enable', { cookie: tfLogin.cookie, body: { code: good } })).status === 200);
+  const noCode = await call('POST', '/api/auth/login', { body: { username: tfName, password: 'regression-admin-pass-1' } });
+  check('sign-in now asks for a code', noCode.status === 401 && noCode.json?.needCode === true);
+  check('a wrong code is refused', (await call('POST', '/api/auth/login', { body: { username: tfName, password: 'regression-admin-pass-1', code: '123456' } })).status === 401);
+  check('a used code cannot be replayed', (await call('POST', '/api/auth/login', { body: { username: tfName, password: 'regression-admin-pass-1', code: good } })).status === 401);
+  const next = totp(started.json.secret, 1);
+  const withCode = await call('POST', '/api/auth/login', { body: { username: tfName, password: 'regression-admin-pass-1', code: next } });
+  check('a fresh code signs in', withCode.status === 200 && Boolean(withCode.cookie), `status ${withCode.status}`);
+  check('turning it off needs a code', (await call('POST', '/api/admin/me/2fa/disable', { cookie: withCode.cookie, body: { code: '111111' } })).status === 400);
+  const tfAdmin = (await call('GET', '/api/admin/admins', { cookie: admin })).json?.items?.find((x) => x.username === tfName);
+  if (tfAdmin) await call('DELETE', `/api/admin/admins/${tfAdmin.id}`, { cookie: admin });
+  void tfMade;
   const noOrigin = await fetch(`${BASE}/api/admin/x/community/search-aliases`, { method: 'DELETE', headers: { 'content-type': 'application/json', cookie: admin }, body: '{"alias":"x"}' });
   check('admin extras reject a write without Origin (CSRF)', noOrigin.status === 403, `status ${noOrigin.status}`);
   check('site cannot be framed by other sites', (await fetch(`${BASE}/`)).headers.get('x-frame-options') === 'SAMEORIGIN');

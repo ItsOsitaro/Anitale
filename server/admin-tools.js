@@ -213,6 +213,32 @@ export const registerAdminTools = (app) => {
   // What the weekly owner report would say right now (the real one goes out Saturday morning).
   app.get('/api/admin/x/system/weekly-report', requireAdmin, (_req, res) => res.json({ text: buildWeeklyReport(), enabled: reportEnabled() }));
 
+  // Everything the site keeps about one member, as a JSON file (for a "give me my data" request, or before deleting the
+  // account). Admin-only notes about the member are not included, and neither is the password hash.
+  app.get('/api/admin/x/users/:username/export.json', requireAdmin, (req, res) => {
+    const u = db.prepare('SELECT * FROM users WHERE username = ? COLLATE NOCASE').get(String(req.params.username || '').trim());
+    if (!u) return bad(res, 'User not found', 404);
+    const all = (sql, ...args) => db.prepare(sql).all(...args);
+    const stacks = all('SELECT id, title, description, is_public AS isPublic, created_at AS createdAt FROM stacks WHERE user_id = ?', u.id)
+      .map((s) => ({ ...s, items: all('SELECT media_type AS mediaType, slug, position FROM stack_items WHERE stack_id = ? ORDER BY position', s.id) }));
+    const data = {
+      exportedAt: new Date().toISOString(),
+      account: { username: u.username, email: u.email || '', emailVerified: Boolean(u.email_verified_at), bio: u.bio, about: u.about, joined: u.created_at, privacy: { anime: u.privacy_anime, manga: u.privacy_manga } },
+      list: all('SELECT media_type AS mediaType, slug, status, rating, progress, note, created_at AS createdAt, updated_at AS updatedAt FROM user_entries WHERE user_id = ?', u.id),
+      reviews: all('SELECT media_type AS mediaType, slug, body, spoiler, created_at AS createdAt FROM reviews WHERE user_id = ?', u.id),
+      suggestions: all('SELECT media_type AS mediaType, slug_a AS slugA, slug_b AS slugB, body, created_at AS createdAt FROM recs WHERE user_id = ?', u.id),
+      stacks,
+      favorites: all('SELECT kind, ref, name FROM favorites WHERE user_id = ?', u.id),
+      following: all('SELECT x.username FROM follows f JOIN users x ON x.id = f.following_id WHERE f.follower_id = ?', u.id).map((r) => r.username),
+      followers: all('SELECT x.username FROM follows f JOIN users x ON x.id = f.follower_id WHERE f.following_id = ?', u.id).map((r) => r.username),
+      reportsSent: all('SELECT kind, ref, reason, status, created_at AS createdAt FROM content_reports WHERE user_id = ?', u.id),
+    };
+    res.setHeader('Content-Type', 'application/json; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="anitale-${u.username}.json"`);
+    res.send(JSON.stringify(data, null, 2));
+    return undefined;
+  });
+
   // Extra queue counts for the dashboard (cheap).
   app.get('/api/admin/x/community/queues', requireAdmin, (_req, res) => {
     res.json({ searchMisses: db.prepare('SELECT COUNT(*) AS n FROM search_misses').get().n, clientErrors: clientErrorsLast(), reports: openReportCount() });

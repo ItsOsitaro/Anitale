@@ -154,7 +154,7 @@ export default function ActivityLog() {
                   <tr key={row.id} className={`sys-log-row${ok ? '' : ' is-fail'}`}>
                     <td data-th={t('logWhen')} className="sys-when"><time dateTime={`${row.at.replace(' ', 'T')}Z`}><span>{stamp(row.at).toLocaleDateString(locale)}</span> <span className="sys-time">{stamp(row.at).toLocaleTimeString(locale)}</span></time></td>
                     <td data-th={t('logWho')} className="sys-who">{row.admin || t('logUnknownAdmin')}</td>
-                    <td data-th={t('logAction')}><span className="adm-verb">{t(VERB[row.method] || 'logVerbEdit')}</span> <code dir="ltr" className="sys-log-path" title={row.path}>{row.path.replace(/^\/api\/+/, '')}</code></td>
+                    <td data-th={t('logAction')}><span className="adm-verb">{t(VERB[row.method] || 'logVerbEdit')}</span> {row.label && <strong dir="auto" className="sys-log-label">{row.label}</strong>} <code dir="ltr" className="sys-log-path" title={row.path}>{row.path.replace(/^\/api\/+/, '')}</code></td>
                     <td data-th={t('logResult')}>
                       <span className={`adm-chip ${ok ? 'is-ok' : 'is-bad'}`} title={ok ? undefined : t(STATUS_HINT[row.status] || 'logHintOther')}>{ok ? t('logOk') : `${t('logFail')} (${num(row.status)})`}</span>{' '}
                       <span className="sys-ms" dir="ltr">{num(row.ms)} ms</span>

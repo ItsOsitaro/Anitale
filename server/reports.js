@@ -1,6 +1,7 @@
 import rateLimit from 'express-rate-limit';
 import { db } from './db.js';
 import { requireAdmin } from './auth.js';
+import { notifyReportResult } from './notifications.js';
 
 // "Report" button on reviews, suggestions (recs) and profiles. A member reports with a short reason; the owner sees an
 // open queue in the admin panel and marks each as handled or dismissed. Reporting never hides anything by itself.
@@ -17,6 +18,10 @@ CREATE TABLE IF NOT EXISTS content_reports (
 );
 CREATE INDEX IF NOT EXISTS idx_reports_status ON content_reports(status, id);
 `);
+// What the owner told the reporter when closing the report (shown in the member's notifications).
+if (!db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('content_reports') WHERE name = 'note'").get().n) {
+  db.exec("ALTER TABLE content_reports ADD COLUMN note TEXT NOT NULL DEFAULT ''");
+}
 
 export const openReportCount = () => db.prepare("SELECT COUNT(*) AS n FROM content_reports WHERE status = 'open'").get().n;
 
@@ -49,15 +54,19 @@ export const registerReportRoutes = (app, { requireSiteUser, userIdOf }) => {
   app.get('/api/admin/x/reports', requireAdmin, (req, res) => {
     const status = ['open', 'done', 'dismissed'].includes(req.query.status) ? req.query.status : 'open';
     const rows = db.prepare(`
-      SELECT c.id, c.kind, c.ref, c.reason, c.status, c.created_at AS createdAt, u.username AS reporter,
+      SELECT c.id, c.kind, c.ref, c.reason, c.note, c.status, c.created_at AS createdAt, u.username AS reporter,
         (SELECT COUNT(*) FROM content_reports x WHERE x.kind = c.kind AND x.ref = c.ref) AS times
       FROM content_reports c JOIN users u ON u.id = c.user_id WHERE c.status = ? ORDER BY c.id DESC LIMIT 100`).all(status);
     res.json({ items: rows.map((row) => ({ ...row, subject: subjectOf(row.kind, row.ref) })), open: openReportCount() });
   });
   app.post('/api/admin/x/reports/:id', requireAdmin, (req, res) => {
     const status = req.body?.status === 'dismissed' ? 'dismissed' : 'done';
-    const { changes } = db.prepare("UPDATE content_reports SET status = ? WHERE id = ? AND status = 'open'").run(status, Number.parseInt(req.params.id, 10));
+    const id = Number.parseInt(req.params.id, 10);
+    const note = String(req.body?.note || '').trim().slice(0, 300);
+    const { changes } = db.prepare("UPDATE content_reports SET status = ?, note = ? WHERE id = ? AND status = 'open'").run(status, note, id);
     if (!changes) { res.status(404).json({ error: 'Not found' }); return; }
+    const reporter = db.prepare('SELECT user_id FROM content_reports WHERE id = ?').get(id);
+    if (reporter) notifyReportResult(reporter.user_id, id);
     res.json({ ok: true });
   });
 };

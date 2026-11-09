@@ -17,6 +17,8 @@ export default function Login({ onLogin, configured }) {
   const [caps, setCaps] = useState(false);
   const [remember, setRemember] = useState(() => { try { return localStorage.getItem(LAST_USER + '.off') === null; } catch { return true; } });
   const [wait, setWait] = useState(0);
+  const [code, setCode] = useState('');
+  const [needCode, setNeedCode] = useState(false);
   const [badField, setBadField] = useState('');
   const userRef = useRef(null);
   const passRef = useRef(null);
@@ -42,10 +44,11 @@ export default function Login({ onLogin, configured }) {
     setBusy(true);
     setError(''); setBadField('');
     try {
-      const result = await api.login(name, password);
+      const result = await api.login(name, password, code.trim());
       try { if (remember) { localStorage.setItem(LAST_USER, name); localStorage.removeItem(LAST_USER + '.off'); } else { localStorage.removeItem(LAST_USER); localStorage.setItem(LAST_USER + '.off', '1'); } } catch { /* private mode */ }
       onLogin(result.user);
     } catch (err) {
+      if (err.status === 401 && err.data?.needCode) { setNeedCode(true); setError(code ? 'loginWrongCode' : 'loginNeedCode'); setCode(''); setPassword(password); return; }
       if (err.status === 401) { setFails((n) => n + 1); setError('loginFailed'); }
       else if (err.status === 503) setError('notConfigured');
       else if (err.status === 429) { setError('tooMany'); setWait(COOLDOWN); }
@@ -71,6 +74,12 @@ export default function Login({ onLogin, configured }) {
         <label htmlFor="adm-user">{t('username')}</label>
         <input id="adm-user" ref={userRef} dir="ltr" autoComplete="username" autoCapitalize="none" spellCheck={false} value={username} onChange={(e) => setUsername(e.target.value)} aria-invalid={userBad} aria-describedby={error ? 'adm-login-err' : undefined} maxLength={60} readOnly={busy} enterKeyHint="next" />
       </div>
+      {needCode && (
+        <div className="adm-field">
+          <label htmlFor="adm-code">{t('loginCode')}</label>
+          <input id="adm-code" dir="ltr" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9]*" maxLength={7} autoFocus value={code} onChange={(e) => setCode(e.target.value)} />
+        </div>
+      )}
       <div className="adm-field">
         <label htmlFor="adm-pass">{t('password')}</label>
         <div className="sys-pass" dir="ltr">

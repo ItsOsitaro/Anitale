@@ -276,7 +276,7 @@ export default function MangaList() {
       )}
 
       <div className={`adm-card adm-table-wrap${loading && data ? ' manga-is-loading' : ''}`} aria-busy={loading}>
-        <SavedViews scope="manga" />
+        <SavedViews scope="manga" value={params.toString()} onApply={(search) => setParams(new URLSearchParams(search), { replace: true })} />
         {canEdit && <BulkBar kind="manga" items={rows} picked={picked} clear={() => setPicked(new Set())} reload={load} />}
         <table className="adm-table">
           <thead>

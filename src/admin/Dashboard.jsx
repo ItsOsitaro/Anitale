@@ -130,6 +130,18 @@ export default function Dashboard() {
               )}
             </section>
 
+            {data.mine?.all > 0 && (
+              <section className="adm-card adm-dash-card">
+                <h2>{t('dashMine')}</h2>
+                <ul className="adm-dash-todo">
+                  <li><span>{t('dashMineReports')}</span><b>{number(data.mine.reports, lang)}</b></li>
+                  <li><span>{t('dashMineSuggestions')}</span><b>{number(data.mine.suggestions, lang)}</b></li>
+                  <li><span>{t('dashMineEdits')}</span><b>{number(data.mine.edits, lang)}</b></li>
+                  <li><span>{t('dashMineAll')}</span><b>{number(data.mine.all, lang)}</b></li>
+                </ul>
+              </section>
+            )}
+
             <section className="adm-card adm-dash-card">
               <h2>{t('dashQuick')}</h2>
               <div className="adm-dash-quick">

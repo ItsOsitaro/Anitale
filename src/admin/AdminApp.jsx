@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, Navigate, NavLink, Route, Routes, useLocation } from 'react-router-dom';
+import { Link, Navigate, NavLink, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { api } from './api.js';
 import { AdminContext } from './context.js';
 import { makeT } from './i18n.js';
@@ -204,6 +204,9 @@ const titleFor = (pathname) => {
   return 'dashNav';
 };
 
+// "g" then one of these letters (typed outside inputs) jumps to the page.
+const GO_KEYS = { d: '/admin', a: '/admin/anime', m: '/admin/manga', r: '/admin/reports', s: '/admin/suggestions', v: '/admin/reviews', u: '/admin/users', h: '/admin/health', l: '/admin/log', j: '/admin/jobs', q: '/admin/quality', n: '/admin/search-misses' };
+
 export default function AdminApp({ theme, onThemeChange }) {
   const [lang, setLang] = useState(readLang);
   const [user, setUser] = useState(undefined); // undefined = checking, null = logged out
@@ -214,6 +217,8 @@ export default function AdminApp({ theme, onThemeChange }) {
   const [overview, setOverview] = useState(null);
   const [dialog, setDialog] = useState(null); // { message, resolve }
   const [paletteOpen, setPaletteOpen] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
+  const navigate = useNavigate();
   const t = useMemo(() => makeT(lang), [lang]);
   const location = useLocation();
 
@@ -302,6 +307,18 @@ export default function AdminApp({ theme, onThemeChange }) {
     const onKey = (event) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') { event.preventDefault(); setPaletteOpen((open) => !open); return; }
       const tag = document.activeElement?.tagName;
+      const typing = ['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) || document.activeElement?.isContentEditable;
+      if (!typing && !event.ctrlKey && !event.metaKey && !event.altKey) {
+        // "g" then a letter jumps to a page; "?" shows the list.
+        if (event.key === '?') { event.preventDefault(); setHelpOpen((open) => !open); return; }
+        if (event.key === 'Escape') setHelpOpen(false);
+        if (window.__admG && Date.now() - window.__admG < 1500) {
+          window.__admG = 0;
+          const target = GO_KEYS[event.key.toLowerCase()];
+          if (target) { event.preventDefault(); navigate(target); return; }
+        }
+        if (event.key === 'g') { window.__admG = Date.now(); return; }
+      }
       if (event.key === '/' && !['INPUT', 'TEXTAREA', 'SELECT'].includes(tag) && !document.activeElement?.isContentEditable) {
         const box = document.querySelector('.adm-main input[type="search"]');
         if (box) { event.preventDefault(); box.focus(); }
@@ -309,7 +326,7 @@ export default function AdminApp({ theme, onThemeChange }) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [user]);
+  }, [user, navigate]);
 
   // can('catalog') = may view, can('catalog', 'edit') = may change. The owner can do everything.
   const can = useCallback((area, level = 'view') => {
@@ -477,6 +494,20 @@ export default function AdminApp({ theme, onThemeChange }) {
           ))}
         </div>
         {dialog && <ConfirmDialog message={dialog.message} options={dialog.options} t={t} onAnswer={answerDialog} />}
+        {helpOpen && user && (
+          <div className="adm-modal-back" onMouseDown={(event) => { if (event.target === event.currentTarget) setHelpOpen(false); }}>
+            <div className="adm-palette adm-keyhelp" role="dialog" aria-modal="true" aria-label={t('kbTitle')}>
+              <h2>{t('kbTitle')}</h2>
+              <ul>
+                <li><kbd>Ctrl</kbd>+<kbd>K</kbd> {t('kbPalette')}</li>
+                <li><kbd>/</kbd> {t('kbSearch')}</li>
+                {Object.entries(GO_KEYS).map(([key, path]) => <li key={key}><kbd>g</kbd> <kbd>{key}</kbd> → <code dir="ltr">{path}</code></li>)}
+                <li><kbd>?</kbd> {t('kbHelp')}</li>
+              </ul>
+              <button type="button" className="adm-btn" onClick={() => setHelpOpen(false)}>{t('cancel')}</button>
+            </div>
+          </div>
+        )}
         {paletteOpen && user && <Palette items={paletteItems} t={t} onClose={() => setPaletteOpen(false)} />}
       </div>
     </AdminContext.Provider>

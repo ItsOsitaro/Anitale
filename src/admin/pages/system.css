@@ -119,3 +119,12 @@
 .tp-preview__card { display: flex; gap: 14px; margin-block-start: 10px; }
 .tp-preview__card img { width: 120px; height: 170px; object-fit: cover; border-radius: 10px; flex: none; background: var(--secondary); }
 .tp-preview__empty { width: 120px; height: 170px; border-radius: 10px; background: var(--secondary); flex: none; }
+
+.tp-livepage { margin-block-start: 12px; display: grid; gap: 8px; }
+.tp-livepage iframe { width: 100%; height: 560px; border: 1px solid var(--border); border-radius: 12px; background: var(--card); }
+
+.tp-secret { padding-block: 6px; padding-inline: 10px; border: 1px dashed var(--border); border-radius: 8px; letter-spacing: 0.08em; user-select: all; }
+
+.adm-keyhelp { padding: 16px; display: grid; gap: 10px; }
+.adm-keyhelp ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.adm-keyhelp kbd { padding-block: 1px; padding-inline: 6px; border: 1px solid var(--border); border-radius: 6px; background: var(--secondary); font-size: 12px; }

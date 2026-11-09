@@ -36,7 +36,9 @@ export default function NotificationList({ items, onNavigate }) {
         const name = row.actor?.username;
         const profile = name ? `/user/${encodeURIComponent(name)}` : null;
         const href = row.kind === 'follow' ? profile : (item ? mediaHref(item, row.mediaType) : (row.slug ? `/${row.mediaType}/${row.slug}` : null));
-        const text = row.kind === 'follow'
+        const text = row.kind === 'report_result'
+          ? t(row.report?.status === 'dismissed' ? 'notifReportDismissed' : 'notifReportDone', { note: row.report?.note ? ` ${row.report.note}` : '' })
+          : row.kind === 'follow'
           ? t('notifFollow', { name })
           : row.kind === 'friend_review'
             ? t('notifReview', { name, title })

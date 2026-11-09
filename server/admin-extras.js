@@ -17,6 +17,7 @@ import { registerAdminTools } from './admin-tools.js';
 import { captureRevisions, registerRevisionRoutes } from './revisions.js';
 import { registerBackupRoutes } from './backup.js';
 import { registerAdminNotes } from './admin-notes.js';
+import { registerTotpRoutes } from './totp.js';
 import { register as registerSystem } from './admin-system.js';
 
 db.exec(`
@@ -33,8 +34,19 @@ if (!db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('admin_log') WHERE 
   db.exec("ALTER TABLE admin_log ADD COLUMN admin TEXT NOT NULL DEFAULT ''");
 }
 
+// The title a log row is about (its name at the time), so the log can be searched by name and not only by slug.
+if (!db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('admin_log') WHERE name = 'label'").get().n) {
+  db.exec("ALTER TABLE admin_log ADD COLUMN label TEXT NOT NULL DEFAULT ''");
+}
+const TITLE_PATH = /^\/api\/(?:admin\/)?(anime|manga)\/([^/]+?)(?:\/[a-z-]+)?$/;
+const labelOf = (path) => {
+  const m = TITLE_PATH.exec(path);
+  if (!m || m[2] === 'refresh-all') return '';
+  try { return db.prepare(`SELECT title FROM ${m[1]} WHERE slug = ?`).get(decodeURIComponent(m[2]))?.title?.slice(0, 200) || ''; } catch { return ''; }
+};
+
 const KEEP_ROWS = 3000;
-const insertLog = db.prepare('INSERT INTO admin_log (method, path, status, ms, admin) VALUES (?, ?, ?, ?, ?)');
+const insertLog = db.prepare('INSERT INTO admin_log (method, path, status, ms, admin, label) VALUES (?, ?, ?, ?, ?, ?)');
 let writes = 0;
 
 // Only changes made by an admin session count: writes under /api/admin and the title CRUD routes.
@@ -46,10 +58,11 @@ export const registerAdminExtras = (app) => {
   app.use((req, res, next) => {
     if (!isAdminWrite(req)) return next();
     const started = Date.now();
+    const label = labelOf(req.path); // read before the handler runs: a delete removes the row
     res.on('finish', () => {
       try {
         if (res.statusCode === 401) return;
-        insertLog.run(req.method, req.path.slice(0, 200), res.statusCode, Date.now() - started, req.admin?.username || currentAdmin(req)?.username || '');
+        insertLog.run(req.method, req.path.slice(0, 200), res.statusCode, Date.now() - started, req.admin?.username || currentAdmin(req)?.username || '', label);
         writes += 1;
         if (writes % 200 === 0) db.prepare('DELETE FROM admin_log WHERE id <= (SELECT MAX(id) FROM admin_log) - ?').run(KEEP_ROWS);
       } catch { /* logging must never break a request */ }
@@ -94,6 +107,17 @@ export const registerAdminExtras = (app) => {
         reviews: n(`SELECT COUNT(*) AS n FROM reviews WHERE created_at >= ${week}`),
         titles: n(`SELECT COUNT(*) AS n FROM anime WHERE created_at >= ${week}`) + n(`SELECT COUNT(*) AS n FROM manga WHERE created_at >= ${week}`),
       },
+      // What this admin did in the last 7 days (from the activity log).
+      mine: (() => {
+        const who = req.admin?.username || '';
+        const c = (extra) => n(`SELECT COUNT(*) AS n FROM admin_log WHERE admin = ? AND status < 400 AND at >= ${week} AND ${extra}`, who);
+        return {
+          reports: c("path LIKE '/api/admin/x/reports/%'"),
+          suggestions: c("(path LIKE '/api/admin/suggestions/%/approve' OR path LIKE '/api/admin/suggestions/%/reject')"),
+          edits: c("method IN ('PUT', 'PATCH', 'DELETE') AND (path LIKE '/api/anime/%' OR path LIKE '/api/admin/anime/%' OR path LIKE '/api/admin/manga/%')"),
+          all: c("method <> 'GET'"),
+        };
+      })(),
       recent: db.prepare('SELECT id, at, method, path, status, admin FROM admin_log ORDER BY id DESC LIMIT 8').all(),
       importAll: importAllState(),
       autoImport: getAutoImportState(),
@@ -118,20 +142,20 @@ export const registerAdminExtras = (app) => {
     if (date(q.from)) { where.push('at >= ?'); args.push(`${date(q.from)} 00:00:00`); }
     if (date(q.to)) { where.push('at <= ?'); args.push(`${date(q.to)} 23:59:59`); }
     const text = String(q.q || '').trim().slice(0, 80);
-    if (text) { where.push("path LIKE ? ESCAPE '!'"); args.push(`%${text.replace(/[!%_]/g, '!$&')}%`); }
+    if (text) { where.push("(path LIKE ? ESCAPE '!' OR label LIKE ? ESCAPE '!')"); args.push(`%${text.replace(/[!%_]/g, '!$&')}%`, `%${text.replace(/[!%_]/g, '!$&')}%`); }
     const clause = where.length ? `WHERE ${where.join(' AND ')}` : '';
     if (q.format === 'csv') {
-      const all = db.prepare(`SELECT at, admin, method, path, status, ms FROM admin_log ${clause} ORDER BY id DESC LIMIT 3000`).all(...args);
+      const all = db.prepare(`SELECT at, admin, method, path, status, ms, label FROM admin_log ${clause} ORDER BY id DESC LIMIT 3000`).all(...args);
       // Prefix risky cells so spreadsheets never run them as formulas.
       const cell = (v) => `"${String(v ?? '').replace(/^[=+@-]/, "'$&").replace(/"/g, '""')}"`;
-      const lines = all.map((r) => [r.at, r.admin, r.method, r.path, r.status, r.ms].map(cell).join(','));
+      const lines = all.map((r) => [r.at, r.admin, r.method, r.path, r.status, r.ms, r.label].map(cell).join(','));
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
       res.setHeader('Content-Disposition', 'attachment; filename="admin-log.csv"');
-      res.send(['﻿at,admin,method,path,status,ms', ...lines].join('\r\n'));
+      res.send(['﻿at,admin,method,path,status,ms,title', ...lines].join('\r\n'));
       return;
     }
     const total = db.prepare(`SELECT COUNT(*) AS n FROM admin_log ${clause}`).get(...args).n;
-    const items = db.prepare(`SELECT id, at, method, path, status, ms, admin FROM admin_log ${clause} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...args, limit, offset);
+    const items = db.prepare(`SELECT id, at, method, path, status, ms, admin, label FROM admin_log ${clause} ORDER BY id DESC LIMIT ? OFFSET ?`).all(...args, limit, offset);
     const admins = db.prepare("SELECT DISTINCT admin FROM admin_log WHERE admin <> '' ORDER BY admin").all().map((r) => r.admin);
     // Failed count for the same filters (except the result filter), so the page can show "N failed".
     const failClause = clause ? `${clause} AND status >= 400` : 'WHERE status >= 400';
@@ -150,6 +174,7 @@ export const registerAdminExtras = (app) => {
   registerRevisionRoutes(app);
   registerBackupRoutes(app);
   registerAdminNotes(app);
+  registerTotpRoutes(app);
   registerSystem(app);
 };
 

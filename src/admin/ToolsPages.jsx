@@ -257,37 +257,28 @@ export function AdminNotes({ type, slug, username }) {
   );
 }
 
-// Saved views of a list: keeps the current search/filter/sort (the page address) under a name, per browser.
-export function SavedViews({ scope }) {
-  const { t } = useAdmin();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const key = `anitale.admin.views.${scope}`;
-  const read = () => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch { return []; } };
-  const [views, setViews] = useState(read);
+// Saved views of a list, shared by all admins (stored on the server). `value` is what describes the current view (the
+// address query for the anime/manga lists, a JSON string for the member list); `onApply(value)` restores a saved one.
+export function SavedViews({ scope, value, onApply }) {
+  const { t, toast } = useAdmin();
+  const [views, setViews] = useState([]);
   const [name, setName] = useState('');
-  const here = location.search;
-  const save = (event) => {
+  const load = useCallback(() => api.views(scope).then((d) => setViews(d.items)).catch(() => setViews([])), [scope]);
+  useEffect(() => { load(); }, [load]);
+  const save = async (event) => {
     event.preventDefault();
-    const next = [...views.filter((v) => v.name !== name.trim()), { name: name.trim().slice(0, 40), search: here }].slice(-12);
-    try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* private mode */ }
-    setViews(next);
-    setName('');
+    try { await api.viewAdd(scope, name.trim(), value); setName(''); load(); } catch (err) { toast(errText(err, t), 'error'); }
   };
-  const drop = (viewName) => {
-    const next = views.filter((v) => v.name !== viewName);
-    try { localStorage.setItem(key, JSON.stringify(next)); } catch { /* private mode */ }
-    setViews(next);
-  };
+  const drop = async (view) => { try { await api.viewRemove(scope, view.id); load(); } catch (err) { toast(errText(err, t), 'error'); } };
   return (
     <div className="tp-views" role="group" aria-label={t('svTitle')}>
       {views.map((v) => (
-        <span key={v.name} className="adm-fchip tp-view">
-          <button type="button" onClick={() => navigate(`${location.pathname}${v.search}`)} aria-pressed={v.search === here}>{v.name}</button>
-          <button type="button" onClick={() => drop(v.name)} aria-label={`${t('ntDelete')}: ${v.name}`}>×</button>
+        <span key={v.id} className="adm-fchip tp-view">
+          <button type="button" onClick={() => onApply(v.search)} aria-pressed={v.search === value} title={v.admin}>{v.name}</button>
+          <button type="button" onClick={() => drop(v)} aria-label={`${t('ntDelete')}: ${v.name}`}>×</button>
         </span>
       ))}
-      {here && (
+      {value && (
         <form onSubmit={save} className="tp-viewform">
           <input value={name} required maxLength={40} onChange={(e) => setName(e.target.value)} placeholder={t('svName')} aria-label={t('svName')} dir="auto" />
           <button type="submit" className="adm-btn">{t('svSave')}</button>
@@ -317,8 +308,9 @@ export function CannedEditor({ items, onSaved }) {
 }
 
 // Preview of how the title will look to visitors, from the form values (before saving).
-export function TitlePreview({ form, cover }) {
+export function TitlePreview({ form, cover, slug = '' }) {
   const { t } = useAdmin();
+  const [live, setLive] = useState(0); // 0 = closed, otherwise a counter that reloads the frame
   const synopsis = String(form.synopsisFa || form.synopsis || '').slice(0, 220);
   return (
     <details className="adm-card tp-preview">
@@ -331,6 +323,13 @@ export function TitlePreview({ form, cover }) {
           <p dir="auto">{synopsis || t('pvNoSynopsis')}{synopsis.length >= 220 ? '…' : ''}</p>
         </div>
       </div>
+      {slug && (
+        <div className="tp-livepage">
+          <button type="button" className="adm-btn" onClick={() => setLive((n) => n + 1)}>{live ? t('pvReload') : t('pvOpenLive')}</button>
+          <small className="adm-muted">{t('pvLiveNote')}</small>
+          {live > 0 && <iframe key={live} title={t('pvOpenLive')} src={`/anime/${encodeURIComponent(slug)}`} loading="lazy" />}
+        </div>
+      )}
     </details>
   );
 }
@@ -365,6 +364,46 @@ export function AdminSessions() {
         ))}
       </ul>
       {data.items.length > 1 && <button type="button" className="adm-btn" onClick={others}>{t('ssEndOthers')}</button>}
+    </section>
+  );
+}
+
+// Two-step sign-in card (account page): secret key, confirm with a code, turn off with a code.
+export function TwoFactor() {
+  const { t, toast } = useAdmin();
+  const [state, setState] = useState(null);
+  const [setup, setSetup] = useState(null);
+  const [code, setCode] = useState('');
+  const load = useCallback(() => api.twofa().then(setState).catch(() => setState(null)), []);
+  useEffect(() => { load(); }, [load]);
+  if (!state) return null;
+  const act = async (task, doneKey) => {
+    try { await task(); if (doneKey) toast(t(doneKey)); setSetup(null); setCode(''); load(); } catch (err) { toast(errText(err, t), 'error'); }
+  };
+  return (
+    <section className="adm-card tp-page">
+      <h2>{t('tfTitle')}</h2>
+      <p className="adm-muted">{t('tfHint')}</p>
+      {state.suspended && <p className="adm-error" role="alert">{t('tfSuspended')}</p>}
+      <p><strong>{state.enabled ? t('tfOn') : t('tfOff')}</strong></p>
+      {!state.enabled && !setup && <button type="button" className="adm-btn adm-primary" onClick={async () => { try { setSetup(await api.twofaStart()); } catch (err) { toast(errText(err, t), 'error'); } }}>{t('tfStart')}</button>}
+      {!state.enabled && setup && (
+        <div className="tp-ban">
+          <p>{t('tfKey')}</p>
+          <code dir="ltr" className="tp-secret">{setup.secret}</code>
+          <a className="adm-btn" href={setup.uri}>{t('tfOpen')}</a>
+          <p>{t('tfConfirm')}</p>
+          <input dir="ltr" inputMode="numeric" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} aria-label={t('loginCode')} autoComplete="one-time-code" />
+          <button type="button" className="adm-btn adm-primary" disabled={code.replace(/\s/g, '').length !== 6} onClick={() => act(() => api.twofaEnable(code), 'tfDone')}>{t('tfEnable')}</button>
+        </div>
+      )}
+      {state.enabled && (
+        <div className="tp-ban">
+          <input dir="ltr" inputMode="numeric" maxLength={7} value={code} onChange={(e) => setCode(e.target.value)} aria-label={t('loginCode')} autoComplete="one-time-code" />
+          <button type="button" className="adm-btn is-danger" disabled={code.replace(/\s/g, '').length !== 6} onClick={() => act(() => api.twofaDisable(code), 'tfOffDone')}>{t('tfDisable')}</button>
+        </div>
+      )}
+      <p className="adm-muted">{t('tfLost')}</p>
     </section>
   );
 }
@@ -428,7 +467,10 @@ export function ReportsPage() {
   const [error, setError] = useState('');
   const load = useCallback(() => api.reports(status).then((d) => { setItems(d.items); setError(''); }).catch((err) => setError(errText(err, t))), [t, status]);
   useEffect(() => { setItems(null); load(); }, [load]);
-  const close = async (row, next) => { try { await api.reportClose(row.id, next); load(); } catch (err) { toast(errText(err, t), 'error'); } };
+  const [note, setNote] = useState('');
+  const [canned, setCanned] = useState([]);
+  useEffect(() => { api.canned().then((d) => setCanned(d.items)).catch(() => {}); }, []);
+  const close = async (row, next) => { try { await api.reportClose(row.id, next, note); setNote(''); load(); } catch (err) { toast(errText(err, t), 'error'); } };
   const kinds = t('rpKinds') || {};
   return (
     <section className="adm-card tp-page">
@@ -437,6 +479,12 @@ export function ReportsPage() {
       <div className="adm-filters" role="group">
         {['open', 'done', 'dismissed'].map((s) => <button key={s} type="button" className={`adm-fchip${status === s ? ' is-on' : ''}`} aria-pressed={status === s} onClick={() => setStatus(s)}>{t(`rp_${s}`)}</button>)}
       </div>
+      {status === 'open' && can('reports', 'edit') && (
+        <div className="tp-ban">
+          <input value={note} maxLength={300} onChange={(e) => setNote(e.target.value)} placeholder={t('rpNote')} aria-label={t('rpNote')} dir="auto" style={{ flex: '1 1 300px' }} />
+          {canned.map((text) => <button key={text} type="button" className="adm-fchip" onClick={() => setNote(text)}>{text}</button>)}
+        </div>
+      )}
       {error && <p className="adm-error" role="alert">{error}</p>}
       {items && items.length === 0 && <p className="adm-empty">{t('rpEmpty')}</p>}
       <ul className="tp-jobs">
@@ -445,7 +493,7 @@ export function ReportsPage() {
             <div className="tp-report">
               <strong>{kinds[row.kind] || row.kind} · {row.subject?.by || '—'} {row.times > 1 && <span className="adm-chip is-bad">×{row.times}</span>}</strong>
               {row.subject ? <p dir="auto">{row.subject.text || '—'}</p> : <p className="adm-muted">{t('rpGone')}</p>}
-              <small className="adm-muted" dir="auto">{t('rpBy', { who: row.reporter })}{row.reason ? ` · ${row.reason}` : ''} · {row.subject?.where}</small>
+              <small className="adm-muted" dir="auto">{t('rpBy', { who: row.reporter })}{row.reason ? ` · ${row.reason}` : ''} · {row.subject?.where}{row.note ? ` · ${t('rpNoteShown')}: ${row.note}` : ''}</small>
             </div>
             {status === 'open' && can('reports', 'edit') && (
               <div className="adm-actions">

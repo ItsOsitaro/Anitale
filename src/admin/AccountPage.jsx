@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { TwoFactor } from './ToolsPages.jsx';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
@@ -30,6 +31,7 @@ export default function AccountPage() {
 
   return (
     <div className="adm-admins">
+      <TwoFactor />
       <div className="adm-card">
         <header className="adm-card-head">
           <div>

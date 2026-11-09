@@ -25,6 +25,37 @@ CREATE TABLE IF NOT EXISTS notification_state (
 );
 `);
 
+// A fourth kind, 'report_result' (the owner closed a report the member sent): the CHECK list cannot be altered in place,
+// so the table is rebuilt once.
+if (!db.prepare("SELECT sql FROM sqlite_master WHERE name = 'notifications'").get().sql.includes('report_result')) {
+  db.exec('BEGIN');
+  try {
+    db.exec(`
+      CREATE TABLE notifications_new (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        kind TEXT NOT NULL CHECK (kind IN ('follow', 'friend_review', 'new_title', 'report_result')),
+        actor_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        media_type TEXT,
+        slug TEXT,
+        ref TEXT NOT NULL,
+        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+        read_at TEXT
+      );
+      INSERT INTO notifications_new SELECT id, user_id, kind, actor_id, media_type, slug, ref, created_at, read_at FROM notifications;
+      DROP TABLE notifications;
+      ALTER TABLE notifications_new RENAME TO notifications;
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_notifications_ref ON notifications(user_id, kind, ref);
+      CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, created_at);
+    `);
+    db.exec('COMMIT');
+  } catch (error) { db.exec('ROLLBACK'); throw error; }
+}
+
+export const notifyReportResult = (userId, reportId) => {
+  db.prepare("INSERT OR IGNORE INTO notifications (user_id, kind, actor_id, media_type, slug, ref) VALUES (?, 'report_result', NULL, NULL, NULL, ?)").run(userId, `rep:${reportId}`);
+};
+
 const insert = db.prepare(`
   INSERT OR IGNORE INTO notifications (user_id, kind, actor_id, media_type, slug, ref) VALUES (?, ?, ?, ?, ?, ?)
 `);
@@ -96,6 +127,7 @@ export const listNotifications = (userId) => {
       slug: row.slug,
       createdAt: new Date(`${row.created_at.replace(' ', 'T')}Z`).toISOString(),
       read: Boolean(row.read_at),
+      ...(row.kind === 'report_result' ? { report: db.prepare('SELECT status, note FROM content_reports WHERE id = ?').get(Number(String(row.ref).slice(4))) || null } : {}),
     })),
   };
 };

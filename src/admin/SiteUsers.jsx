@@ -2,7 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { api } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
-import { BanControl, AdminNotes } from './ToolsPages.jsx';
+import { BanControl, AdminNotes, SavedViews } from './ToolsPages.jsx';
 import {
   Chip, ErrorBar, Pager, Skeleton, call, fmtDate, num, qs, useDebounced, useRemoteList, useSearchHotkey,
 } from './pages/communityKit.jsx';
@@ -153,6 +153,9 @@ export default function SiteUsers() {
   };
 
   const removeUser = async (user) => {
+    // Two steps: the usual confirmation, then typing the username (deleting a member removes their list and reviews).
+    const typed = window.prompt(t('uTypeName', { name: user.username }));
+    if (typed == null || typed.trim().toLowerCase() !== user.username.toLowerCase()) { if (typed != null) toast(t('uTypeMismatch'), 'error'); return; }
     if (!await confirm(t('uDeleteConfirm', { name: user.username }) + (user.animeCount + user.mangaCount ? ` ${t('uDeleteLists', { n: user.animeCount + user.mangaCount })}` : ''))) return;
     try {
       await api.usersRemove(user.username);
@@ -194,6 +197,7 @@ export default function SiteUsers() {
         <td colSpan={colCount}>
           <div className="adm-user-detail" ref={detailRef}>
             <div className="adm-user-half">
+              {selected?.user && <a className="adm-btn" href={`/api/admin/x/users/${encodeURIComponent(selected.user.username)}/export.json`} download>{t('uExportData')}</a>}
               <AdminNotes username={selected?.user?.username || ''} />
               <BanControl username={selected?.user?.username || ''} summary={summary} canEdit={canEdit} onChanged={() => { loadSummary(selected.user.username); reload(); }} />
               {summary && (
@@ -275,6 +279,7 @@ export default function SiteUsers() {
         {canEdit && <button className="adm-btn adm-primary" type="button" aria-expanded={creating} onClick={() => setCreating((open) => !open)}>+ {t('newUser')}</button>}
       </div>
 
+      <SavedViews scope="users" value={query || filter || sort !== 'new' ? JSON.stringify({ q: query, filter, sort }) : ''} onApply={(raw) => { try { const v = JSON.parse(raw); setQuery(v.q || ''); setFilter(v.filter || ''); setSort(v.sort || 'new'); setPage(1); } catch { /* a bad saved value is ignored */ } }} />
       <div className="adm-filters" role="group" aria-label={t('cmFilters')}>
         <Chip on={!filter} count={counts ? num(counts.all, lang) : null} onClick={() => setFilter('')}>{t('cmAll')}</Chip>
         {FILTERS.map((f) => <Chip key={f} on={filter === f} count={counts ? num(counts[f], lang) : null} onClick={() => setFilter(filter === f ? '' : f)}>{t(`uFilter_${f}`)}</Chip>)}
