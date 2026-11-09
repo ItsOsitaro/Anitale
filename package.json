@@ -15,7 +15,8 @@
     "seed": "node server/seed.js",
     "setup-admin": "node server/scripts/setup-admin.js",
     "setup:model": "node scripts/fetch-model.mjs",
-    "hash-password": "node server/scripts/hash-password.js"
+    "hash-password": "node server/scripts/hash-password.js",
+    "verify": "node scripts/verify.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.9.0",

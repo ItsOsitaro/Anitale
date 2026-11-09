@@ -1,4 +1,6 @@
 import rateLimit from 'express-rate-limit';
+import { eventAlert } from './event-alerts.js';
+import { siteUrl } from './mailer.js';
 import { z } from 'zod';
 import { db } from './db.js';
 import { titleExists } from './reviews.js';
@@ -90,6 +92,7 @@ export const registerSuggestionRoutes = (app, { requireSiteUser, requireAdmin, c
       throw httpError(409, 'You already have a pending suggestion of this kind for this title');
     }
     const info = db.prepare('INSERT INTO edit_suggestions (user_id, media_type, slug, kind, payload) VALUES (?, ?, ?, ?, ?)').run(user.id, mediaType, slug, kind, JSON.stringify(rest));
+    eventAlert('suggestion', `✏️ پیشنهاد ویرایش تازه (${kind}) برای «${slug}». ${siteUrl()}/admin/suggestions`);
     res.status(201).json({ ok: true, id: Number(info.lastInsertRowid), left: DAILY_LIMIT - today - 1 });
   });
 

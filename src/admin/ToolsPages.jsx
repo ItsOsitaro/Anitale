@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { api } from './api.js';
+import { api, runBulkJob } from './api.js';
 import { useAdmin } from './context.js';
 import { errText } from './util.js';
 
@@ -29,7 +29,9 @@ export function GrowthPage() {
   const { t, lang } = useAdmin();
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
-  useEffect(() => { api.growth().then(setData).catch((err) => setError(errText(err, t))); }, [t]);
+  const [funnel, setFunnel] = useState(null);
+  const [stats, setStats] = useState(null);
+  useEffect(() => { api.growth().then(setData).catch((err) => setError(errText(err, t))); api.funnel().then(setFunnel).catch(() => {}); api.stats(7).then(setStats).catch(() => {}); }, [t]);
   return (
     <section className="adm-card tp-page">
       <h2>{t('gwTitle')}</h2>
@@ -45,6 +47,25 @@ export function GrowthPage() {
             <Bars rows={data.series.reviews} label={t('gwReviews')} lang={lang} />
             <Bars rows={data.series.titles} label={t('gwTitles')} lang={lang} />
           </div>
+          {funnel?.weeks.length > 0 && (
+            <div className="tp-funnel">
+              <h3>{t('fnTitle')}</h3>
+              <p className="adm-muted">{t('fnHint')}</p>
+              <table className="adm-table">
+                <thead><tr><th>{t('fnWeek')}</th><th>{t('fnSignups')}</th><th>{t('fnListed')}</th><th>{t('fnEngaged')}</th><th>{t('fnReviewed')}</th><th>{t('fnReturned')}</th></tr></thead>
+                <tbody>{funnel.weeks.map((w) => (
+                  <tr key={w.w}><td dir="ltr">{w.w}</td><td>{num(w.signups, lang)}</td><td>{num(w.listed, lang)}</td><td>{num(w.engaged, lang)}</td><td>{num(w.reviewed, lang)}</td><td>{num(w.returned, lang)}</td></tr>
+                ))}</tbody>
+              </table>
+            </div>
+          )}
+          {stats && (stats.anime.length > 0 || stats.pages.length > 0 || stats.searches.length > 0) && (
+            <div className="tp-lists">
+              <div><h3>{t('stViewedAnime')}</h3><ol>{stats.anime.map((r) => <li key={r.ref}><Link to={`/admin/edit/${r.ref}`} dir="auto">{r.title}</Link> <b>{num(r.n, lang)}</b></li>)}</ol></div>
+              <div><h3>{t('stViewedPages')}</h3><ol>{stats.pages.map((r) => <li key={r.ref}><span dir="ltr">{r.ref}</span> <b>{num(r.n, lang)}</b></li>)}</ol></div>
+              <div><h3>{t('stSearches')}</h3><ol>{stats.searches.map((r) => <li key={r.q}><span dir="auto">{r.q}</span> <b>{num(r.n, lang)}</b></li>)}</ol></div>
+            </div>
+          )}
           <div className="tp-lists">
             <div>
               <h3>{t('gwTop')}</h3>
@@ -78,11 +99,23 @@ function MergeButton({ slugs, onDone }) {
 }
 
 export function QualityPage() {
-  const { t, lang } = useAdmin();
+  const { t, lang, toast, confirm, can } = useAdmin();
+  const [fixing, setFixing] = useState('');
+  const [fixProgress, setFixProgress] = useState(null);
   const [data, setData] = useState(null);
   const [error, setError] = useState('');
   useEffect(() => { api.quality().then(setData).catch((err) => setError(errText(err, t))); }, [t]);
   const labels = t('qlGroups') || {};
+  // "Fix all": re-fetch every title with this gap from the source, as one background job with progress (a few per second at most).
+  const fixAll = async (group) => {
+    if (!await confirm(t('qlFixConfirm', { n: group.count }))) return;
+    setFixing(group.key);
+    try {
+      const { updated, failed } = await runBulkJob(() => api.refreshGap(group.key), api.refreshAllStatus, setFixProgress);
+      toast(t('bulkDone', { ok: updated, bad: failed }), failed ? 'error' : undefined);
+      api.quality().then(setData);
+    } catch (err) { toast(errText(err, t), 'error'); } finally { setFixing(''); setFixProgress(null); }
+  };
   const filterable = ['noCover', 'noPersian', 'noScore', 'noMal']; // the filters the anime list knows
   const open = (group) => (group.type === 'manga' ? '/admin/manga' : filterable.includes(group.key) ? `/admin/anime?filter=${group.key}` : '/admin/anime');
   const bad = data?.groups.filter((g) => g.count > 0) || [];
@@ -99,6 +132,10 @@ export function QualityPage() {
           <h3>{t(group.type === 'manga' ? 'qlManga' : 'qlAnime')} · {labels[group.key] || group.key} <b>{num(group.count, lang)}</b></h3>
           <ul>{group.samples.map((row) => <li key={row.slug}><Link to={`/admin/edit/${row.slug}`} dir="auto">{row.title}</Link></li>)}</ul>
           <Link className="adm-btn" to={open(group)}>{t('qlFix')}</Link>
+          {group.type === 'anime' && ['noScore', 'noCover', 'noGenres', 'noYear'].includes(group.key) && can('import', 'edit') && (
+            <button type="button" className="adm-btn adm-primary" disabled={Boolean(fixing)} onClick={() => fixAll(group)}>{fixing === group.key ? `${t('qlFixing')} ${fixProgress ? `${fixProgress.done}/${fixProgress.total}` : ''}` : t('qlFixAll', { n: num(group.count, lang) })}</button>
+          )}
+          {group.type === 'anime' && group.key === 'noPersian' && can('translate', 'edit') && <Link className="adm-btn adm-primary" to="/admin/translate">{t('qlTranslateAll')}</Link>}
         </div>
       ))}
       {data?.dupes.length > 0 && (
@@ -570,6 +607,87 @@ export function BackupCard() {
         </div>
       )}
       <ul className="tp-check">{state.files.map((f) => <li key={f.name}><span dir="ltr">{f.name}</span><small className="adm-muted">{mb(f.size)}</small></li>)}</ul>
+    </section>
+  );
+}
+
+// A small CSV reader (quotes, commas and newlines inside quotes); the first row is the header.
+const parseCsv = (text) => {
+  const rows = [];
+  let row = [];
+  let cell = '';
+  let quoted = false;
+  const src = String(text).replace(/^﻿/, '');
+  for (let i = 0; i < src.length; i += 1) {
+    const ch = src[i];
+    if (quoted) {
+      if (ch === '"' && src[i + 1] === '"') { cell += '"'; i += 1; } else if (ch === '"') quoted = false; else cell += ch;
+    } else if (ch === '"') quoted = true;
+    else if (ch === ',') { row.push(cell); cell = ''; } else if (ch === '\n' || ch === '\r') {
+      if (ch === '\r' && src[i + 1] === '\n') i += 1;
+      row.push(cell); cell = '';
+      if (row.some((c) => c !== '')) rows.push(row);
+      row = [];
+    } else cell += ch;
+  }
+  row.push(cell);
+  if (row.some((c) => c !== '')) rows.push(row);
+  const [header = [], ...body] = rows;
+  const keys = header.map((h) => h.trim());
+  return body.map((r) => Object.fromEntries(keys.map((k, i) => [k, r[i] ?? ''])));
+};
+
+// Bulk edit from a CSV file: columns slug (required), titleFa, genres (split by ; or ,), year, synopsisFa. Preview first.
+export function BulkEditPage() {
+  const { t, toast, confirm } = useAdmin();
+  const [type, setType] = useState('anime');
+  const [rows, setRows] = useState([]);
+  const [preview, setPreview] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const pick = async (event) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) { toast(t('beTooBig'), 'error'); return; }
+    const parsed = parseCsv(await file.text());
+    if (!parsed.length || !('slug' in parsed[0])) { toast(t('beNoSlug'), 'error'); return; }
+    setRows(parsed.slice(0, 500));
+    setPreview(null);
+  };
+  const send = async (apply) => {
+    setBusy(true);
+    try { setPreview(await api.bulkEdit({ type, rows, apply })); if (apply) toast(t('beApplied')); } catch (err) { toast(errText(err, t), 'error'); } finally { setBusy(false); }
+  };
+  const changed = preview?.rows.filter((r) => r.changes.length).length || 0;
+  return (
+    <section className="adm-card tp-page">
+      <h2>{t('beTitle')}</h2>
+      <p className="adm-muted">{t('beHint')}</p>
+      <div className="tp-ban">
+        <select value={type} onChange={(e) => { setType(e.target.value); setPreview(null); }} aria-label={t('smKind')}>
+          <option value="anime">{t('qlAnime')}</option>
+          <option value="manga">{t('qlManga')}</option>
+        </select>
+        <input type="file" accept=".csv,text/csv" onChange={pick} aria-label={t('beFile')} />
+        <button type="button" className="adm-btn" onClick={() => downloadCsv('bulk-edit-template.csv', ['slug', 'titleFa', 'genres', 'year', 'synopsisFa'], [['solo-leveling', 'سولو لولینگ', 'Action; Fantasy', '2024', '']])}>{t('beTemplate')}</button>
+      </div>
+      {rows.length > 0 && <p>{t('beRows', { n: rows.length })} <button type="button" className="adm-btn adm-primary" disabled={busy} onClick={() => send(false)}>{t('bePreview')}</button></p>}
+      {preview && (
+        <>
+          <p role="status"><strong>{t('beChanged', { n: changed, total: preview.rows.length })}</strong></p>
+          <ul className="tp-jobs">
+            {preview.rows.map((r, i) => (
+              <li key={`${r.slug}-${i}`}>
+                <div className="tp-report">
+                  <strong dir="auto">{r.title || r.slug}</strong> {!r.found && <span className="adm-chip is-bad">{t('beMissing')}</span>}
+                  {r.found && r.changes.length === 0 && <small className="adm-muted"> {t('beSame')}</small>}
+                  {r.changes.map((c) => <p key={c.field} dir="auto"><code>{c.field}</code>: <span className="adm-muted">{c.from || '—'}</span> → <b>{c.to}</b></p>)}
+                </div>
+              </li>
+            ))}
+          </ul>
+          {!preview.apply && changed > 0 && <button type="button" className="adm-btn adm-primary" disabled={busy} onClick={async () => { if (await confirm(t('beConfirm', { n: changed }))) send(true); }}>{t('beApply', { n: changed })}</button>}
+        </>
+      )}
     </section>
   );
 }

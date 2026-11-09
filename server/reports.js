@@ -2,6 +2,8 @@ import rateLimit from 'express-rate-limit';
 import { db } from './db.js';
 import { requireAdmin } from './auth.js';
 import { notifyReportResult } from './notifications.js';
+import { eventAlert } from './event-alerts.js';
+import { siteUrl } from './mailer.js';
 
 // "Report" button on reviews, suggestions (recs) and profiles. A member reports with a short reason; the owner sees an
 // open queue in the admin panel and marks each as handled or dismissed. Reporting never hides anything by itself.
@@ -47,7 +49,8 @@ export const registerReportRoutes = (app, { requireSiteUser, userIdOf }) => {
     const reason = String(req.body?.reason || '').trim().slice(0, 300);
     if (!kind || !ref) { res.status(400).json({ error: 'Nothing to report' }); return; }
     if (!subjectOf(kind, ref)) { res.status(404).json({ error: 'Not found' }); return; }
-    db.prepare('INSERT OR IGNORE INTO content_reports (user_id, kind, ref, reason) VALUES (?, ?, ?, ?)').run(userIdOf(req), kind, ref, reason);
+    const added = db.prepare('INSERT OR IGNORE INTO content_reports (user_id, kind, ref, reason) VALUES (?, ?, ?, ?)').run(userIdOf(req), kind, ref, reason).changes;
+    if (added) eventAlert('report', `🚩 گزارش تازه از یک عضو (${kind}). منتظر رسیدگی: ${openReportCount()}. ${siteUrl()}/admin/reports`);
     res.json({ ok: true });
   });
 

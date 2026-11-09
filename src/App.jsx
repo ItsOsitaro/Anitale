@@ -1526,6 +1526,11 @@ function AppRoutes({ theme, onThemeChange }) {
   const isMobile = useIsMobile();
   const { pathname } = useLocation();
   useScrollMemory(pathname, { skip: pathname.startsWith('/admin') });
+  // Count the page view (the server keeps only a per-day counter, no visitor data).
+  useEffect(() => {
+    if (pathname.startsWith('/admin')) return;
+    try { navigator.sendBeacon?.('/api/hit', new Blob([JSON.stringify({ path: pathname })], { type: 'application/json' })); } catch { /* counting is optional */ }
+  }, [pathname]);
   const routes = (
     <Routes>
       <Route path="/" element={<HomePage />} />

@@ -21,6 +21,7 @@ import { registerContinueRoutes } from './continue-series.js';
 import { registerOgRoutes } from './og-image.js';
 import { checkTotp, totpRequired } from './totp.js';
 import { registerTogetherRoute } from './together.js';
+import { registerStatsRoutes, countSearch } from './stats.js';
 import { registerReportRoutes } from './reports.js';
 import { registerAnnouncementRoutes } from './announcement.js';
 import { logMiss } from './search-aliases.js';
@@ -525,6 +526,7 @@ export const createApp = () => {
   registerCalendarRoutes(app, botDeps);
   registerContinueRoutes(app, botDeps);
   registerTogetherRoute(app, botDeps);
+  registerStatsRoutes(app);
   registerReportRoutes(app, botDeps);
   registerAnnouncementRoutes(app);
   registerHomeCommunityRoute(app);
@@ -928,6 +930,7 @@ export const createApp = () => {
     });
     const plain = Object.keys(req.query).every((key) => ['q', 'type', 'sort', 'page', 'sfw'].includes(key));
     if (plain && result.total === 0 && result.page === 1) logMiss(text, req.ip);
+    if (plain && result.page === 1 && text.trim()) countSearch(text);
     const needle = foldTitle(text.trim());
     const users = needle
       ? db.prepare('SELECT username, bio, avatar_color FROM users ORDER BY id ASC').all()
@@ -1582,7 +1585,10 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   app.post('/api/admin/anime/refresh-all', requireAdmin, writeLimiter, (req, res) => {
     cleanupTemp();
     // Light rows only (50k full rows would not fit in memory); each full row is read when its turn comes.
-    const rows = db.prepare('SELECT id, slug, title FROM anime WHERE mal_id IS NOT NULL ORDER BY id ASC').all();
+    // gap = only titles with that gap (catalog quality page: "fix all"); otherwise every title with a MyAnimeList id.
+    const GAPS = { noScore: 'score IS NULL', noCover: "cover = ''", noGenres: "genres IN ('', '[]')", noYear: "year IS NULL OR year = ''" };
+    const gap = GAPS[req.body?.gap] ? ` AND (${GAPS[req.body.gap]})` : '';
+    const rows = db.prepare(`SELECT id, slug, title FROM anime WHERE mal_id IS NOT NULL${gap} ORDER BY id ASC`).all();
     const deferPersian = !inlinePersianEnabled();
     startBulk('anime', rows, async (light) => {
       const row = db.prepare('SELECT * FROM anime WHERE id = ?').get(light.id);

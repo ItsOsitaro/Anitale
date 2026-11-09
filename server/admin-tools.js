@@ -8,6 +8,7 @@ import { alertConfig, saveAlertConfig } from './health-alerts.js';
 import { clientErrorsLast } from './health.js';
 import { saveRevision } from './revisions.js';
 import { openReportCount } from './reports.js';
+import { eventAlertsEnabled, setEventAlertsEnabled } from './event-alerts.js';
 import { buildWeeklyReport, reportEnabled, setReportEnabled } from './weekly-report.js';
 import { translateSynopsis } from './translate.js';
 
@@ -118,6 +119,7 @@ export const registerAdminTools = (app) => {
         { id: 'scores', enabled: scoreConfig().enabled, running: Boolean(scores.running), info: { waiting: scores.waiting }, link: '/admin/anime?filter=noScore' },
         { id: 'alerts', enabled: alertConfig().enabled, running: false, info: null, link: '/admin/health' },
         { id: 'weekly', enabled: reportEnabled(), running: false, info: null, link: '/admin/jobs' },
+        { id: 'events', enabled: eventAlertsEnabled(), running: false, info: null, link: '/admin/jobs' },
       ],
       importAll: { anime: importAllState('anime'), manga: importAllState('manga') },
     });
@@ -130,6 +132,7 @@ export const registerAdminTools = (app) => {
       case 'scores': saveScoreConfig({ enabled: on }); rescheduleScores(); break;
       case 'alerts': saveAlertConfig({ enabled: on }); break;
       case 'weekly': setReportEnabled(on); break;
+      case 'events': setEventAlertsEnabled(on); break;
       default: return bad(res, 'Unknown job', 404);
     }
     return res.json({ ok: true });
@@ -237,6 +240,72 @@ export const registerAdminTools = (app) => {
     res.setHeader('Content-Disposition', `attachment; filename="anitale-${u.username}.json"`);
     res.send(JSON.stringify(data, null, 2));
     return undefined;
+  });
+
+  // Bulk edit from a file: rows of { slug, titleFa?, genres?, year?, synopsisFa? } (read from a CSV in the browser).
+  // apply=false only reports what would change (the preview); apply=true saves it (each title keeps a revision to undo).
+  app.post('/api/admin/x/catalog/bulk-edit', requireAdmin, (req, res) => {
+    const type = req.body?.type === 'manga' ? 'manga' : 'anime';
+    const apply = req.body?.apply === true;
+    const input = (Array.isArray(req.body?.rows) ? req.body.rows : []).slice(0, 500);
+    if (!input.length) return bad(res, 'The file has no rows');
+    const out = [];
+    let applied = 0;
+    for (const raw of input) {
+      const slug = String(raw?.slug || '').trim().slice(0, 200);
+      const row = slug ? db.prepare(`SELECT * FROM ${type} WHERE slug = ?`).get(slug) : null;
+      if (!row) { out.push({ slug, found: false, changes: [] }); continue; }
+      const sets = {};
+      const changes = [];
+      const text = (v, max) => String(v ?? '').trim().slice(0, max);
+      if (type === 'anime' && raw.titleFa !== undefined && raw.titleFa !== '' && text(raw.titleFa, 500) !== (row.title_fa || '')) {
+        sets.title_fa = text(raw.titleFa, 500);
+        changes.push({ field: 'titleFa', from: row.title_fa || '', to: sets.title_fa });
+      }
+      if (raw.year !== undefined && raw.year !== '' && text(raw.year, 10) !== String(row.year || '')) {
+        sets.year = text(raw.year, 10);
+        changes.push({ field: 'year', from: String(row.year || ''), to: sets.year });
+      }
+      if (raw.genres !== undefined && raw.genres !== '') {
+        const list = [...new Set(String(raw.genres).split(/[;,|]/).map((g) => g.trim().slice(0, 40)).filter(Boolean))].slice(0, 20);
+        let current = [];
+        try { current = JSON.parse(row.genres) || []; } catch { current = []; }
+        if (JSON.stringify(list) !== JSON.stringify(current)) {
+          sets.genres = JSON.stringify(list);
+          changes.push({ field: 'genres', from: current.join(', '), to: list.join(', ') });
+        }
+      }
+      if (raw.synopsisFa !== undefined && raw.synopsisFa !== '') {
+        let syn = {};
+        try { syn = JSON.parse(row.synopsis || '{}') || {}; } catch { syn = {}; }
+        const fa = text(raw.synopsisFa, 8000);
+        if (fa !== (syn.fa || '')) {
+          sets.synopsis = JSON.stringify({ ...syn, fa, auto: false });
+          changes.push({ field: 'synopsisFa', from: String(syn.fa || '').slice(0, 60), to: fa.slice(0, 60) });
+        }
+      }
+      if (apply && changes.length) {
+        saveRevision(req.admin?.username || '', type, row, 'edit');
+        const cols = Object.keys(sets);
+        db.prepare(`UPDATE ${type} SET ${cols.map((c) => `${c} = ?`).join(', ')}, updated_at = datetime('now') WHERE id = ?`).run(...cols.map((c) => sets[c]), row.id);
+        applied += 1;
+      }
+      out.push({ slug, title: row.title, found: true, changes });
+    }
+    return res.json({ ok: true, apply, applied, rows: out });
+  });
+
+  // Sign-up funnel by week of joining (last 8 weeks): how many added a title, 3+ titles, wrote a review, and came back a week later.
+  app.get('/api/admin/x/system/funnel', requireAdmin, (_req, res) => {
+    const rows = db.prepare(`
+      SELECT w, COUNT(*) AS signups, SUM(c >= 1) AS listed, SUM(c >= 3) AS engaged, SUM(r >= 1) AS reviewed, SUM(ret) AS returned FROM (
+        SELECT strftime('%Y-%W', u.created_at) AS w,
+          (SELECT COUNT(*) FROM user_entries e WHERE e.user_id = u.id) AS c,
+          (SELECT COUNT(*) FROM reviews r WHERE r.user_id = u.id) AS r,
+          EXISTS (SELECT 1 FROM user_entries e WHERE e.user_id = u.id AND e.updated_at >= datetime(u.created_at, '+7 days')) AS ret
+        FROM users u WHERE u.created_at >= date('now', '-56 days'))
+      GROUP BY w ORDER BY w DESC`).all();
+    res.json({ weeks: rows });
   });
 
   // Extra queue counts for the dashboard (cheap).

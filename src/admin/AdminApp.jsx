@@ -13,7 +13,7 @@ import BulkImport from './BulkImport.jsx';
 import QuickAdd from './QuickAdd.jsx';
 import MissingTitles from './MissingTitles.jsx';
 import SearchMisses from './SearchMisses.jsx';
-import { GrowthPage, QualityPage, JobsPage, RevisionsPage, ReportsPage, AnnouncementPage } from './ToolsPages.jsx';
+import { GrowthPage, QualityPage, JobsPage, RevisionsPage, ReportsPage, AnnouncementPage, BulkEditPage } from './ToolsPages.jsx';
 import AutoImport from './AutoImport.jsx';
 import HealthPage from './HealthPage.jsx';
 import VpnPage from './VpnPage.jsx';
@@ -141,6 +141,7 @@ const NAV = [
       { to: '/admin/missing', icon: IconSearch, key: 'missNav', badge: 'missing', perm: 'community' },
       { to: '/admin/search-misses', icon: IconSearch, key: 'smNav', perm: 'community' },
       { to: '/admin/quality', icon: IconCheckList, key: 'qlNav', perm: 'catalog' },
+      { to: '/admin/bulk-edit', icon: IconEdit, key: 'beNav', perm: 'catalog' },
       { to: '/admin/growth', icon: IconPulse, key: 'gwNav', perm: 'system' },
       { to: '/admin/jobs', icon: IconRefresh, key: 'jbNav', perm: 'system' },
       { to: '/admin/revisions', icon: IconClock, key: 'rvNav', perm: 'system' },
@@ -189,6 +190,7 @@ const titleFor = (pathname) => {
   if (pathname.startsWith('/admin/missing')) return 'missNav';
   if (pathname.startsWith('/admin/search-misses')) return 'smNav';
   if (pathname.startsWith('/admin/quality')) return 'qlNav';
+  if (pathname.startsWith('/admin/bulk-edit')) return 'beNav';
   if (pathname.startsWith('/admin/growth')) return 'gwNav';
   if (pathname.startsWith('/admin/jobs')) return 'jbNav';
   if (pathname.startsWith('/admin/revisions')) return 'rvNav';
@@ -453,6 +455,7 @@ export default function AdminApp({ theme, onThemeChange }) {
                 <Route path="missing" element={guard('community', <MissingTitles />)} />
                 <Route path="search-misses" element={guard('community', <SearchMisses />)} />
                 <Route path="quality" element={guard('catalog', <QualityPage />)} />
+                <Route path="bulk-edit" element={guard('catalog', <BulkEditPage />)} />
                 <Route path="growth" element={guard('system', <GrowthPage />)} />
                 <Route path="jobs" element={guard('system', <JobsPage />)} />
                 <Route path="revisions" element={guard('system', <RevisionsPage />)} />
