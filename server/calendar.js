@@ -82,6 +82,8 @@ export const registerCalendarRoutes = (app, { requireSiteUser, userIdOf, limiter
     res.setHeader('Content-Type', 'text/calendar; charset=utf-8');
     res.setHeader('Cache-Control', 'private, max-age=300');
     res.setHeader('X-Robots-Tag', 'noindex');
+    // ?download=1: a plain file download, which phones open in their calendar app (the webcal: link does nothing on many Android phones).
+    if (req.query.download === '1') res.setHeader('Content-Disposition', 'attachment; filename="anitale.ics"');
     res.send(buildCalendar(row.user_id));
   });
 };

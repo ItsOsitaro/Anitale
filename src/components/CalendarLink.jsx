@@ -35,9 +35,12 @@ export default function CalendarLink() {
           <input type="text" readOnly dir="ltr" value={url} aria-label={t('calHead')} onFocus={(event) => event.target.select()} />
           <div className="chat-link__actions">
             <Button type="button" size="sm" onClick={copy}>{t('calCopy')}</Button>
+            <a className="cal-link__open" href={`https://calendar.google.com/calendar/r?cid=${encodeURIComponent(url.replace(/^https?:/, 'webcal:'))}`} target="_blank" rel="noopener noreferrer">{t('calGoogle')}</a>
+            <a className="cal-link__open" href={`${url}?download=1`} download="anitale.ics">{t('calDownload')}</a>
             <a className="cal-link__open" href={url.replace(/^https?:/, 'webcal:')}>{t('calOpen')}</a>
             <Button type="button" variant="outline" size="sm" disabled={busy} onClick={() => run('POST', '/api/user/calendar/reset', t('calReset'))}>{t('calNew')}</Button>
           </div>
+          <p className="auth-hint">{t('calHelp')}</p>
           <p className="auth-hint">{t('calWarn')}</p>
         </div>
       )}
