@@ -6,7 +6,7 @@ import { genreLabel } from '@/lib/genre-kinds.js';
 const LABELS = {
   type: 'نوع', episodes: 'قسمت‌ها', chapters: 'فصل‌ها', volumes: 'جلدها', status: 'وضعیت', aired: 'پخش',
   published: 'انتشار', premiered: 'فصل پخش', broadcast: 'زمان پخش', producers: 'تهیه‌کنندگان',
-  licensors: 'دارندگان مجوز', studios: 'استودیو', source: 'منبع', genres: 'ژانرها', themes: 'تم‌ها',
+  licensors: 'دارندگان مجوز', studios: 'استودیو', source: 'منبع', genres: 'ژانرها', themes: 'مضمون‌ها',
   demographic: 'مخاطب', duration: 'مدت', rating: 'رده سنی', serialization: 'مجله', authors: 'نویسندگان',
 };
 const VALUES = {
@@ -74,7 +74,7 @@ export function infoValue(label, value, lang) {
   if (lang !== 'fa' || typeof value !== 'string') return value;
   if (['unknown', 'not available', 'tbd'].includes(value.trim().toLowerCase())) return 'نامشخص';
   if (['episodes', 'chapters', 'volumes'].includes(String(label).trim().toLowerCase()) && /^\d+$/.test(value.trim())) return toPersianDigits(value.trim());
-  if (['genres', 'themes', 'demographic', 'ژانرها', 'تم‌ها', 'مخاطب'].includes(String(label).trim().toLowerCase())) return value.split(/\s*,\s*/).map((name) => genreLabel(name, 'fa')).join('، ');
+  if (['genres', 'themes', 'demographic', 'ژانرها', 'تم‌ها', 'مضمون‌ها', 'مخاطب'].includes(String(label).trim().toLowerCase())) return value.split(/\s*,\s*/).map((name) => genreLabel(name, 'fa')).join('، ');
   const byLabel = faValueByLabel(String(label).trim().toLowerCase(), value);
   if (byLabel) return byLabel;
   const map = VALUES[String(label).trim().toLowerCase()];
