@@ -1,7 +1,7 @@
-import { Bell, ChevronRight, LogIn, Menu, Search } from 'lucide-react';
+import { Bell, ChevronRight, LogIn, Menu, Moon, Search, Sun } from 'lucide-react';
 import { NavLink } from 'react-router-dom';
 import { useSiteLang } from '@/i18n';
-import DayNightToggle from '@/components/DayNightToggle';
+import { useTheme } from '@/theme-context.jsx';
 import { cn } from 'cn';
 
 export default function MobileTopBar({
@@ -18,6 +18,7 @@ export default function MobileTopBar({
   className,
 }) {
   const { t } = useSiteLang();
+  const { isDark, toggle } = useTheme();
   const bellCount = (alerts?.unread || 0) + (notifications?.unread || 0);
 
   return (
@@ -41,7 +42,17 @@ export default function MobileTopBar({
 
       <div className="mobile-topbar__spacer" />
 
-      <DayNightToggle variant="mobile" />
+      <button
+        type="button"
+        className="mobile-topbar__search mobile-topbar__theme"
+        onClick={toggle}
+        aria-label={isDark ? t('themeOn') : t('themeOff')}
+        aria-pressed={isDark}
+      >
+        {isDark
+          ? <Sun width={20} height={20} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />
+          : <Moon width={20} height={20} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" />}
+      </button>
 
       <button
         type="button"

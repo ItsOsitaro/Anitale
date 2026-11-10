@@ -4,7 +4,7 @@
    (1) every selector sits under the wrapper class .dnt so nothing leaks into the rest of the site,
    (2) the colour/spring tokens are declared on .dnt instead of :root, and
    (3) the demo page's own rules (page background, centred stage, footer) are left out.
-   Sizing is done only through --size (see .dnt--header / .dnt--mobile at the end). */
+   Sizing is done only through --size (see .dnt--header at the end). */
 .dnt {
   display: inline-flex;
   align-items: center;
@@ -303,4 +303,3 @@
 
 /* ---------- Sizes for this site (the README's documented way: change --size) ---------- */
 .dnt.dnt--header .toggle { --size: 62px; }
-.dnt.dnt--mobile .toggle { --size: 54px; }
