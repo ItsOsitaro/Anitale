@@ -22,6 +22,9 @@ export function ThemeProvider({ children }) {
 
   useEffect(() => {
     document.body.setAttribute('data-theme', theme);
+    // The day/night toggle's CSS (components/day-night-toggle.css) listens to these two body classes.
+    document.body.classList.toggle('is-night', theme === 'dark');
+    document.body.classList.toggle('is-day', theme !== 'dark');
   }, [theme]);
 
   const setTheme = useCallback((next) => setThemeState((current) => {

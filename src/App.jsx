@@ -62,6 +62,7 @@ import { useForYou } from '@/hooks/use-for-you';
 import { useContinueSeries } from '@/hooks/use-continue-series';
 import ContinueManga from '@/components/ContinueManga';
 import AnnouncementBar from '@/components/AnnouncementBar';
+import DayNightToggle from '@/components/DayNightToggle';
 import ShareCardDialog from '@/components/ShareCardDialog';
 import OnboardingPicker from '@/components/OnboardingPicker';
 import { BrowsePage, GenresIndex } from './landingPages.jsx';
@@ -72,33 +73,6 @@ import MobileDetailPage from '@/components/mobile/MobileDetailPage';
 import { coverUrl } from '@/lib/cover';
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
-
-function ThemeSwitch() {
-  const { isDark, toggle } = useTheme();
-  const { t } = useSiteLang();
-  return (
-    <button
-      type="button"
-      className="theme-switch"
-      role="switch"
-      aria-checked={isDark}
-      aria-label={isDark ? t('themeOn') : t('themeOff')}
-      onClick={toggle}
-    >
-      <span className="theme-switch-track" aria-hidden="true">
-        <span className="theme-switch-knob">
-          <svg className="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-            <circle cx="12" cy="12" r="4.2" />
-            <path d="M12 2.5v2.2M12 19.3v2.2M2.5 12h2.2M19.3 12h2.2M5 5l1.6 1.6M17.4 17.4 19 19M19 5l-1.6 1.6M6.6 17.4 5 19" />
-          </svg>
-          <svg className="icon-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M20.5 14.2A8.8 8.8 0 1 1 9.8 3.5a7 7 0 0 0 10.7 10.7Z" />
-          </svg>
-        </span>
-      </span>
-    </button>
-  );
-}
 
 // Bold matching characters inside the suggestion title.
 const highlightMatch = (title, query) => {
@@ -250,7 +224,7 @@ function SiteHeader() {
           >
             {t('langButton')}
           </Button>
-          <ThemeSwitch />
+          <DayNightToggle variant="header" />
           <HeaderBell />
           <form
             className="search-box"

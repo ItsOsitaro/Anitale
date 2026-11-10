@@ -32,7 +32,7 @@ export const messages = {
     userKind: 'کاربر',
     themeAria: 'روشن یا تیره',
     langButton: 'EN',
-    themeOn: 'پوسته‌ی تیره', themeOff: 'پوسته‌ی روشن',
+    themeOn: 'پوسته‌ی تیره', themeOff: 'پوسته‌ی روشن', themeToggleHint: 'تغییر بین پوسته‌ی روز و شب',
     // App state
     loadingCatalog: 'در حال بارگذاری کاتالوگ…',
     loadError: 'کاتالوگ محلی بارگذاری نشد.',
@@ -241,7 +241,7 @@ export const messages = {
     userKind: 'User',
     themeAria: 'Light or dark',
     langButton: 'فا',
-    themeOn: 'Dark theme', themeOff: 'Light theme',
+    themeOn: 'Dark theme', themeOff: 'Light theme', themeToggleHint: 'Toggle day and night',
     loadingCatalog: 'Loading catalog…',
     loadError: 'The local catalog could not be loaded.',
     quickSeasonalCharts: 'Seasonal charts',

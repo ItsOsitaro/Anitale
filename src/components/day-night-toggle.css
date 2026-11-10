@@ -1,0 +1,306 @@
+/* Colours: adapted to the site palette through the tokens below, as the README describes ("Change the colors").
+   Day / Night toggle by Hamzeh (https://github.com/HamzehGhoreyshi/interactive-day-night-toggle), MIT license.
+   Used as designed: the rules below are the repository's style.css, unchanged, except that
+   (1) every selector sits under the wrapper class .dnt so nothing leaks into the rest of the site,
+   (2) the colour/spring tokens are declared on .dnt instead of :root, and
+   (3) the demo page's own rules (page background, centred stage, footer) are left out.
+   Sizing is done only through --size (see .dnt--header / .dnt--mobile at the end). */
+.dnt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  /* Page */
+  --bezel-day: var(--muted); /* follows the site surface */
+  --bezel-night: var(--secondary); /* follows the site surface */
+
+  /* Sky base = the outermost band. Bands closer to the knob are lighter. */
+  --sky-day: #d8527b; /* sakura dusk */
+  --sky-night: #25122b; /* deep plum, a touch darker than the dark cards */
+
+  /* Sun + moon */
+  --sun: #ffc94d;
+  --moon-hi: #f6e9f0;
+  --moon-lo: #b9a0b6;
+  --crater: #a287a1;
+
+  /* Clouds: back → middle → front */
+  --cloud-1: #f2a3bd; /* back layer */
+  --cloud-2: #f9cddb; /* middle layer */
+  --cloud-3: #fff2f6; /* front layer */
+
+  --star: #ffeaf2;
+
+  /* Physical springs (damped-spring formula sampled into CSS linear()) */
+  --spring-soft: linear(0, 0.0454, 0.1554, 0.2976, 0.4484, 0.592, 0.7189, 0.8242, 0.9067, 0.9677, 1.0096, 1.0358, 1.0495, 1.0542, 1.0526, 1.0471, 1.0396, 1.0314, 1.0235, 1.0164, 1.0105, 1.0058, 1.0023, 0.9998, 0.9983, 0.9974, 0.9971, 0.9971, 0.9974, 0.9978, 0.9982, 0.9986, 0.999, 0.9994, 0.9996, 0.9998, 1, 1.0001, 1.0001, 1.0002, 1);
+  --spring-bouncy: linear(0, 0.0563, 0.1961, 0.3793, 0.5734, 0.7545, 0.9073, 1.024, 1.1031, 1.1475, 1.1628, 1.1562, 1.135, 1.1058, 1.0742, 1.0441, 1.0184, 0.9985, 0.9847, 0.9767, 0.9736, 0.9742, 0.9774, 0.982, 0.9872, 0.9921, 0.9964, 0.9998, 1.0022, 1.0037, 1.0043, 1.0043, 1.0038, 1.0031, 1.0022, 1.0014, 1.0007, 1.0001, 0.9997, 0.9994, 1);
+  --ease-out: cubic-bezier(.22, 1, .36, 1);
+  --ease-in: cubic-bezier(.55, 0, .75, .2);
+}
+/* ---------- Toggle ---------- */
+/* The button is only the size container + focus target. Everything visual lives in .pill,
+   so cqw units (1cqw = 1% of the button width) resolve against the button. */
+.dnt .toggle {
+  --size: 530px;                     /* ← change this one value to resize the whole toggle */
+  position: relative;
+  width: min(var(--size), 80vw);
+  aspect-ratio: 530 / 243;
+  container-type: inline-size;
+  padding: 0;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  cursor: pointer;
+  outline: none;
+  transition: transform 350ms var(--spring-soft);
+}
+
+.dnt .toggle:hover { transform: translateY(-2px); }
+
+.dnt .toggle:active { transform: scale(.975); transition-duration: 120ms; }
+
+.dnt .toggle:focus-visible { outline: 3px solid var(--ring); outline-offset: calc(min(var(--size), 80vw) * .035); }
+
+.dnt .pill {
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--sky-day);
+  /* Raised bezel ring around a recessed slot */
+  box-shadow:
+    0 0 0 2.2cqw var(--bezel-day),
+    0 0 0 2.5cqw rgba(0, 0, 0, .05),
+    0 -.8cqw 2cqw 2cqw rgba(255, 255, 255, .9),
+    0 1.6cqw 3.5cqw 2cqw rgba(0, 0, 0, .14);
+  transition: box-shadow 900ms var(--ease-out);
+}
+
+.is-night .dnt .pill {
+  box-shadow:
+    0 0 0 2.2cqw var(--bezel-night),
+    0 0 0 2.5cqw rgba(0, 0, 0, .35),
+    0 -.8cqw 2cqw 2cqw rgba(255, 255, 255, .04),
+    0 1.6cqw 3.5cqw 2cqw rgba(0, 0, 0, .45);
+}
+
+/* Inner shadow on top of every layer: makes the slot look pressed into the bezel */
+.dnt .pill::after {
+  content: "";
+  position: absolute; inset: 0;
+  border-radius: inherit;
+  box-shadow:
+    inset 0 1.6cqw 2.4cqw rgba(0, 0, 0, .32),
+    inset 0 .3cqw .5cqw rgba(0, 0, 0, .25),
+    inset 0 -.6cqw 1.2cqw rgba(255, 255, 255, .25);
+  pointer-events: none;
+  z-index: 10;
+}
+
+.dnt .layer { position: absolute; inset: 0; display: block; pointer-events: none; }
+
+.dnt .sky-night {
+  background: var(--sky-night);
+  opacity: 0;
+  transition: opacity 700ms var(--ease-out);
+}
+
+.is-night .dnt .sky-night { opacity: 1; }
+
+/* ---------- Stars ---------- */
+.dnt .stars { width: 100%; height: 100%; }
+
+.dnt .star {
+  transform-box: fill-box;
+  transform-origin: center;
+  opacity: 0;
+  transform: translateY(-6px) scale(.2) rotate(-90deg);
+  transition: transform 450ms var(--ease-in), opacity 300ms var(--ease-in);
+  transition-delay: calc(var(--i) * 15ms);
+}
+
+.is-night .dnt .star {
+  opacity: 1;
+  transform: none;
+  transition: transform 1000ms var(--spring-bouncy), opacity 500ms var(--ease-out);
+  transition-delay: calc(250ms + var(--i) * 45ms);
+}
+
+.dnt .star > * {
+  fill: var(--star);
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: twinkle var(--t, 3s) ease-in-out infinite;
+  animation-delay: calc(var(--i) * -0.37s);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .3; transform: scale(.55) rotate(45deg); }
+}
+
+.dnt .shooting {
+  position: absolute;
+  left: 8cqw; top: 8cqw;
+  width: 12cqw; height: .4cqw;
+  border-radius: 999px;
+  background: linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,.95));
+  opacity: 0;
+  pointer-events: none;
+}
+
+.is-night .dnt .shooting { animation: shoot 7s 1.1s linear infinite; }
+
+@keyframes shoot {
+  0%   { opacity: 0; transform: rotate(16deg) translateX(-8cqw) scaleX(.3); }
+  2%   { opacity: 1; }
+  9%   { opacity: 0; transform: rotate(16deg) translateX(28cqw) scaleX(1); }
+  100% { opacity: 0; transform: rotate(16deg) translateX(28cqw) scaleX(1); }
+}
+
+/* ---------- Knob (sun / moon) ---------- */
+.dnt .knob-track {
+  position: absolute;
+  top: 4.18cqw; left: 4.18cqw;
+  width: 37.5cqw; height: 37.5cqw;
+  transition: transform 900ms var(--spring-soft);
+  z-index: 2;
+}
+
+.is-night .dnt .knob-track { transform: translateX(54.14cqw); }
+
+/* Concentric light bands that travel with the knob.
+   Each ring adds 7% white, so the bands step lighter toward the sun/moon. */
+.dnt .halo {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  box-shadow:
+    0 0 0 7cqw  rgba(255, 255, 255, .075),
+    0 0 0 15cqw rgba(255, 255, 255, .075),
+    0 0 0 24cqw rgba(255, 255, 255, .075),
+    0 0 0 34cqw rgba(255, 255, 255, .075);
+  transition: transform 1000ms var(--spring-bouncy);
+}
+
+/* Rings ripple outward as the knob lands */
+.is-night .dnt .halo { animation: ripple 1100ms var(--ease-out) 150ms; }
+
+.is-day .dnt   .halo { animation: ripple2 1100ms var(--ease-out) 150ms; }
+
+@keyframes ripple { 0% { transform: scale(.75); } 100% { transform: scale(1); } }
+
+@keyframes ripple2 { 0% { transform: scale(.75); } 100% { transform: scale(1); } }
+
+.dnt .knob {
+  position: absolute; inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  box-shadow:
+    .8cqw 1.4cqw 2.2cqw rgba(0, 0, 0, .35),
+    .2cqw .4cqw .5cqw rgba(0, 0, 0, .2);
+}
+
+.dnt .sun,
+.dnt .moon { position: absolute; inset: 0; border-radius: 50%; }
+
+.dnt .sun {
+  background: var(--sun);
+  box-shadow:
+    inset 0 0 0 .35cqw rgba(190, 120, 0, .22),
+    inset 0 1cqw 1.2cqw rgba(255, 240, 170, .55),
+    inset -.6cqw -1.4cqw 1.8cqw rgba(210, 130, 0, .35);
+  transition: transform 900ms var(--spring-soft);
+}
+
+/* Once the moon fully covers it, hide the sun so no yellow edge peeks out */
+.is-night .dnt .sun { transform: rotate(120deg); opacity: 0; transition: transform 900ms var(--spring-soft), opacity 0s 1000ms; }
+
+/* The moon slides across the sun like an eclipse */
+.dnt .moon {
+  background: radial-gradient(circle at 35% 30%, var(--moon-hi) 0%, #c7c9ce 55%, var(--moon-lo) 100%);
+  box-shadow:
+    inset 0 0 0 .35cqw rgba(0, 0, 0, .12),
+    inset 0 1cqw 1.2cqw rgba(255, 255, 255, .5),
+    inset -.6cqw -1.4cqw 1.8cqw rgba(60, 65, 80, .3);
+  transform: translateX(105%) rotate(90deg);
+  transition: transform 700ms var(--ease-in);
+}
+
+.is-night .dnt .moon {
+  transform: none;
+  transition: transform 1000ms var(--spring-soft) 80ms;
+}
+
+.dnt .crater {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--crater);
+  box-shadow:
+    inset .5cqw .7cqw .9cqw rgba(40, 50, 80, .45),
+    0 .2cqw .2cqw rgba(255, 255, 255, .5);
+}
+
+.dnt .c1 { left: 42%; top: 15%; width: 17%; height: 17%; }
+
+.dnt .c2 { left: 20%; top: 52%; width: 34%; height: 34%; }
+
+.dnt .c3 { left: 64%; top: 52%; width: 25%; height: 25%; }
+
+/* ---------- Clouds (3 layers) ---------- */
+.dnt .cloud {
+  position: absolute; inset: 0;
+  width: 100%; height: 100%;
+  overflow: visible;
+}
+
+.dnt .cloud-1 { z-index: 3; transition: transform 1100ms var(--spring-bouncy) 180ms; }
+
+.dnt .cloud-2 { z-index: 4; transition: transform 1100ms var(--spring-bouncy) 110ms; }
+
+.dnt .cloud-3 { z-index: 5; transition: transform 1100ms var(--spring-bouncy) 40ms; }
+
+/* Night: each layer sinks away, front first */
+.is-night .dnt .cloud-3 { transform: translate(6cqw, 50cqw);  transition: transform 600ms var(--ease-in) 0ms; }
+
+.is-night .dnt .cloud-2 { transform: translate(10cqw, 54cqw); transition: transform 650ms var(--ease-in) 60ms; }
+
+.is-night .dnt .cloud-1 { transform: translate(14cqw, 60cqw); transition: transform 700ms var(--ease-in) 120ms; }
+
+.dnt .cloud g {
+  transform-box: view-box;
+  animation: drift 8s ease-in-out infinite;
+}
+
+.dnt .cloud-1 g { animation-duration: 11s; animation-delay: -4s; }
+
+.dnt .cloud-2 g { animation-duration: 9s;  animation-delay: -2s; animation-direction: reverse; }
+
+@keyframes drift {
+  0%, 100% { transform: translateX(0); }
+  50%      { transform: translateX(-7px); }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {.dnt *,
+.dnt *::before,
+.dnt *::after {
+    animation: none !important;
+    transition-duration: 200ms !important;
+    transition-delay: 0ms !important;
+    transition-timing-function: ease !important;
+  }
+}
+
+.dnt.preload *,
+.dnt.preload *::before,
+.dnt.preload *::after,
+.dnt.preload::before { transition: none !important; animation: none !important; }
+
+.dnt .sr-only {
+  position: absolute; width: 1px; height: 1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap;
+}
+
+/* ---------- Sizes for this site (the README's documented way: change --size) ---------- */
+.dnt.dnt--header .toggle { --size: 62px; }
+.dnt.dnt--mobile .toggle { --size: 54px; }
