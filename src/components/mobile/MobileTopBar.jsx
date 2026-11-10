@@ -34,7 +34,8 @@ export default function MobileTopBar({
         </button>
       ) : (
         <NavLink to="/" end className="mobile-topbar__brand" aria-label={t('brandAria')}>
-          <img className="mobile-topbar__logo" src="/logo-mark.svg" alt="" aria-hidden="true" width={26} height={36} decoding="async" />
+          <img className="mobile-topbar__logo logo-on-light" src="/logo-light.svg" alt="" aria-hidden="true" width={51} height={23} decoding="async" />
+          <img className="mobile-topbar__logo logo-on-dark" src="/logo-dark.svg" alt="" aria-hidden="true" width={51} height={23} decoding="async" />
           <span className="mobile-topbar__title">{title ?? t('siteName')}</span>
         </NavLink>
       )}

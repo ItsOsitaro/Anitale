@@ -1,18 +1,28 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Anitale">
-  <!-- Anitale mark: a folded bookmark ribbon forms the A (your list, your tale); a sakura blossom is its crossbar; the sparkle is the anime shine. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="AniTale"><rect width="512" height="512" rx="96" fill="#70142B"/><svg x="24" y="144.9" width="464" height="222.2" viewBox="65 245 950 455">
   <defs>
-    <linearGradient id="a-front" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#e8577a"/><stop offset="1" stop-color="#c8284f"/>
-    </linearGradient>
-    <path id="a-petal" d="M0 -4 C-13 -9 -18 -26 -9 -35 L0 -29 L9 -35 C18 -26 13 -9 0 -4 Z"/>
+    <path id="sakura-petal-badge" d="M 0 -4 C -13 -9 -18 -26 -9 -35 L 0 -29 L 9 -35 C 18 -26 13 -9 0 -4 Z" />
   </defs>
-  <g stroke-linejoin="round" stroke-width="6">
-    <path d="M128 26 L44 228 L70 207 L96 228 L128 151 Z" fill="#8c1d43" stroke="#8c1d43"/>
-    <path d="M128 26 L212 228 L186 207 L160 228 L104.6 84.3 Z" fill="url(#a-front)" stroke="url(#a-front)"/>
+
+  <!-- Compact Rounded Header Badge Background -->
+  <rect x="65" y="245" width="950" height="455" rx="72" fill="#70142B" />
+
+  <!-- Main Typography: ATN -->
+  <g fill="#FFF5F7">
+    <path d="M 113 652 L 186 431 C 198 392 226 371 265 371 L 325 371 L 419 652 L 333 652 L 317 602 L 214 602 L 198 652 Z" />
+    <path d="M 381 371 L 622 371 L 622 442 L 544 442 L 544 652 L 459 652 L 459 442 L 381 442 Z" />
+    <path d="M 645 371 L 719 371 L 817 531 L 817 373 L 893 421 L 893 610 L 851 652 L 817 652 L 721 496 L 721 652 L 645 652 Z" />
   </g>
-  <g transform="translate(128 166)" fill="#fff6f9" stroke="#8c1d43" stroke-width="2.5" stroke-linejoin="round">
-    <use href="#a-petal"/><use href="#a-petal" transform="rotate(72)"/><use href="#a-petal" transform="rotate(144)"/><use href="#a-petal" transform="rotate(216)"/><use href="#a-petal" transform="rotate(288)"/>
+
+  <!-- Sakura Blossom inside Letter A -->
+  <g transform="translate(265.5 513) scale(1.62)" fill="#FFF5F7" stroke="#70142B" stroke-width="3.8" stroke-linejoin="round">
+    <use href="#sakura-petal-badge" />
+    <use href="#sakura-petal-badge" transform="rotate(72)" />
+    <use href="#sakura-petal-badge" transform="rotate(144)" />
+    <use href="#sakura-petal-badge" transform="rotate(216)" />
+    <use href="#sakura-petal-badge" transform="rotate(288)" />
   </g>
-  <circle cx="128" cy="166" r="6" fill="#e8577a"/>
-  <path d="M198 34 Q200 50 214 52 Q200 54 198 70 Q196 54 182 52 Q196 50 198 34 Z" fill="#f4a9c0"/>
-</svg>
+  <circle cx="265.5" cy="513" r="10.5" fill="#E55F82" />
+
+  <!-- Pastel Pink Four-Pointed Sparkle -->
+  <path d="M 910 281 Q 915 335 979 340 Q 915 345 910 399 Q 905 345 841 340 Q 905 335 910 281 Z" fill="#F1B3C2" />
+</svg></svg>

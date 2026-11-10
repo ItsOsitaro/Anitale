@@ -89,9 +89,9 @@ const background = (ctx, height, image) => {
 };
 
 const footer = async (ctx, height, tagline) => {
-  const logo = await loadImage('/logo-mark.svg');
+  const logo = await loadImage('/logo-badge.svg');
   const y = height - 130;
-  if (logo) ctx.drawImage(logo, CARD_WIDTH / 2 - 36, y - 80, 72, 72);
+  if (logo) ctx.drawImage(logo, CARD_WIDTH / 2 - 75, y - 80, 150, 72);
   ctx.textAlign = 'center';
   ctx.textBaseline = 'alphabetic';
   ctx.fillStyle = PAL.deep;

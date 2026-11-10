@@ -224,7 +224,8 @@ function SiteHeader() {
     <header className="topbar">
       <div className="topbar-inner">
         <Link className="brand" to="/">
-          <img className="brand-mark" src="/logo.svg" alt="" aria-hidden="true" width="40" height="40" />
+          <img className="brand-mark logo-on-light" src="/logo-light.svg" alt="" aria-hidden="true" width="76" height="34" />
+          <img className="brand-mark logo-on-dark" src="/logo-dark.svg" alt="" aria-hidden="true" width="76" height="34" />
           <span className="brand-copy">
             <strong>{t('siteName')}</strong>
             <small>{t('siteTagline')}</small>
@@ -1573,7 +1574,7 @@ function AppRoutes({ theme, onThemeChange }) {
 function CatalogSkeleton() {
   return (
     <main className="app-loading" aria-busy="true">
-      <img className="loading-brand" src="/logo.svg" alt="" aria-hidden="true" width="66" height="66" />
+      <img className="loading-brand" src="/logo-badge.svg" alt="" aria-hidden="true" width="138" height="66" />
       <div className="loading-grid">
         {Array.from({ length: 8 }).map((_, index) => (
           <Skeleton key={index} className="loading-card" />

@@ -43,9 +43,8 @@
 
   .mobile-topbar__logo {
     display: block;
-    width: 26px;
-    height: 36px;
-    min-width: 26px;
+    width: auto;
+    height: 23px;
     object-fit: contain;
     filter: drop-shadow(0 2px 4px color-mix(in oklch, var(--primary) 28%, transparent));
   }

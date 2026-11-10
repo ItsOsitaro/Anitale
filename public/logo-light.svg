@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="97 265 898 403" width="100%" height="100%" role="img" aria-label="AniTale ATN Light Header Logo">
+  <defs>
+    <linearGradient id="anitale-rose" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#E8577A" />
+      <stop offset="100%" stop-color="#8C1D43" />
+    </linearGradient>
+    <path id="sakura-petal-light" d="M 0 -4 C -13 -9 -18 -26 -9 -35 L 0 -29 L 9 -35 C 18 -26 13 -9 0 -4 Z" />
+  </defs>
+
+  <!-- Main Typography: ATN in Burgundy & Rose Gradient -->
+  <g>
+    <path d="M 113 652 L 186 431 C 198 392 226 371 265 371 L 325 371 L 419 652 L 333 652 L 317 602 L 214 602 L 198 652 Z" fill="url(#anitale-rose)" />
+    <path d="M 381 371 L 622 371 L 622 442 L 544 442 L 544 652 L 459 652 L 459 442 L 381 442 Z" fill="#70142B" />
+    <path d="M 645 371 L 719 371 L 817 531 L 817 373 L 893 421 L 893 610 L 851 652 L 817 652 L 721 496 L 721 652 L 645 652 Z" fill="#70142B" />
+  </g>
+
+  <!-- Sakura Blossom inside Letter A -->
+  <g transform="translate(265.5 513) scale(1.62)" fill="#FFF5F7" stroke="#70142B" stroke-width="3.8" stroke-linejoin="round">
+    <use href="#sakura-petal-light" />
+    <use href="#sakura-petal-light" transform="rotate(72)" />
+    <use href="#sakura-petal-light" transform="rotate(144)" />
+    <use href="#sakura-petal-light" transform="rotate(216)" />
+    <use href="#sakura-petal-light" transform="rotate(288)" />
+  </g>
+  <circle cx="265.5" cy="513" r="10.5" fill="#E8577A" />
+
+  <!-- Pastel Pink Four-Pointed Sparkle -->
+  <path d="M 910 281 Q 915 335 979 340 Q 915 345 910 399 Q 905 345 841 340 Q 905 335 910 281 Z" fill="#E8577A" />
+</svg>
