@@ -5,6 +5,8 @@ import { db } from './db.js';
 import { getSetting, setSetting } from './settings.js';
 import { getDispatcher } from './proxy.js';
 import { siteUrl } from './mailer.js';
+import { coverUrlFor } from './images.js';
+import { prefEnabled } from './notifications.js';
 
 // "A new episode of something on your list just aired": a Telegram / Bale bot the member links from the account page.
 // Linking: the account page makes a one-time code; the member sends `/start <code>` to the bot (or opens the deep link) and
@@ -271,9 +273,17 @@ export const notifyDue = async (now = Date.now()) => {
     for (const item of due) {
       for (const link of find.all(item.slug)) {
         if (!configured(link.provider)) continue;
+        if (!prefEnabled(link.user_id, 'episode')) continue; // the member switched episode alerts off
         if (claim.run(link.user_id, link.provider, item.key, now).changes === 0) continue; // already told
         try {
-          await sendMessage(link.provider, link.chat_id, `📺 قسمت تازه‌ی «${item.title}» همین الان در ژاپن پخش شد.\nزیرنویس‌ها معمولاً چند ساعت بعد می‌آیند.\n${siteUrl()}/anime/${item.slug}`);
+          const text = `📺 قسمت تازه‌ی «${item.title}» همین الان در ژاپن پخش شد.\nزیرنویس‌ها معمولاً چند ساعت بعد می‌آیند.\n${siteUrl()}/anime/${item.slug}`;
+          const cover = coverUrlFor(item.slug);
+          let delivered = false;
+          if (cover) {
+            // The cover goes first with the message as its caption; if the messenger cannot fetch the picture, fall back to plain text.
+            try { await call(link.provider, 'sendPhoto', { chat_id: link.chat_id, photo: `${siteUrl()}${cover}`, caption: text }); delivered = true; } catch (error) { if (error.status === 403) throw error; }
+          }
+          if (!delivered) await sendMessage(link.provider, link.chat_id, text);
           sent += 1;
           await new Promise((r) => setTimeout(r, 120)); // stay far below the bots' per-second limits
         } catch (error) {

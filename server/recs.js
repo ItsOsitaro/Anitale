@@ -1,5 +1,6 @@
 import { db } from './db.js';
 import { bloomFor } from './users.js';
+import { notifyHelpful, removeHelpful } from './notifications.js';
 
 // User recommendations: "if you liked A, also try B" with a reason. One per user per
 // pair (A/B and B/A count as the same pair), write-once like reviews, rated with "helpful".
@@ -54,10 +55,15 @@ export const listRecs = (mediaType, slug, { viewerId = null, limit = 20 } = {}) 
 }));
 
 export const setRecHelpful = (userId, recId, on) => {
-  const rec = db.prepare('SELECT id, user_id FROM recs WHERE id = ?').get(recId);
+  const rec = db.prepare('SELECT id, user_id, media_type, slug_a FROM recs WHERE id = ?').get(recId);
   if (!rec || rec.user_id === userId) return null;
-  if (on) db.prepare('INSERT OR IGNORE INTO rec_votes (rec_id, user_id) VALUES (?, ?)').run(recId, userId);
-  else db.prepare('DELETE FROM rec_votes WHERE rec_id = ? AND user_id = ?').run(recId, userId);
+  if (on) {
+    db.prepare('INSERT OR IGNORE INTO rec_votes (rec_id, user_id) VALUES (?, ?)').run(recId, userId);
+    notifyHelpful(rec.user_id, userId, 'rec_helpful', recId, rec.media_type, rec.slug_a);
+  } else {
+    db.prepare('DELETE FROM rec_votes WHERE rec_id = ? AND user_id = ?').run(recId, userId);
+    removeHelpful(rec.user_id, userId, 'rec_helpful', recId);
+  }
   return { helpful: db.prepare('SELECT COUNT(*) AS n FROM rec_votes WHERE rec_id = ?').get(recId).n, voted: on };
 };
 

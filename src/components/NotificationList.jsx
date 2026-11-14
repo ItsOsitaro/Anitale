@@ -15,8 +15,9 @@ const timeAgo = (iso, lang) => {
   return formatter.format(-Math.round(seconds / 86400), 'day');
 };
 
-// Server notifications: new follower, a review by someone you follow, a new title
-// in genres you like. Shared by the mobile sheet and the desktop dropdown.
+// Server notifications: followers, reviews by people you follow, "helpful" votes, results of your reports and edit
+// suggestions, new titles in genres you like and sequels that started airing. Same-kind events within a day arrive
+// already merged (row.count / row.actors). Shared by the bell sheet and the /notifications page.
 export default function NotificationList({ items, onNavigate }) {
   const { t, lang } = useSiteLang();
   const anime = useCatalog();
@@ -28,6 +29,34 @@ export default function NotificationList({ items, onNavigate }) {
     manga: new Map(withMangaImages(manga || [], anime || []).map((item) => [item.slug, item])),
   }), [anime, manga]);
 
+  // "Ali", "Ali and Sara", "Ali and 3 others".
+  const whoOf = (row) => {
+    const names = (row.actors || []).map((a) => a.username);
+    if (!names.length) return '';
+    if (row.count <= 1) return names[0];
+    if (row.count === 2 && names.length === 2) return t('notifAnd', { a: names[0], b: names[1] });
+    return t('notifAndMore', { a: names[0], n: row.count - 1 });
+  };
+
+  const textOf = (row, title) => {
+    const name = row.actor?.username;
+    const who = whoOf(row);
+    switch (row.kind) {
+      case 'report_result':
+        return t(row.report?.status === 'dismissed' ? 'notifReportDismissed' : 'notifReportDone', { note: row.report?.note ? ` ${row.report.note}` : '' });
+      case 'suggestion_result':
+        return row.suggestion?.status === 'rejected'
+          ? t('notifSuggestionRejected', { title, reason: row.suggestion.reason ? ` ${row.suggestion.reason}` : '' })
+          : t('notifSuggestionApproved', { title });
+      case 'follow': return row.count > 1 ? t('notifFollowMany', { who }) : t('notifFollow', { name });
+      case 'friend_review': return t('notifReview', { name, title });
+      case 'review_helpful': return t('notifReviewHelpful', { who, title });
+      case 'rec_helpful': return t('notifRecHelpful', { who, title });
+      case 'sequel_airing': return t('notifSequel', { title, from: row.from?.title || '' });
+      default: return t('notifNewTitle', { title });
+    }
+  };
+
   return (
     <ul className="notif-list">
       {items.map((row) => {
@@ -36,13 +65,6 @@ export default function NotificationList({ items, onNavigate }) {
         const name = row.actor?.username;
         const profile = name ? `/user/${encodeURIComponent(name)}` : null;
         const href = row.kind === 'follow' ? profile : (item ? mediaHref(item, row.mediaType) : (row.slug ? `/${row.mediaType}/${row.slug}` : null));
-        const text = row.kind === 'report_result'
-          ? t(row.report?.status === 'dismissed' ? 'notifReportDismissed' : 'notifReportDone', { note: row.report?.note ? ` ${row.report.note}` : '' })
-          : row.kind === 'follow'
-          ? t('notifFollow', { name })
-          : row.kind === 'friend_review'
-            ? t('notifReview', { name, title })
-            : t('notifNewTitle', { title });
         const visual = row.kind === 'follow'
           ? <span className="user-avatar sm" style={{ '--bloom': row.actor?.bloom ?? 12 }} aria-hidden="true">{name?.[0]?.toUpperCase()}</span>
           : item?.image ? <img src={coverUrl(item.image, 120)} alt="" width="40" height="56" loading="lazy" decoding="async" /> : <span className="notif__blank" aria-hidden="true" />;
@@ -50,7 +72,7 @@ export default function NotificationList({ items, onNavigate }) {
           <>
             <span className="notif__visual">{visual}</span>
             <span className="notif__copy">
-              <span className="notif__text" dir="auto">{text}</span>
+              <span className="notif__text" dir="auto">{textOf(row, title)}</span>
               <time className="notif__time" dateTime={row.createdAt}>{timeAgo(row.createdAt, lang)}</time>
             </span>
             {!row.read && <span className="notif__dot" aria-label={t('notifNew')} />}

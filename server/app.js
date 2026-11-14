@@ -29,7 +29,7 @@ import { registerHomeCommunityRoute } from './home-community.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
 import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
-import { listNotifications, markNotificationsRead, notifyFollow, notifyFollowersOfReview } from './notifications.js';
+import { clearNotifications, getPrefs, listNotifications, markNotificationsRead, setPref, notifyFollow, notifyFollowersOfReview } from './notifications.js';
 import { isSensitiveItem } from './sensitive.js';
 import { searchCatalog } from './search.js';
 import { recentSeasons, premieredKey } from '../src/lib/landing.js';
@@ -450,7 +450,27 @@ export const createApp = () => {
     const row = getUserByUsername(currentSiteUser(req));
     if (!row) throw httpError(401, 'Not logged in');
     res.setHeader('Cache-Control', 'no-store');
-    res.json(listNotifications(row.id));
+    res.json(listNotifications(row.id, { tab: String(req.query.tab || ''), limit: Number(req.query.limit) || 30 }));
+  });
+
+  app.get('/api/user/notification-prefs', requireSiteUser, (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    res.setHeader('Cache-Control', 'no-store');
+    res.json({ prefs: getPrefs(row.id) });
+  });
+
+  app.put('/api/user/notification-prefs', requireSiteUser, writeLimiter, (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    if (!setPref(row.id, String(req.body?.key), req.body?.enabled === true)) throw httpError(400, 'Unknown notification type');
+    res.json({ prefs: getPrefs(row.id) });
+  });
+
+  app.post('/api/user/notifications/clear', requireSiteUser, writeLimiter, (req, res) => {
+    const row = getUserByUsername(currentSiteUser(req));
+    if (!row) throw httpError(401, 'Not logged in');
+    res.json({ removed: clearNotifications(row.id, { all: req.body?.all === true }) });
   });
 
   app.post('/api/user/notifications/read', requireSiteUser, writeLimiter, (req, res) => {

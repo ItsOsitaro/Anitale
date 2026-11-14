@@ -201,7 +201,9 @@ if (admin) {
     const loginA = await call('POST', '/api/user/login', { body: { username: ua, password } });
     const loginB = await call('POST', '/api/user/login', { body: { username: ub, password } });
     await call('POST', '/api/user/reviews', { cookie: loginB.cookie, body: { mediaType: 'anime', slug: sample.slug, body: 'A review written by the regression script for reports.' } });
+    const posted = await call('POST', '/api/user/reviews', { cookie: loginB.cookie, body: { mediaType: 'anime', slug: sample.slug, body: 'A review written by the regression script for reports.' } });
     const rv = (await call('GET', `/api/community/anime/${sample.slug}`)).json?.reviews?.find((r) => r.username === ub);
+    if (!rv) check('regression review is visible', false, `post ${posted.status} ${posted.text.slice(0, 120)}`);
     if (rv) {
       const rep = await call('POST', '/api/user/reports', { cookie: loginA.cookie, body: { kind: 'review', ref: String(rv.id), reason: 'regression' } });
       check('a member can report a review', rep.status === 200, `status ${rep.status}`);
@@ -212,6 +214,39 @@ if (admin) {
       check('the report can be closed with a note', item && (await call('POST', `/api/admin/x/reports/${item.id}`, { cookie: admin, body: { status: 'done', note: 'removed, thanks' } })).status === 200);
       const inbox = await call('GET', '/api/user/notifications', { cookie: loginA.cookie });
       check('the reporter is told, with the note', inbox.status === 200 && inbox.json?.items?.some((n) => n.kind === 'report_result' && n.report?.note === 'removed, thanks'), JSON.stringify(inbox.json?.items?.[0]));
+
+      // notification settings, "helpful" alerts, grouping, tabs, suggestion result, clearing
+      const prefs = await call('GET', '/api/user/notification-prefs', { cookie: loginB.cookie });
+      check('every notification type is on by default', prefs.status === 200 && Object.values(prefs.json?.prefs || {}).length >= 7 && Object.values(prefs.json.prefs).every(Boolean));
+      check('an unknown notification type is refused', (await call('PUT', '/api/user/notification-prefs', { cookie: loginB.cookie, body: { key: 'nope', enabled: false } })).status === 400);
+      const inboxOf = async (cookie, tab = '') => (await call('GET', `/api/user/notifications${tab ? `?tab=${tab}` : ''}`, { cookie })).json;
+      await call('PUT', '/api/user/notification-prefs', { cookie: loginB.cookie, body: { key: 'helpful', enabled: false } });
+      await call('PUT', `/api/user/reviews/${rv.id}/helpful`, { cookie: loginA.cookie });
+      check('a switched-off type creates nothing', !(await inboxOf(loginB.cookie)).items.some((n) => n.kind === 'review_helpful'));
+      await call('PUT', '/api/user/notification-prefs', { cookie: loginB.cookie, body: { key: 'helpful', enabled: true } });
+      await call('DELETE', `/api/user/reviews/${rv.id}/helpful`, { cookie: loginA.cookie });
+      await call('PUT', `/api/user/reviews/${rv.id}/helpful`, { cookie: loginA.cookie });
+      const helpful = (await inboxOf(loginB.cookie)).items.find((n) => n.kind === 'review_helpful');
+      check('the author hears that the review was helpful', helpful?.count === 1 && helpful.actor?.username === ua && helpful.slug === sample.slug, JSON.stringify(helpful));
+      await call('DELETE', `/api/user/reviews/${rv.id}/helpful`, { cookie: loginA.cookie });
+      check('taking the vote back removes the notification', !(await inboxOf(loginB.cookie)).items.some((n) => n.kind === 'review_helpful'));
+      await call('POST', `/api/users/${ub}/follow`, { cookie: loginA.cookie });
+      await call('POST', `/api/users/${ub}/follow`, { cookie: me });
+      const follows = (await inboxOf(loginB.cookie)).items.filter((n) => n.kind === 'follow');
+      check('followers in one day merge into one row', follows.length === 1 && follows[0].count === 2 && follows[0].ids.length === 2, JSON.stringify(follows));
+      check('the social tab holds follows, the results tab does not', (await inboxOf(loginB.cookie, 'social')).items.some((n) => n.kind === 'follow') && (await inboxOf(loginB.cookie, 'results')).items.length === 0);
+      check('the results tab holds the report answer', (await inboxOf(loginA.cookie, 'results')).items.some((n) => n.kind === 'report_result') && !(await inboxOf(loginA.cookie, 'social')).items.some((n) => n.kind === 'report_result'));
+      // a rejected edit suggestion reaches its author with the reason
+      const sg = await call('POST', '/api/user/suggestions', { cookie: loginA.cookie, body: { mediaType: 'anime', slug: sample.slug, kind: 'report', text: 'regression suggestion about a mistake' } });
+      if (sg.status === 201) {
+        const rej = await call('POST', `/api/admin/suggestions/${sg.json.id}/reject`, { cookie: admin, body: { reason: 'not needed' } });
+        const note = (await inboxOf(loginA.cookie)).items.find((n) => n.kind === 'suggestion_result');
+        check('a rejected suggestion notifies its author with the reason', rej.status === 200 && note?.suggestion?.status === 'rejected' && note.suggestion.reason === 'not needed', JSON.stringify(note));
+      } else check('create a suggestion for the notification test', false, `status ${sg.status}`);
+      // read, then clear only what was read
+      await call('POST', '/api/user/notifications/read', { cookie: loginB.cookie, body: { all: true } });
+      const cleared = await call('POST', '/api/user/notifications/clear', { cookie: loginB.cookie, body: {} });
+      check('clearing removes what was read', cleared.status === 200 && cleared.json?.removed >= 1 && (await inboxOf(loginB.cookie)).items.length === 0, JSON.stringify(cleared.json));
     }
   }
 

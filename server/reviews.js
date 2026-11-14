@@ -1,5 +1,6 @@
 import { db } from './db.js';
 import { bloomFor, canSeeList } from './users.js';
+import { notifyHelpful, removeHelpful } from './notifications.js';
 
 // Public reviews (one per user per title) and the community score, which is the
 // average of the personal 1-10 ratings people already give on their lists.
@@ -89,10 +90,15 @@ export const listReviews = (mediaType, slug, { viewerId = null, limit = 20, offs
 
 // "Helpful" vote: one per user per review, never on your own review. Returns the new state or null when not allowed.
 export const setHelpful = (userId, reviewId, on) => {
-  const review = db.prepare('SELECT id, user_id FROM reviews WHERE id = ?').get(reviewId);
+  const review = db.prepare('SELECT id, user_id, media_type, slug FROM reviews WHERE id = ?').get(reviewId);
   if (!review || review.user_id === userId) return null;
-  if (on) db.prepare('INSERT OR IGNORE INTO review_votes (review_id, user_id) VALUES (?, ?)').run(reviewId, userId);
-  else db.prepare('DELETE FROM review_votes WHERE review_id = ? AND user_id = ?').run(reviewId, userId);
+  if (on) {
+    db.prepare('INSERT OR IGNORE INTO review_votes (review_id, user_id) VALUES (?, ?)').run(reviewId, userId);
+    notifyHelpful(review.user_id, userId, 'review_helpful', reviewId, review.media_type, review.slug);
+  } else {
+    db.prepare('DELETE FROM review_votes WHERE review_id = ? AND user_id = ?').run(reviewId, userId);
+    removeHelpful(review.user_id, userId, 'review_helpful', reviewId);
+  }
   return { helpful: db.prepare('SELECT COUNT(*) AS n FROM review_votes WHERE review_id = ?').get(reviewId).n, voted: on };
 };
 

@@ -6,12 +6,18 @@ import path from 'node:path';
 import assert from 'node:assert/strict';
 
 const sent = [];
+const photos = [];
+let failPhoto = false;
 const server = http.createServer((req, res) => {
   let body = '';
   req.on('data', (c) => { body += c; });
   req.on('end', () => {
     const method = req.url.split('/').pop();
     if (method === 'sendMessage') sent.push(JSON.parse(body));
+    if (method === 'sendPhoto') {
+      photos.push(JSON.parse(body));
+      if (failPhoto) { res.statusCode = 400; res.end(JSON.stringify({ ok: false, description: 'wrong file' })); return; }
+    }
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ ok: true, result: method === 'getUpdates' ? [] : {} }));
   });
@@ -53,6 +59,34 @@ assert.equal(await bots.notifyDue(now), 1, 'only the watched title is announced'
 assert.ok(sent.at(-1).text.includes('Test Show') && sent.at(-1).text.includes('https://example.test/anime/t-show'));
 assert.equal(await bots.notifyDue(now + 5 * 60000), 0, 'the same episode is not announced twice');
 assert.equal(sent.length, before + 1);
+
+// 3b. with a cover on disk the message is the photo caption; a refused photo falls back to text and keeps the link;
+// a member who switched episode alerts off gets nothing
+const { COVERS_DIR } = await import('../../server/images.js');
+const fs = await import('node:fs');
+const coverFile = path.join(COVERS_DIR, 't-show.jpg');
+const hadCover = fs.existsSync(coverFile);
+if (!hadCover) fs.writeFileSync(coverFile, 'x');
+try {
+  const week = 7 * 86400000;
+  assert.equal(await bots.notifyDue(now + week), 1);
+  assert.equal(photos.at(-1).photo, 'https://example.test/covers/t-show.jpg');
+  assert.ok(photos.at(-1).caption.includes('Test Show') && photos.at(-1).caption.includes('/anime/t-show'), 'the usual text is the caption');
+  failPhoto = true;
+  const textsBefore = sent.length;
+  assert.equal(await bots.notifyDue(now + 2 * week), 1);
+  assert.equal(sent.length, textsBefore + 1, 'a refused photo falls back to plain text');
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM chat_links').get().n, 1, 'a refused photo does not unlink the chat');
+  failPhoto = false;
+  const { setPref } = await import('../../server/notifications.js');
+  setPref(1, 'episode', false);
+  const photosBefore = photos.length;
+  assert.equal(await bots.notifyDue(now + 3 * week), 0, 'episode alerts switched off');
+  assert.equal(photos.length, photosBefore);
+  setPref(1, 'episode', true);
+} finally {
+  if (!hadCover) fs.unlinkSync(coverFile);
+}
 
 // 4. /stop forgets the link
 await bots.handleUpdate('telegram', { chat: { id: 555 }, text: '/stop' });

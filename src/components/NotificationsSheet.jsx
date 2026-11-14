@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
+import { Link } from 'react-router-dom';
 import { X } from 'lucide-react';
 import { useSiteLang } from '@/i18n';
 import { useSheet } from '@/hooks/use-sheet';
@@ -43,6 +44,7 @@ export default function NotificationsSheet({ open, onClose, alerts, notification
               <AiringAlertList alerts={alerts} onNavigate={onClose} />
             </section>
           )}
+          <Link className="notif-all" to="/notifications" onClick={onClose}>{t('notifSeeAll')}</Link>
         </div>
       </div>
     </div>,

@@ -3,6 +3,7 @@ import { useCatalog } from '@/catalog-context.jsx';
 import { currentWeekday } from '@/catalog.js';
 import { entryTotal } from '@/components/mobile/entry-utils';
 import { useUser } from '@/user.jsx';
+import { useNotificationPrefs } from '@/hooks/use-notification-prefs';
 
 // «Airing today» alerts: anime on the viewer's «watching» list whose weekly
 // airing day is today. "Seen" marks live in localStorage per calendar day, so
@@ -42,7 +43,11 @@ export function useAiringAlerts() {
   const seen = useSyncExternalStore(subscribe, read, read);
   const today = currentWeekday();
 
+  const { isOn } = useNotificationPrefs(Boolean(user?.me));
+  const episodeOn = isOn('episode');
+
   const items = useMemo(() => {
+    if (!episodeOn) return []; // the member switched episode alerts off in the account page
     const bySlug = new Map((catalog || []).map((item) => [item.slug, item]));
     const list = [];
     for (const entry of user?.entries?.anime || []) {
@@ -55,7 +60,7 @@ export function useAiringAlerts() {
       list.push({ entry, item, nextEpisode: progress + 1, total, progress, mark: seen.marks[entry.slug] || null, seen: Boolean(seen.marks[entry.slug]) });
     }
     return list;
-  }, [catalog, user?.entries?.anime, today, seen]);
+  }, [catalog, user?.entries?.anime, today, seen, episodeOn]);
 
   const unread = items.filter((row) => !row.seen).length;
   const markSeen = useCallback((slug) => writeSeen(slug, 'later'), []);

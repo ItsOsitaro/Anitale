@@ -4,6 +4,7 @@ import { siteUrl } from './mailer.js';
 import { z } from 'zod';
 import { db } from './db.js';
 import { titleExists } from './reviews.js';
+import { notifySuggestionResult } from './notifications.js';
 
 // Member edit suggestions: Persian synopsis, Persian title, genre changes, or a free-text error report.
 // They wait in a queue; an admin approves (the change is applied automatically) or rejects with a reason.
@@ -140,12 +141,14 @@ export const registerSuggestionRoutes = (app, { requireSiteUser, requireAdmin, c
     const row = load(req);
     if (!apply(row)) throw httpError(404, 'The title no longer exists');
     db.prepare("UPDATE edit_suggestions SET status = 'approved', reviewed_at = datetime('now') WHERE id = ?").run(row.id);
+    notifySuggestionResult(row.user_id, row.id, row.media_type, row.slug);
     res.json({ ok: true });
   });
   app.post('/api/admin/suggestions/:id/reject', requireAdmin, (req, res) => {
     const row = load(req);
     const { reason } = rejectInput.parse(req.body);
     db.prepare("UPDATE edit_suggestions SET status = 'rejected', reason = ?, reviewed_at = datetime('now') WHERE id = ?").run(reason, row.id);
+    notifySuggestionResult(row.user_id, row.id, row.media_type, row.slug);
     res.json({ ok: true });
   });
 };

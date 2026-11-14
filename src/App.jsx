@@ -40,6 +40,7 @@ import MediaTabs from './components/MediaTabs.jsx';
 import SuggestEdit from './components/SuggestEdit.jsx';
 import DevelopersPage from './developersPage.jsx';
 import MySuggestions from './suggestionsPage.jsx';
+import NotificationsPage from './notificationsPage.jsx';
 import { StacksBrowse, StackView } from './stacksPages.jsx';
 import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
@@ -1524,6 +1525,7 @@ function AppRoutes({ theme, onThemeChange }) {
       <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
       <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
       <Route path="/developers" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><DevelopersPage /></WithHeader>} />
+      <Route path="/notifications" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><NotificationsPage /></WithHeader>} />
       <Route path="/suggestions" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><MySuggestions /></WithHeader>} />
       <Route path="/stacks" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StacksBrowse /></WithHeader>} />
       <Route path="/stacks/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StackView /></WithHeader>} />
