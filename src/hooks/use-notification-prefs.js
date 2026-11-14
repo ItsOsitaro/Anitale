@@ -3,7 +3,7 @@ import { userApi } from '@/user.jsx';
 
 // The member's notification switches (all on unless switched off). One shared copy, so the settings card and the
 // bell / airing alerts stay in step. Loaded once per signed-in session.
-export const PREF_KEYS = ['episode', 'new_title', 'sequel', 'follow', 'friend_review', 'helpful', 'results'];
+export const PREF_KEYS = ['episode', 'sequel', 'follow', 'friend_review', 'helpful', 'results'];
 const listeners = new Set();
 let prefs = null; // null until loaded: everything counts as on
 let loading = false;

@@ -64,20 +64,21 @@ if (db.prepare("SELECT sql FROM sqlite_master WHERE name = 'notifications'").get
     db.exec('COMMIT');
   } catch (error) { db.exec('ROLLBACK'); throw error; }
 }
+db.prepare("DELETE FROM notifications WHERE kind = 'new_title'").run(); // that notification type was removed
 if (!db.prepare("SELECT COUNT(*) AS n FROM pragma_table_info('notification_state') WHERE name = 'sequel_at'").get().n) {
   db.exec('ALTER TABLE notification_state ADD COLUMN sequel_at TEXT');
 }
 
 // What a member can switch (the settings page lists exactly these). `episode` is the "an episode of something you are
 // watching aired" alert: the bell's "airing today" block and the Telegram / Bale message.
-export const PREF_KEYS = ['episode', 'new_title', 'sequel', 'follow', 'friend_review', 'helpful', 'results'];
+export const PREF_KEYS = ['episode', 'sequel', 'follow', 'friend_review', 'helpful', 'results'];
 const PREF_OF = {
-  follow: 'follow', friend_review: 'friend_review', new_title: 'new_title', sequel_airing: 'sequel',
+  follow: 'follow', friend_review: 'friend_review', sequel_airing: 'sequel',
   review_helpful: 'helpful', rec_helpful: 'helpful', report_result: 'results', suggestion_result: 'results',
 };
 // Tabs of the notifications page.
 const TABS = {
-  titles: ['new_title', 'sequel_airing'],
+  titles: ['sequel_airing'],
   social: ['follow', 'friend_review', 'review_helpful', 'rec_helpful'],
   results: ['report_result', 'suggestion_result'],
 };
@@ -122,50 +123,15 @@ export const removeHelpful = (authorId, voterId, kind, targetId) => {
   db.prepare('DELETE FROM notifications WHERE user_id = ? AND kind = ? AND ref = ?').run(authorId, kind, `h:${targetId}:${voterId}`);
 };
 
-const parseGenres = (text) => { try { const v = JSON.parse(text || '[]'); return Array.isArray(v) ? v : []; } catch { return []; } };
-
-const topGenres = (userId) => {
-  const counts = new Map();
-  const entries = db.prepare("SELECT media_type, slug FROM user_entries WHERE user_id = ? AND status != 'dropped'").all(userId);
-  const stmts = { anime: db.prepare('SELECT genres FROM anime WHERE slug = ?'), manga: db.prepare('SELECT genres FROM manga WHERE slug = ?') };
-  for (const { media_type: type, slug } of entries) {
-    const row = stmts[type]?.get(slug);
-    for (const genre of parseGenres(row?.genres)) counts.set(genre, (counts.get(genre) || 0) + 1);
-  }
-  return new Set([...counts.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).slice(0, 3).map(([genre]) => genre));
-};
-
-const syncNewTitles = (userId) => {
-  const state = db.prepare('SELECT genre_cursor FROM notification_state WHERE user_id = ?').get(userId);
-  const now = db.prepare("SELECT datetime('now') AS now").get().now;
-  if (!state) { // first visit: start from now, never backfill the whole catalog
-    db.prepare('INSERT INTO notification_state (user_id, genre_cursor) VALUES (?, ?)').run(userId, now);
-    return;
-  }
-  const fresh = ['anime', 'manga'].flatMap((type) => db
-    .prepare(`SELECT slug, genres, created_at FROM ${type} WHERE created_at > ? ORDER BY created_at DESC LIMIT 60`)
-    .all(state.genre_cursor)
-    .map((row) => ({ ...row, type })));
-  db.prepare('UPDATE notification_state SET genre_cursor = ? WHERE user_id = ?').run(now, userId);
-  if (fresh.length === 0) return;
-  const likes = topGenres(userId);
-  if (likes.size === 0) return;
-  const owned = new Set(db.prepare('SELECT media_type, slug FROM user_entries WHERE user_id = ?').all(userId).map((e) => `${e.media_type}:${e.slug}`));
-  let added = 0;
-  for (const row of fresh.sort((a, b) => b.created_at.localeCompare(a.created_at))) {
-    if (added >= 5) break;
-    if (owned.has(`${row.type}:${row.slug}`) || !parseGenres(row.genres).some((genre) => likes.has(genre))) continue;
-    put(userId, 'new_title', null, row.type, row.slug, `t:${row.type}:${row.slug}`);
-    added += 1;
-  }
-};
+// The first visit creates the member's state row (the sequel check below is throttled through it).
+const ensureState = (userId) => db.prepare("INSERT OR IGNORE INTO notification_state (user_id, genre_cursor) VALUES (?, datetime('now'))").run(userId);
 
 // A sequel of something the member finished that is airing now (the same data as the "continue the series" rail).
 // Checked at most every 6 hours per member; each sequel is announced once (the ref is unique).
 const syncSequels = (userId) => {
   if (!prefEnabled(userId, 'sequel')) return;
   const state = db.prepare('SELECT sequel_at FROM notification_state WHERE user_id = ?').get(userId);
-  if (!state) return; // syncNewTitles creates the row on the first visit
+  if (!state) return; // ensureState creates the row on the first visit
   if (state.sequel_at && Date.now() - Date.parse(`${state.sequel_at.replace(' ', 'T')}Z`) < 6 * 3600000) return;
   db.prepare("UPDATE notification_state SET sequel_at = datetime('now') WHERE user_id = ?").run(userId);
   for (const item of continueFor(userId, 'anime', 30)) {
@@ -223,7 +189,7 @@ const shapeGroup = (g) => {
 
 // opts.tab: 'titles' | 'social' | 'results' (the notifications page tabs); no tab = everything.
 export const listNotifications = (userId, { limit = 30, tab = '' } = {}) => {
-  syncNewTitles(userId);
+  ensureState(userId);
   syncSequels(userId);
   db.prepare(`DELETE FROM notifications WHERE user_id = ? AND created_at < datetime('now', '-${RETENTION_DAYS} days')`).run(userId);
   const kinds = TABS[tab] || null;

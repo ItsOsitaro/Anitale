@@ -217,7 +217,7 @@ if (admin) {
 
       // notification settings, "helpful" alerts, grouping, tabs, suggestion result, clearing
       const prefs = await call('GET', '/api/user/notification-prefs', { cookie: loginB.cookie });
-      check('every notification type is on by default', prefs.status === 200 && Object.values(prefs.json?.prefs || {}).length >= 7 && Object.values(prefs.json.prefs).every(Boolean));
+      check('every notification type is on by default', prefs.status === 200 && Object.values(prefs.json?.prefs || {}).length >= 6 && Object.values(prefs.json.prefs).every(Boolean));
       check('an unknown notification type is refused', (await call('PUT', '/api/user/notification-prefs', { cookie: loginB.cookie, body: { key: 'nope', enabled: false } })).status === 400);
       const inboxOf = async (cookie, tab = '') => (await call('GET', `/api/user/notifications${tab ? `?tab=${tab}` : ''}`, { cookie })).json;
       await call('PUT', '/api/user/notification-prefs', { cookie: loginB.cookie, body: { key: 'helpful', enabled: false } });

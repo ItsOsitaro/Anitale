@@ -53,7 +53,7 @@ export default function NotificationList({ items, onNavigate }) {
       case 'review_helpful': return t('notifReviewHelpful', { who, title });
       case 'rec_helpful': return t('notifRecHelpful', { who, title });
       case 'sequel_airing': return t('notifSequel', { title, from: row.from?.title || '' });
-      default: return t('notifNewTitle', { title });
+      default: return title;
     }
   };
 
