@@ -17,7 +17,13 @@ const { DatabaseSync } = await import('node:sqlite');
 process.emitWarning = originalEmitWarning;
 
 db = new DatabaseSync(process.env.DB_FILE || path.join(SERVER_DIR, 'data.db'));
-db.exec('PRAGMA journal_mode = WAL');
+db.exec(`
+  PRAGMA journal_mode = WAL;
+  PRAGMA synchronous = NORMAL;
+  PRAGMA cache_size = -8000;
+  PRAGMA temp_store = MEMORY;
+  PRAGMA busy_timeout = 5000;
+`);
 
 db.exec(`
 CREATE TABLE IF NOT EXISTS settings (

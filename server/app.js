@@ -94,7 +94,7 @@ export const createApp = () => {
   // the rate limiters key on the real client instead of one shared proxy IP
   // (and the CSRF host check can read x-forwarded-host).
   if (process.env.TRUST_PROXY === '1') app.set('trust proxy', 1);
-  app.use(compression());
+  app.use(compression({ threshold: 1024 }));
   // Baseline browser hardening; CSP (SPA + inline styles) is a manual follow-up.
   app.use((req, res, next) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -1954,12 +1954,22 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
       index: false,
       setHeaders: (res, file) => {
         // Vite fingerprints /assets/*, so they can be cached for a year; the
-        // service worker and manifest must always be revalidated.
-        if (file.includes(`${path.sep}assets${path.sep}`)) res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
-        else if (/sw\.js$|manifest\.webmanifest$/.test(file)) res.setHeader('Cache-Control', 'no-cache');
+        // service worker, manifest, and index.html must always be revalidated.
+        if (/[/\\]assets[/\\]/.test(file)) {
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+        } else {
+          res.setHeader('Cache-Control', 'no-cache');
+        }
       },
     }));
-    app.use((req, res, next) => (req.method === 'GET' ? res.sendFile(path.join(dist, 'index.html')) : next()));
+    app.use((req, res, next) => {
+      if (req.method === 'GET') {
+        res.setHeader('Cache-Control', 'no-cache');
+        res.sendFile(path.join(dist, 'index.html'));
+      } else {
+        next();
+      }
+    });
   } else {
     app.get('/', (req, res) => res.type('text').send('API is running. For the website run "npm run build" first, or use "npm start" (dev mode, http://127.0.0.1:5173).'));
   }
