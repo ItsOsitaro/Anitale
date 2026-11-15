@@ -28,7 +28,7 @@ import { logMiss } from './search-aliases.js';
 import { registerHomeCommunityRoute } from './home-community.js';
 import { FAVORITE_KINDS, FAVORITE_LIMIT, addFavorite, favoriteInfo, listFavorites, removeFavorite } from './favorites.js';
 import { addRec, adminDeleteRec, adminListRecs, listRecs, setRecHelpful } from './recs.js';
-import { addReview, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
+import { addReview, reviewLooksSpammy, adminDeleteReview, adminListReviews, communityStats, listReviews, listUserReviews, setHelpful, titleExists } from './reviews.js';
 import { clearNotifications, getPrefs, listNotifications, markNotificationsRead, setPref, notifyFollow, notifyFollowersOfReview } from './notifications.js';
 import { isSensitiveItem } from './sensitive.js';
 import { searchCatalog } from './search.js';
@@ -507,6 +507,7 @@ export const createApp = () => {
     const row = getUserByUsername(currentSiteUser(req));
     if (!row) throw httpError(401, 'Not logged in');
     if (!titleExists(input.mediaType, input.slug)) throw httpError(404, 'Title not found');
+    if (reviewLooksSpammy(row.id, input.body)) throw httpError(422, 'This review looks like spam (too many links or a repeated text)');
     if (!addReview(row.id, input.mediaType, input.slug, input.body, input.spoiler)) throw httpError(409, 'You already reviewed this title');
     notifyFollowersOfReview(row.id, input.mediaType, input.slug);
     res.status(201).json({ ok: true });

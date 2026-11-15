@@ -33,11 +33,14 @@ const perDay = (table, days) => {
 const selfChecks = async (port) => {
   const base = `http://127.0.0.1:${port}`;
   const anime = db.prepare('SELECT slug FROM anime ORDER BY members DESC LIMIT 1').get();
+  const farAnime = db.prepare('SELECT slug FROM anime ORDER BY members ASC LIMIT 1').get();
   const paths = [
     ['Home page', '/'], ['Schedule', '/schedule'], ['Seasonal', '/seasonal'], ['Genres', '/genres'], ['Catalog API', '/api/anime?lite=1'],
     ['Search', '/api/search?q=a'], ['Full search', '/api/search/full?type=anime&sort=score&sfw=1'], ['Landing seasons', '/api/landing'],
     ['Community highlights', '/api/home/community'], ['Sitemap', '/sitemap.xml'], ['Web manifest', '/manifest.webmanifest'],
-    ...(anime ? [['Title page', `/anime/${anime.slug}`]] : []),
+    ...(anime ? [['Title page', `/anime/${anime.slug}`], ['Title API', `/api/title/anime/${anime.slug}`], ['Community stats', `/api/community/anime/${anime.slug}`]] : []),
+    // A title outside the popular "core" must still open (the page fetches it from the server).
+    ...(farAnime ? [['Non-core title API', `/api/title/anime/${farAnime.slug}`]] : []),
   ];
   const results = [];
   for (const [name, path] of paths) {

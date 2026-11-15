@@ -1,7 +1,7 @@
 import './config.js';
 import { db } from './db.js';
 import { getSetting, setSetting } from './settings.js';
-import { tenraiCircuitOpen } from './tenrai.js';
+import { tenraiCircuitOpen, asBackground } from './tenrai.js';
 import { warmExtras, EXTRAS_VER } from './extras.js';
 
 // Pre-caches the "extras" (relations, characters, staff, themes, recommendations, trailer) of every anime in
@@ -75,7 +75,7 @@ export const backfillExtras = async () => {
     for (const { mal_id: id } of rows) {
       if (tenraiCircuitOpen()) break;
       try {
-        await warmExtras('anime', id);
+        await asBackground(() => warmExtras('anime', id));
         done += 1;
       } catch (error) {
         if (error?.network) { state.error = error.message || String(error); break; }

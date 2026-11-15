@@ -261,6 +261,10 @@ export const registerSeoRoutes = (app) => {
       const alternates = [...new Set([item.titleFa, item.alternativeTitles?.japanese, item.alternativeTitles?.english, item.alternativeTitles?.romaji].filter((n) => n && n !== name))];
       const studios = infoRow('studios').split(',').map((n) => n.trim()).filter(Boolean);
       const mal = item.malId ? `https://myanimelist.net/${type}/${item.malId}` : '';
+      // Trailer from the cached extras (only when already stored; no Tenrai call here).
+      const extrasRow = item.malId ? db.prepare('SELECT data FROM title_extras WHERE type = ? AND mal_id = ?').get(type, item.malId) : null;
+      let trailerId = '';
+      try { trailerId = extrasRow ? JSON.parse(extrasRow.data)?.trailer?.youtubeId || '' : ''; } catch { trailerId = ''; }
       const jsonLd = {
         '@context': 'https://schema.org',
         '@graph': [
@@ -276,6 +280,7 @@ export const registerSeoRoutes = (app) => {
             ...(startDate ? { datePublished: startDate } : {}),
             ...(studios.length && type === 'anime' ? { productionCompany: studios.map((n) => ({ '@type': 'Organization', name: n })) } : {}),
             ...(mal ? { sameAs: [mal] } : {}),
+            ...(trailerId && /^[A-Za-z0-9_-]{6,20}$/.test(trailerId) ? { trailer: { '@type': 'VideoObject', name: `${name} — trailer`, embedUrl: `https://www.youtube.com/embed/${trailerId}`, thumbnailUrl: `https://img.youtube.com/vi/${trailerId}/hqdefault.jpg`, description } } : {}),
             inLanguage: 'ja',
             // Only a real vote count counts as a rating: no invented "1 vote" scores.
             ...(scoreNumber > 0 && votes > 0 ? { aggregateRating: { '@type': 'AggregateRating', ratingValue: scoreNumber, bestRating: 10, worstRating: 1, ratingCount: votes } } : {}),

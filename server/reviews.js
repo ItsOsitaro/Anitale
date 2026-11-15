@@ -30,7 +30,25 @@ export const titleExists = (mediaType, slug) => Boolean(
   db.prepare(`SELECT 1 AS hit FROM ${mediaType === 'manga' ? 'manga' : 'anime'} WHERE slug = ?`).get(slug),
 );
 
+// A busy title is read far more often than it changes, so the counts are kept for 20 s per title.
+const statsCache = new Map();
 export const communityStats = (mediaType, slug) => {
+  const key = `${mediaType}:${slug}`;
+  const hit = statsCache.get(key);
+  if (hit && Date.now() - hit.at < 20_000) return hit.value;
+  const value = computeStats(mediaType, slug);
+  if (statsCache.size > 2000) statsCache.clear();
+  statsCache.set(key, { at: Date.now(), value });
+  return value;
+};
+
+// Too many links, or the same text the member already posted on another title.
+export const reviewLooksSpammy = (userId, body) => {
+  if ((String(body).match(/https?:\/\//gi) || []).length > 2) return true;
+  return Boolean(db.prepare('SELECT 1 AS hit FROM reviews WHERE user_id = ? AND body = ? LIMIT 1').get(userId, body));
+};
+
+const computeStats = (mediaType, slug) => {
   const rows = db.prepare(
     'SELECT rating, COUNT(*) AS n FROM user_entries WHERE media_type = ? AND slug = ? AND rating IS NOT NULL GROUP BY rating',
   ).all(mediaType, slug);

@@ -1,7 +1,8 @@
 import './config.js';
 import { db } from './db.js';
 import { getSetting, setSetting } from './settings.js';
-import { tenraiGetRaw, tenraiCircuitOpen } from './tenrai.js';
+import { tenraiGetRaw as liveGet, tenraiCircuitOpen, asBackground } from './tenrai.js';
+const tenraiGetRaw = (path) => asBackground(() => liveGet(path));
 
 // Tenrai often leaves `score` empty for titles that MyAnimeList does score (it has the rank and the
 // voter count, just not the number). The vote histogram from /statistics is complete, so the score is

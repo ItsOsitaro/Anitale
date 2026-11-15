@@ -214,6 +214,7 @@ CREATE INDEX IF NOT EXISTS idx_manga_members ON manga(members DESC, score DESC);
 CREATE INDEX IF NOT EXISTS idx_anime_updated ON anime(updated_at);
 CREATE INDEX IF NOT EXISTS idx_manga_updated ON manga(updated_at);
 CREATE INDEX IF NOT EXISTS idx_entries_title ON user_entries(media_type, slug);
+CREATE INDEX IF NOT EXISTS idx_entries_title_rating ON user_entries(media_type, slug, rating, status);
 `);
 
 // Migration: per-user session token version (security: revoke issued site-user

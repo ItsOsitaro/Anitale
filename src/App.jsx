@@ -56,7 +56,8 @@ import MobileHomePage from '@/components/mobile/MobileHomePage';
 import MobileCatalogPage from '@/components/mobile/MobileCatalogPage';
 import MobileRankingPage from '@/components/mobile/MobileRankingPage';
 import MobileSeasonalPage from '@/components/mobile/MobileSeasonalPage';
-import { SchedulePageBody, SeasonPageBody } from './airingBoard.jsx';
+import { SchedulePageBody, SeasonPageBody, slotOf } from './airingBoard.jsx';
+import FriendsWatched from '@/components/FriendsWatched';
 import UserRecs from './components/Recommendations.jsx';
 import InstallButton from '@/components/InstallButton';
 import { useForYou } from '@/hooks/use-for-you';
@@ -1081,6 +1082,15 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
     return map[String(raw).toLowerCase()] || raw;
   };
   const episodesRaw = infoValue('episodes') || infoValue('chapters');
+  // "Weekly on Saturday at 18:30 (Tehran)" for a title that is airing now: the question people open the page with.
+  const airsLine = (() => {
+    if (!/^currently airing/i.test(infoValue('status'))) return null;
+    let zone = lang === 'fa' ? 'tehran' : 'jst';
+    try { const saved = localStorage.getItem('anitale.tz'); if (saved === 'tehran' || saved === 'jst') zone = saved; } catch { /* private mode */ }
+    const slot = slotOf(item, zone);
+    if (!slot.day || !slot.time) return infoValue('broadcast') ? infoValueFa('broadcast', infoValue('broadcast'), lang) : null;
+    return t('airsWeekly', { day: t(`day${slot.day}`), time: lang === 'fa' ? toPersianDigits(slot.time) : slot.time, zone: t(zone === 'tehran' ? 'tzTehran' : 'tzJst') });
+  })();
   const heroFacts = [
     mediaType === 'manga' ? (lang === 'fa' ? 'مانگا' : 'Manga') : (infoValue('type') || item.format),
     item.year ? yearText(item.year, lang) : null,
@@ -1088,8 +1098,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
       ? `${formatNumber(numericOf(episodesRaw) ?? episodesRaw, lang)} ${mediaType === 'manga' ? t('chaptersUnit') : t('episodesUnit')}`
       : null,
     statusText(infoValue('status')),
-    /^currently airing/i.test(infoValue('status')) && infoValue('broadcast')
-      ? infoValueFa('broadcast', infoValue('broadcast'), lang) : null,
+    airsLine,
   ].filter(Boolean);
   const progressTotal = numericOf(episodesRaw) || 0;
   const progressNow = Math.max(0, Math.min(progressTotal, Number(savedEntry?.progress) || 0));

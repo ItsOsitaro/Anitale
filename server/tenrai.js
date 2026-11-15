@@ -1,4 +1,5 @@
 import './config.js';
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { fetch } from 'undici';
 import { getDispatcher, viaProxy } from './proxy.js';
 
@@ -42,18 +43,28 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 const fail = (message, status = 502, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 
 // Serialises every Tenrai call and keeps a minimum gap between them.
-let chain = Promise.resolve();
+// Two lanes: a visitor's request always goes before background pre-caching (asBackground).
+const lane = new AsyncLocalStorage();
+export const asBackground = (fn) => lane.run('low', fn);
+const queues = { high: [], low: [] };
+let pumping = false;
 let lastCall = 0;
-const enqueue = (task) => {
-  const run = chain.then(async () => {
-    const wait = lastCall + MIN_GAP_MS - Date.now();
-    if (wait > 0) await sleep(wait);
-    lastCall = Date.now();
-    return task();
-  });
-  chain = run.catch(() => {});
-  return run;
+const pump = async () => {
+  if (pumping) return;
+  pumping = true;
+  try {
+    for (let job = queues.high.shift() || queues.low.shift(); job; job = queues.high.shift() || queues.low.shift()) {
+      const wait = lastCall + MIN_GAP_MS - Date.now();
+      if (wait > 0) await sleep(wait);
+      lastCall = Date.now();
+      try { job.resolve(await job.task()); } catch (error) { job.reject(error); }
+    }
+  } finally { pumping = false; }
 };
+const enqueue = (task) => new Promise((resolve, reject) => {
+  queues[lane.getStore() === 'low' ? 'low' : 'high'].push({ task, resolve, reject });
+  pump();
+});
 
 const headers = () => ({
   accept: 'application/json',

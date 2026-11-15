@@ -163,7 +163,7 @@ export const registerExtrasRoutes = (app) => {
       // Stored data is served at once, however old; a stale row is refreshed in the background so no visitor waits.
       if (Date.now() - row.fetched_at >= FRESH_MS && !recentlyFailed) refresh(type, id).catch(() => {});
       res.setHeader('Cache-Control', 'public, max-age=0, s-maxage=600, stale-while-revalidate=3600');
-      res.json({ ...stored, ok: true });
+      res.json({ ...stored, ok: true, fetchedAt: row.fetched_at, stale: Date.now() - row.fetched_at >= FRESH_MS });
       return;
     }
     try {
@@ -174,8 +174,8 @@ export const registerExtrasRoutes = (app) => {
     } catch {
       // Tenrai unreachable: serve the stale copy if there is one, otherwise an empty answer the page hides.
       res.setHeader('Cache-Control', 'no-cache');
-      if (row) res.json({ ...stored, ok: true, stale: true });
-      else res.json({ ok: false });
+      if (row) res.json({ ...stored, ok: true, stale: true, fetchedAt: row.fetched_at });
+      else res.json({ ok: false, unavailable: true });
     }
   });
 
