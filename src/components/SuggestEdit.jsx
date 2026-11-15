@@ -4,12 +4,20 @@ import { Link } from 'react-router-dom';
 import { useSiteLang } from '@/i18n';
 import { useUser, userApi } from '@/user.jsx';
 
-const synopsisFa = (item) => (item.synopsis && typeof item.synopsis === 'object' ? item.synopsis.fa || '' : '');
+function synopsisFa(item) {
+  return item.synopsis && typeof item.synopsis === 'object' ? item.synopsis.fa || '' : '';
+}
 
-function Dialog({ item, mediaType, onClose }) {
+export function SuggestEditDialog({ item, mediaType, initialKind = 'synopsis', onClose }) {
   const { t } = useSiteLang();
-  const [kind, setKind] = useState('synopsis');
-  const [text, setText] = useState(synopsisFa(item));
+  const [kind, setKind] = useState(initialKind);
+  const [text, setText] = useState(() => (
+    initialKind === 'synopsis'
+      ? synopsisFa(item)
+      : initialKind === 'title'
+        ? (item.titleFa || '')
+        : ''
+  ));
   const [remove, setRemove] = useState([]);
   const [addRaw, setAddRaw] = useState('');
   const [state, setState] = useState({ status: 'idle', msg: '' });
@@ -91,7 +99,7 @@ export default function SuggestEdit({ item, mediaType }) {
   return (
     <>
       <button type="button" className="sug-open" onClick={() => setOpen(true)} id="sug-open">{t('sugButton')}</button>
-      {open && <Dialog item={item} mediaType={mediaType} onClose={() => setOpen(false)} />}
+      {open && <SuggestEditDialog item={item} mediaType={mediaType} onClose={() => setOpen(false)} />}
     </>
   );
 }

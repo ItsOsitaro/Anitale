@@ -11,23 +11,51 @@ const cache = new Map();
 
 export function useTitleExtras(mediaType, malId) {
   const [state, setState] = useState(() => (malId && cache.get(`${mediaType}:${malId}`)) || { status: malId ? 'loading' : 'none' });
-  useEffect(() => {
-    if (!malId) { setState({ status: 'none' }); return undefined; }
+  const [retryTick, setRetryTick] = useState(0);
+
+  const retry = () => {
+    if (!malId) return;
     const key = `${mediaType}:${malId}`;
-    if (cache.has(key)) { setState(cache.get(key)); return undefined; }
+    cache.delete(key);
+    setRetryTick((t) => t + 1);
+  };
+
+  useEffect(() => {
+    if (!malId) { setState({ status: 'none', retry }); return undefined; }
+    const key = `${mediaType}:${malId}`;
+    if (cache.has(key)) { setState({ ...cache.get(key), retry }); return undefined; }
     let alive = true;
-    setState({ status: 'loading' });
+    setState({ status: 'loading', retry });
     fetch(`/api/extras/${mediaType}/${malId}`)
-      .then((response) => (response.ok ? response.json() : { ok: false }))
+      .then((response) => (response.ok ? response.json() : { ok: false, unavailable: true }))
       .then((body) => {
-        const next = body?.ok ? { status: 'ready', data: body } : { status: 'none' };
-        if (next.status === 'ready') cache.set(key, next);
+        if (body?.unavailable || !body?.ok) {
+          const next = { status: 'unavailable', retry };
+          if (alive) setState(next);
+          return;
+        }
+        const next = { status: 'ready', data: body, retry };
+        cache.set(key, next);
         if (alive) setState(next);
       })
-      .catch(() => { if (alive) setState({ status: 'none' }); });
+      .catch(() => { if (alive) setState({ status: 'unavailable', retry }); });
     return () => { alive = false; };
-  }, [mediaType, malId]);
-  return state;
+  }, [mediaType, malId, retryTick]);
+  return { ...state, retry };
+}
+
+export function ExtrasError({ onRetry }) {
+  const { t } = useSiteLang();
+  return (
+    <div className="extras-error-banner" role="alert">
+      <span>{t('extrasUnavailable')}</span>
+      {onRetry && (
+        <button type="button" className="extras-retry-btn" onClick={onRetry}>
+          {t('extrasRetry')}
+        </button>
+      )}
+    </div>
+  );
 }
 
 const RELATION_FA = {

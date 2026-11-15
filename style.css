@@ -1,4 +1,4 @@
-﻿/* ============================================================
+/* ============================================================
    Anitale ΓÇö ┬½╪¿╪º┘å┌⌐┘É ┌»┘ä┬╗ (Sakura & Ink) ┬╖ MODERN EDITION
    Design-language CSS. Tokens live in src/tailwind.css
    (--background, --foreground, --primary, --border, ...).
@@ -4927,3 +4927,169 @@ body[data-theme="dark"] .logo-on-light { display: none; }
 .notif-prefs { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; }
 .notif-prefs label { display: flex; align-items: center; gap: 10px; min-height: 44px; cursor: pointer; line-height: 1.5; }
 .notif-prefs input { width: 20px; height: 20px; accent-color: var(--primary); flex: none; }
+
+/* Detail Page: Low votes badge */
+.detail-low-votes-badge {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.1rem 0.45rem;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--muted) 80%, transparent);
+  color: var(--muted-foreground);
+  border: 1px solid var(--border);
+  margin-inline-start: 0.45rem;
+  vertical-align: middle;
+}
+
+/* Detail Page: Synopsis collapse/expand */
+.detail-synopsis-toggle {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  text-underline-offset: 4px;
+}
+.detail-synopsis-toggle:hover {
+  opacity: 0.85;
+}
+
+/* Detail Page: Information table categories (Viewer & Production) */
+.dx-info-group {
+  margin-bottom: 1.25rem;
+}
+.dx-info-group:last-of-type {
+  margin-bottom: 0.5rem;
+}
+.dx-info-subheading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  margin: 0.5rem 0 0.5rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
+/* Detail Page: More Actions Dropdown */
+.detail-more-actions {
+  position: relative;
+  display: inline-flex;
+}
+.detail-more-actions-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.detail-more-actions-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  inset-inline-start: 0;
+  min-width: 170px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 8px);
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
+  padding: 0.35rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.detail-more-actions-item {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  width: 100%;
+  padding: 0.45rem 0.65rem;
+  border-radius: calc(var(--radius, 8px) - 2px);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--foreground);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  text-align: start;
+  transition: background 0.15s ease;
+}
+.detail-more-actions-item:hover,
+.detail-more-actions-item:focus-visible {
+  background: var(--accent);
+  color: var(--accent-foreground, var(--foreground));
+  outline: none;
+}
+
+/* Detail Page: Title Extras Unavailable Banner */
+.extras-error-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius, 8px);
+  background: var(--card);
+  border: 1px dashed var(--border);
+  color: var(--muted-foreground);
+  font-size: 0.88rem;
+  margin: 1rem 0;
+}
+.extras-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 6px);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+.extras-retry-btn:hover {
+  background: var(--accent);
+}
+
+/* Detail Page: Jump To Top Floating Button */
+.detail-jump-top {
+  position: fixed;
+  bottom: 2rem;
+  inset-inline-end: 2rem;
+  z-index: 35;
+  width: 44px;
+  height: 44px;
+  border-radius: 9999px;
+  background: var(--card);
+  color: var(--foreground);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 16px -2px rgba(0, 0, 0, 0.2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: transform 0.15s ease, background-color 0.15s ease;
+}
+.detail-jump-top:hover {
+  background: var(--accent);
+  transform: translateY(-2px);
+}
+.detail-jump-top:active {
+  transform: translateY(0);
+}
+
+@media (max-width: 820px) {
+  .detail-jump-top {
+    bottom: calc(90px + env(safe-area-inset-bottom, 0px));
+    inset-inline-end: 1rem;
+    width: 40px;
+    height: 40px;
+  }
+}
+

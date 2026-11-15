@@ -18,7 +18,9 @@ import { loadAnimeCatalog, loadMangaCatalog, buildSchedule, mediaHref, foldTitle
 import { CatalogContext, MangaCatalogContext, useCatalog, useMangaCatalog, useResolvedTitle, useVisibleCatalog, useVisibleMangaCatalog, withMangaImages } from './catalog-context.jsx';
 import { getShowSensitive, isSensitive, rankKey, setShowSensitive, useShowSensitive } from './lib/catalog-rules.js';
 import { useUser, UserProvider } from './user.jsx';
-import { useTitleExtras, hasAny, FranchiseNav, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from './components/TitleExtras.jsx';
+import { useTitleExtras, hasAny, FranchiseNav, ExtrasSkeleton, ExtrasError, Characters, Relations, Recommendations, Trailer, Themes, Staff } from './components/TitleExtras.jsx';
+import TitleMoreActions from './components/TitleMoreActions.jsx';
+import JumpToTop from './components/JumpToTop.jsx';
 import { synopsisText, selectHomePicks, getCurrentSeasonInfo, getItemSeasonInfo } from './home-data.js';
 import { ThemeProvider, useTheme } from './theme-context.jsx';
 import { AuthPage, UserDashboard, UserPublicProfile } from './userPages.jsx';
@@ -998,6 +1000,10 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const extras = useTitleExtras(mediaType, item.malId);
   const alternativeTitles = item.alternativeTitles || {};
   const romajiTitle = alternativeTitles.romaji || '';
+  const [synopsisExpanded, setSynopsisExpanded] = useState(false);
+  const fullSynopsis = item.synopsis || '';
+  const isLongSynopsis = fullSynopsis.length > 350;
+  const displayedSynopsis = isLongSynopsis && !synopsisExpanded ? `${fullSynopsis.slice(0, 350).trim()}…` : fullSynopsis;
   // Share / copy link for this title (Web Share API when available, clipboard
   // fallback otherwise). The note clears itself after a beat.
   const [shareNote, setShareNote] = useState('');
@@ -1103,12 +1109,15 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
   const progressTotal = numericOf(episodesRaw) || 0;
   const progressNow = Math.max(0, Math.min(progressTotal, Number(savedEntry?.progress) || 0));
   const scoreValue = numericOf(item.statistics?.score) ?? (item.sampleScore > 0 ? item.sampleScore : null);
+  const scoredByCount = numericOf(item.statistics?.scoredBy);
+  const isLowVotes = Boolean(scoreValue && scoredByCount != null && scoredByCount < 500);
   const heroStats = [
     scoreValue ? {
       label: t('scoreLabel'),
       value: formatScore(scoreValue, lang),
-      note: numericOf(item.statistics?.scoredBy) ? `${formatNumber(numericOf(item.statistics.scoredBy), lang)} ${t('votesUnit')}` : null,
+      note: scoredByCount ? `${formatNumber(scoredByCount, lang)} ${t('votesUnit')}` : null,
       primary: true,
+      lowVotes: isLowVotes,
     } : null,
     rankText(item.rank || item.statistics?.ranked) ? { label: t('rankedLabel'), value: rankText(item.rank || item.statistics?.ranked) } : null,
     rankText(item.statistics?.popularity) ? { label: t('popularity'), value: rankText(item.statistics.popularity) } : null,
@@ -1190,14 +1199,22 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         onShare={shareTitle}
         shareNote={shareNote}
       />
+      <JumpToTop />
       {cardDialog}
       </>
     );
   }
 
-  // The hero already shows type, episodes, status and the genre chips; the aside keeps only what the hero does not.
-  const HERO_ROWS = ['type', 'episodes', 'chapters', 'status', 'genres', 'themes'];
-  const asideRows = informationRows.filter((row) => !HERO_ROWS.includes(String(row.label).toLowerCase()));
+  // Categorize information rows into Viewer and Production groups.
+  // Any miscellaneous row not explicitly in Production is retained under Viewer so nothing is dropped.
+  const PRODUCTION_LABELS = new Set(['studios', 'producers', 'licensors', 'source', 'premiered', 'serialization', 'authors']);
+  const isProductionRow = (row) => PRODUCTION_LABELS.has(String(row.label || '').trim().toLowerCase());
+  const viewerRows = informationRows.filter((row) => {
+    const key = String(row.label || '').trim().toLowerCase();
+    if (key === 'genres' || key === 'themes') return false;
+    return !isProductionRow(row);
+  });
+  const productionRows = informationRows.filter((row) => isProductionRow(row));
   const altRows = [
     { label: t('synonyms'), value: (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ') },
     { label: t('japaneseTitle'), value: alternativeTitles.japanese },
@@ -1265,17 +1282,13 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                   ))}
                 </div>
               )}
-              <div className="detail-share-row">
-                <Button className="detail-share-button" variant="outline" size="sm" type="button" onClick={shareTitle}>
-                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" />
-                    <path d="m8.6 13.4 6.8 4M15.4 6.6l-6.8 4" />
-                  </svg>
-                  {t('shareTitle')}
-                </Button>
-                <Button className="detail-share-button" variant="outline" size="sm" type="button" onClick={openCard}>{t('cardOpen')}</Button>
-                {shareNote && <span className="detail-share-note" role="status">{shareNote}</span>}
-              </div>
+              <TitleMoreActions
+                item={item}
+                mediaType={mediaType}
+                onShare={shareTitle}
+                onShareCard={openCard}
+                shareNote={shareNote}
+              />
                 </div>
                   {progressTotal > 0 && savedEntry && (
                     <div className="detail-progress" role="img" aria-label={`${formatNumber(progressNow, lang)} / ${formatNumber(progressTotal, lang)}`}>
@@ -1288,7 +1301,11 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                       {heroStats.map((stat) => (
                         <div key={stat.label} className={stat.primary ? 'is-primary' : undefined}>
                           <dt>{stat.label}</dt>
-                          <dd>{stat.value}{stat.note && <small>{stat.note}</small>}</dd>
+                          <dd>
+                            {stat.value}
+                            {stat.lowVotes && <span className="detail-low-votes-badge">{t('lowVotes')}</span>}
+                            {stat.note && <small>{stat.note}</small>}
+                          </dd>
                         </div>
                       ))}
                     </dl>
@@ -1306,7 +1323,20 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                 <DetailSection id="detailSynopsis" title={t('synopsis')}>
                   {item.detailLoading
                     ? <div className="synopsis-skeleton" role="status" aria-label={t('extrasLoading')}><i /><i /><i /><i /><i style={{ width: '60%' }} /></div>
-                    : <p className="detail-synopsis" dir="auto">{item.synopsis}</p>}
+                    : (
+                      <>
+                        <p className="detail-synopsis" dir="auto">{displayedSynopsis}</p>
+                        {isLongSynopsis && (
+                          <button
+                            type="button"
+                            className="detail-synopsis-toggle"
+                            onClick={() => setSynopsisExpanded((v) => !v)}
+                          >
+                            {synopsisExpanded ? t('synopsisLess') : t('synopsisMore')}
+                          </button>
+                        )}
+                      </>
+                    )}
                   {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
                 </DetailSection>
                 {hasAny(extras, 'trailer') && (
@@ -1319,6 +1349,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                   <DetailSection id="detailMedia" title={t('mediaSection')}><MediaTabs item={item} mediaType={mediaType} /></DetailSection>
                 )}
                 {extras.status === 'loading' && <p className="extras-muted" role="status">{t('extrasLoading')}</p>}
+                {extras.status === 'unavailable' && <ExtrasError onRetry={extras.retry} />}
                 {hasAny(extras, 'relations') && (
                   <DetailSection id="detailRelatedEntries" title={t('relatedEntries')}><Relations data={extras.data} /><WatchOrder mediaType={mediaType} malId={item.malId} /></DetailSection>
                 )}
@@ -1351,7 +1382,18 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
             <aside className="dx-aside">
               <section className="dx-card" aria-labelledby="dx-info-title">
                 <h2 id="dx-info-title">{t('information')}</h2>
-                <SidebarDataList rows={asideRows} />
+                {viewerRows.length > 0 && (
+                  <div className="dx-info-group">
+                    <h3 className="dx-info-subheading">{t('infoViewer')}</h3>
+                    <SidebarDataList rows={viewerRows} />
+                  </div>
+                )}
+                {productionRows.length > 0 && (
+                  <div className="dx-info-group">
+                    <h3 className="dx-info-subheading">{t('infoProduction')}</h3>
+                    <SidebarDataList rows={productionRows} />
+                  </div>
+                )}
                 {altRows.some((row) => row.value) && (
                   <details className="dx-alt">
                     <summary>{t('alternativeTitles')}</summary>
@@ -1396,6 +1438,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
           </div>
         </main>
       </div>
+      <JumpToTop />
       {cardDialog}
     </>
   );
