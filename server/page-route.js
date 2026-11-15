@@ -1,8 +1,10 @@
-import { httpError } from './errors.js';
-import { getBySlug, getByMalId, getMangaBySlug, getMangaByMalId, rowToItem, mangaItemsBy, mangaRowToItem } from './repo.js';
+import { getBySlug, getByMalId, getMangaBySlug, getMangaByMalId, mangaItemsBy, mangaRowToItem } from './repo.js';
+import { rowToItem } from './shape.js';
 import { getCachedExtras } from './extras.js';
 import { communityStats, listReviews } from './reviews.js';
 import { listRecs } from './recs.js';
+
+const httpError = (status, message, extra = {}) => Object.assign(new Error(message), { status, ...extra });
 
 export function registerPageRoutes(app, { viewerId } = {}) {
   app.get('/api/page/:type/:key', async (req, res) => {
