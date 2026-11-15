@@ -22,7 +22,6 @@ import UserRecs from '../Recommendations.jsx';
 import { genreHref } from '@/lib/landing';
 import { hasAny, ExtrasSkeleton, ExtrasError, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
 import TitleMoreActions from '@/components/TitleMoreActions';
-import JumpToTop from '@/components/JumpToTop';
 
 const TAB_IDS = ['summary', 'media', 'reviews', 'info', 'team', 'related'];
 const TAB_KEYS = { summary: 'mdSummary', media: 'mediaSection', reviews: 'mdReviews', info: 'information', team: 'staffSection', related: 'mdRelated' };
@@ -442,7 +441,6 @@ export default function MobileDetailPage({
         onPick={onSetStatus}
         onRemove={onToggleSaved}
       />
-      <JumpToTop />
     </div>
   );
 }
