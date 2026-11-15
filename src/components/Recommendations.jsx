@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReportButton from '@/components/ReportButton';
 import { Link } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
@@ -115,20 +115,28 @@ function RecForm({ mediaType, slug, onSaved }) {
 }
 
 // "If you liked this, try that": user recommendations for one title (below the reviews).
-export default function Recommendations({ mediaType, slug }) {
+export default function Recommendations({ mediaType, slug, initialItems = null }) {
   const { t } = useSiteLang();
   const user = useUser();
   const anime = useCatalog();
   const manga = useMangaCatalog();
   const catalog = mediaType === 'manga' ? manga : anime;
-  const [items, setItems] = useState(null);
+  const [items, setItems] = useState(initialItems);
   useEnsureTitles(mediaType, (items || []).map((rec) => rec.other));
   const me = user.me?.username || null;
 
   const load = useCallback(async () => {
     try { setItems((await userApi.recs(mediaType, slug)).items); } catch { setItems([]); }
   }, [mediaType, slug]);
-  useEffect(() => { load(); }, [load, me]);
+
+  const primedSlug = useRef(initialItems ? slug : null);
+  useEffect(() => {
+    if (primedSlug.current === slug) {
+      primedSlug.current = null;
+      return;
+    }
+    load();
+  }, [load, me, slug]);
 
   if (!items) return null;
   return (

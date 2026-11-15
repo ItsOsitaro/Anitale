@@ -48,7 +48,7 @@ import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
 import IntroStrip from './components/IntroStrip.jsx';
 import { formatNumber, formatScore, toPersianDigits } from '@/lib/digits.js';
-import { fetchAnimeFull, fetchTitleFull } from '@/lib/anime-full.js';
+import { fetchAnimeFull, fetchTitleFull, fetchTitlePage } from '@/lib/anime-full.js';
 import { infoLabel, infoValue as infoValueFa } from '@/lib/info-labels.js';
 import TopCharactersPage from './topCharactersPage.jsx';
 import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
@@ -981,7 +981,7 @@ function SidebarDataList({ rows }) {
   );
 }
 
-function DetailPage({ item, mediaType, theme, onThemeChange }) {
+function DetailPage({ item, mediaType, theme, onThemeChange, pageData = null }) {
   const { lang, t } = useSiteLang();
   const isMobile = useIsMobile();
   const visibleAnimeCatalog = useVisibleCatalog();
@@ -1198,6 +1198,7 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         onSetStatus={(statusId) => user.setStatus(mediaType, item.slug, statusId)}
         onShare={shareTitle}
         shareNote={shareNote}
+        pageData={pageData}
       />
       {cardDialog}
       </>
@@ -1362,11 +1363,11 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
                   </DetailSection>
                 )}
                 <DetailSection id="detailReviews" title={t('reviewsTitle')} className="detail-content-section detail-community">
-                  <CommunitySection mediaType={mediaType} slug={item.slug} withRecs={false} />
+                  <CommunitySection mediaType={mediaType} slug={item.slug} withRecs={false} initialData={pageData?.community} />
                 </DetailSection>
                 {(
                   <DetailSection id="relatedHeading" title={t('moreLikeThis')} className="detail-content-section dx-more">
-                    <UserRecs mediaType={mediaType} slug={item.slug} />
+                    <UserRecs mediaType={mediaType} slug={item.slug} initialItems={pageData?.recs} />
                     {hasAny(extras, 'recommendations') && <Recommendations data={extras.data} mediaType={mediaType} />}
                     {related.length > 0 && (
                       <>
@@ -1479,17 +1480,24 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
   let item = foundItem;
   const resolved = item;
   // The catalog list is lite (no links / alternative titles / full synopsis);
-  // anime detail pages pull those from /api/anime/:slug and merge them in.
+  // detail pages pull those from /api/page/:type/:slug (or /api/title/:type/:slug) and merge them in.
+  const [pageData, setPageData] = useState(null);
   const [full, setFull] = useState(null);
   const [fullSettled, setFullSettled] = useState(false);
   const resolvedSlug = resolved?.slug;
   useEffect(() => {
     setFull(null);
     setFullSettled(false);
+    setPageData(null);
     if (!resolvedSlug) return undefined;
     let cancelled = false;
-    fetchTitleFull(mediaType, resolvedSlug)
-      .then((data) => { if (!cancelled && data?.slug === resolvedSlug) setFull(data); })
+    fetchTitlePage(mediaType, resolvedSlug)
+      .then((data) => {
+        if (!cancelled && data?.item?.slug === resolvedSlug) {
+          setPageData(data);
+          setFull(data.item);
+        }
+      })
       .finally(() => { if (!cancelled) setFullSettled(true); });
     return () => { cancelled = true; };
   }, [resolvedSlug, mediaType]);
@@ -1524,7 +1532,7 @@ function AnimePage({ theme, onThemeChange, mediaType = 'anime' }) {
     return <SensitiveGate mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} />;
   }
 
-  return resolved ? <DetailPage key={`${mediaType}-${resolved.slug}`} item={item} mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} /> : (
+  return resolved ? <DetailPage key={`${mediaType}-${resolved.slug}`} item={item} mediaType={mediaType} theme={theme} onThemeChange={onThemeChange} pageData={pageData} /> : (
     <>
       {!isMobile && <SiteHeader theme={theme} onThemeChange={onThemeChange} />}
       <NotFoundPanel>

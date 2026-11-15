@@ -122,6 +122,20 @@ const buildExtras = async (type, id) => {
 export const EXTRAS_VER = EXTRAS_VERSION;
 const readRow = (type, id) => db.prepare('SELECT data, fetched_at FROM title_extras WHERE type = ? AND mal_id = ?').get(type, id);
 
+export const getCachedExtras = (type, id) => {
+  const numId = Number(id);
+  if (!type || !Number.isInteger(numId) || numId <= 0) return null;
+  const row = readRow(type, numId);
+  if (!row) return null;
+  try {
+    const stored = JSON.parse(row.data);
+    if (!stored || stored.v !== EXTRAS_VERSION) return null;
+    return { ...stored, ok: true, fetchedAt: row.fetched_at, stale: Date.now() - row.fetched_at >= FRESH_MS };
+  } catch {
+    return null;
+  }
+};
+
 const refresh = (type, id) => {
   const key = `${type}:${id}`;
   if (inflight.has(key)) return inflight.get(key);

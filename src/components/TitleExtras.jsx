@@ -9,6 +9,14 @@ import { formatNumber } from '@/lib/digits.js';
 // /api/extras. The server fetches it from Tenrai once and keeps it; we only render what exists.
 const cache = new Map();
 
+export function primeExtrasCache(mediaType, malId, data) {
+  if (!malId || !data || !data.ok) return;
+  const key = `${mediaType}:${malId}`;
+  if (!cache.has(key)) {
+    cache.set(key, { status: 'ready', data });
+  }
+}
+
 export function useTitleExtras(mediaType, malId) {
   const [state, setState] = useState(() => (malId && cache.get(`${mediaType}:${malId}`)) || { status: malId ? 'loading' : 'none' });
   const [retryTick, setRetryTick] = useState(0);

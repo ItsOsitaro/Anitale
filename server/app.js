@@ -53,6 +53,7 @@ import { registerSuggestionRoutes } from './suggestions.js';
 import { registerApiV1 } from './api-v1.js';
 import { registerFranchiseRoutes } from './franchise.js';
 import { registerHealthRoutes } from './health.js';
+import { registerPageRoutes } from './page-route.js';
 import { recordMissing, registerMissingRoutes } from './missing-titles.js';
 import { coverResizeHandler } from './cover-resize.js';
 import { translateSynopsis, planPersian, draftPersian, inlinePersianEnabled } from './translate.js';
@@ -756,13 +757,22 @@ export const createApp = () => {
     const key = String(req.params.key || '');
     const mal = /^\d+$/.test(key) ? Number(key) : null;
     let item = null;
+    let rawRow = null;
     if (req.params.type === 'anime') {
-      const row = getBySlug(key) || (mal ? getByMalId(mal) : null);
-      item = row ? rowToItem(row) : null;
+      rawRow = getBySlug(key) || (mal ? getByMalId(mal) : null);
+      item = rawRow ? rowToItem(rawRow) : null;
     } else if (req.params.type === 'manga') {
-      item = mangaItemsBy({ slugs: [key], malIds: mal ? [mal] : [] })[0] || null;
+      rawRow = getMangaBySlug(key) || (mal ? getMangaByMalId(mal) : null);
+      item = mangaItemsBy({ slugs: [key], malIds: mal ? [mal] : [] })[0] || (rawRow ? mangaRowToItem(rawRow) : null);
     }
     if (!item) throw httpError(404, 'Title not found');
+    const updatedAt = rawRow?.updated_at || item.updatedAt || '';
+    const etag = `W/"title-${req.params.type}-${item.slug}-${Date.parse(updatedAt || 0) || 0}"`;
+    res.setHeader('ETag', etag);
+    if (req.headers['if-none-match'] === etag || req.fresh) {
+      res.status(304).end();
+      return;
+    }
     publicCatalogCache(res);
     res.json(item);
   });
@@ -777,8 +787,27 @@ export const createApp = () => {
   app.get('/api/anime/:slug', (req, res) => {
     const row = getBySlug(req.params.slug);
     if (!row) throw httpError(404, 'Anime not found');
+    const etag = `W/"anime-${row.slug}-${Date.parse(row.updated_at || 0) || 0}"`;
+    res.setHeader('ETag', etag);
+    if (req.headers['if-none-match'] === etag || req.fresh) {
+      res.status(304).end();
+      return;
+    }
     publicCatalogCache(res);
     res.json(rowToItem(row));
+  });
+  app.get('/api/manga/:slug', (req, res) => {
+    const row = getMangaBySlug(req.params.slug);
+    if (!row) throw httpError(404, 'Manga not found');
+    const etag = `W/"manga-${row.slug}-${Date.parse(row.updated_at || 0) || 0}"`;
+    res.setHeader('ETag', etag);
+    if (req.headers['if-none-match'] === etag || req.fresh) {
+      res.status(304).end();
+      return;
+    }
+    publicCatalogCache(res);
+    const item = mangaItemsBy({ slugs: [row.slug] })[0] || mangaRowToItem(row);
+    res.json(item);
   });
   app.get('/api/manga', (req, res) => {
     publicCatalogCache(res);
@@ -1911,6 +1940,7 @@ app.delete('/api/admin/manga/:slug', requireAdmin, (req, res) => {
   registerFranchiseRoutes(app);
   registerMissingRoutes(app, { requireAdmin, writeLimiter });
   registerHealthRoutes(app, { requireAdmin, writeLimiter });
+  registerPageRoutes(app, { viewerId });
 
   // ---------- Static files ----------
   app.use('/api', (req, res) => res.status(404).json({ error: 'Not found' }));

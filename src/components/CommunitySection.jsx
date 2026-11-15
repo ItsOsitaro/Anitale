@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ReportButton from '@/components/ReportButton';
 import FriendsWatched from '@/components/FriendsWatched';
 import { Link } from 'react-router-dom';
@@ -182,12 +182,12 @@ function ReviewItem({ review, signedIn }) {
 }
 
 // Community score + reviews for one title. Shared by the desktop and mobile detail pages.
-export default function CommunitySection({ mediaType, slug, withRecs = true }) {
+export default function CommunitySection({ mediaType, slug, withRecs = true, initialData = null }) {
   const { t } = useSiteLang();
   const user = useUser();
-  const [data, setData] = useState(null);
+  const [data, setData] = useState(initialData);
   const [failed, setFailed] = useState(false);
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(initialData?.page || 1);
   const [sort, setSort] = useState('new');
   const me = user.me?.username || null;
 
@@ -202,7 +202,14 @@ export default function CommunitySection({ mediaType, slug, withRecs = true }) {
     } catch { setFailed(true); }
   }, [mediaType, slug, sort]);
 
-  useEffect(() => { load(1); }, [load, me]);
+  const primedSlug = useRef(initialData ? slug : null);
+  useEffect(() => {
+    if (primedSlug.current === slug) {
+      primedSlug.current = null;
+      return;
+    }
+    load(1);
+  }, [load, me, slug]);
 
   if (failed && !data) return <p className="community-hint">{t('communityLoadFailed')}</p>;
   if (!data) return <p className="community-hint" role="status">{t('communityLoading')}</p>;

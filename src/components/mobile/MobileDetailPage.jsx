@@ -114,6 +114,7 @@ function StatusSheet({ open, onClose, statuses, current, onPick, onRemove }) {
 export default function MobileDetailPage({
   item, mediaType, related, extras, informationRows, statisticsRows, alternativeTitles, romajiTitle,
   isSaved, currentStatus, progress, listStatuses, onToggleSaved, onSetStatus, onShare, onShareCard, shareNote,
+  pageData = null,
 }) {
   const { t, lang } = useSiteLang();
   const navigate = useNavigate();
@@ -279,7 +280,7 @@ export default function MobileDetailPage({
 
         {tab === 'reviews' && (
           <section>
-            <CommunitySection mediaType={mediaType} slug={item.slug} withRecs={false} />
+            <CommunitySection mediaType={mediaType} slug={item.slug} withRecs={false} initialData={pageData?.community} />
           </section>
         )}
         {tab === 'info' && (
@@ -390,7 +391,7 @@ export default function MobileDetailPage({
             )}
             <section>
               <h2 className="mobile-detail__h">{t('moreLikeThis')}</h2>
-              <UserRecs mediaType={mediaType} slug={item.slug} />
+              <UserRecs mediaType={mediaType} slug={item.slug} initialItems={pageData?.recs} />
               {hasAny(extras, 'recommendations') && <Recommendations data={extras.data} mediaType={mediaType} />}
             </section>
             {related.length > 0 && (
