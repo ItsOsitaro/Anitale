@@ -34,3 +34,5 @@ export const genreHref = (name) => {
   const key = String(name || '').trim().toLowerCase();
   return landingGenres().includes(key) ? `/genre/${slugOfGenre(key)}` : `/search?genre=${encodeURIComponent(name)}`;
 };
+
+export const companyHref = (kind, name) => `/${kind}/${encodeURIComponent(name)}`;

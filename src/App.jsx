@@ -23,7 +23,6 @@ import TitleMoreActions from './components/TitleMoreActions.jsx';
 import JumpToTop from './components/JumpToTop.jsx';
 import { synopsisText, selectHomePicks, getCurrentSeasonInfo, getItemSeasonInfo } from './home-data.js';
 import { ThemeProvider, useTheme } from './theme-context.jsx';
-import { AuthPage, UserDashboard, UserPublicProfile } from './userPages.jsx';
 import { DEFAULT_LANG, L, SiteLangContext, makeSiteT, useSiteLang } from './i18n.js';
 import {
   primaryNavigation,
@@ -31,27 +30,17 @@ import {
   sidebarSections,
 } from './sectionData.js';
 import { useIsMobile } from '@/hooks/use-is-mobile';
-import SearchPage from './searchPage.jsx';
 import NotificationsSheet from '@/components/NotificationsSheet';
 import { useNotifications } from '@/hooks/use-notifications';
 import { useAiringAlerts } from '@/hooks/use-airing-alerts';
 import CommunitySection from '@/components/CommunitySection';
-import ImportListPage from './importListPage.jsx';
-import PeoplePage from './peoplePages.jsx';
 import MediaTabs from './components/MediaTabs.jsx';
 import SuggestEdit from './components/SuggestEdit.jsx';
-import DevelopersPage from './developersPage.jsx';
-import MySuggestions from './suggestionsPage.jsx';
-import NotificationsPage from './notificationsPage.jsx';
-import { StacksBrowse, StackView } from './stacksPages.jsx';
-import CompanyPage, { companyHref, companyNames } from './companyPage.jsx';
 import { QuickEpisode } from './components/QuickEpisode.jsx';
 import IntroStrip from './components/IntroStrip.jsx';
 import { formatNumber, formatScore, toPersianDigits } from '@/lib/digits.js';
 import { fetchAnimeFull, fetchTitleFull, fetchTitlePage } from '@/lib/anime-full.js';
 import { infoLabel, infoValue as infoValueFa } from '@/lib/info-labels.js';
-import TopCharactersPage from './topCharactersPage.jsx';
-import { ForgotPasswordPage, ResetPasswordPage, VerifyEmailPage, AccountSecurityPage } from './accountPages.jsx';
 import { useScrollMemory } from '@/hooks/use-scroll-memory';
 import MobileShell from '@/components/mobile/MobileShell';
 import MobileHomePage from '@/components/mobile/MobileHomePage';
@@ -67,14 +56,33 @@ import { useContinueSeries } from '@/hooks/use-continue-series';
 import ContinueManga from '@/components/ContinueManga';
 import AnnouncementBar from '@/components/AnnouncementBar';
 import DayNightToggle from '@/components/DayNightToggle';
-import ShareCardDialog from '@/components/ShareCardDialog';
 import OnboardingPicker from '@/components/OnboardingPicker';
-import { BrowsePage, GenresIndex } from './landingPages.jsx';
-import PickPage from './pickPage.jsx';
 import CommunityPicks from '@/components/CommunityPicks';
-import { genreHref } from '@/lib/landing';
-import MobileDetailPage from '@/components/mobile/MobileDetailPage';
+import { companyHref, genreHref } from '@/lib/landing';
 import { coverUrl } from '@/lib/cover';
+
+const SearchPage = lazy(() => import('./searchPage.jsx'));
+const AuthPage = lazy(() => import('./userPages.jsx').then((m) => ({ default: m.AuthPage })));
+const UserDashboard = lazy(() => import('./userPages.jsx').then((m) => ({ default: m.UserDashboard })));
+const UserPublicProfile = lazy(() => import('./userPages.jsx').then((m) => ({ default: m.UserPublicProfile })));
+const ForgotPasswordPage = lazy(() => import('./accountPages.jsx').then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import('./accountPages.jsx').then((m) => ({ default: m.ResetPasswordPage })));
+const VerifyEmailPage = lazy(() => import('./accountPages.jsx').then((m) => ({ default: m.VerifyEmailPage })));
+const AccountSecurityPage = lazy(() => import('./accountPages.jsx').then((m) => ({ default: m.AccountSecurityPage })));
+const ImportListPage = lazy(() => import('./importListPage.jsx'));
+const PeoplePage = lazy(() => import('./peoplePages.jsx'));
+const DevelopersPage = lazy(() => import('./developersPage.jsx'));
+const MySuggestions = lazy(() => import('./suggestionsPage.jsx'));
+const NotificationsPage = lazy(() => import('./notificationsPage.jsx'));
+const StacksBrowse = lazy(() => import('./stacksPages.jsx').then((m) => ({ default: m.StacksBrowse })));
+const StackView = lazy(() => import('./stacksPages.jsx').then((m) => ({ default: m.StackView })));
+const CompanyPage = lazy(() => import('./companyPage.jsx'));
+const TopCharactersPage = lazy(() => import('./topCharactersPage.jsx'));
+const PickPage = lazy(() => import('./pickPage.jsx'));
+const BrowsePage = lazy(() => import('./landingPages.jsx').then((m) => ({ default: m.BrowsePage })));
+const GenresIndex = lazy(() => import('./landingPages.jsx').then((m) => ({ default: m.GenresIndex })));
+const ShareCardDialog = lazy(() => import('@/components/ShareCardDialog'));
+const MobileDetailPage = lazy(() => import('@/components/mobile/MobileDetailPage'));
 
 const dayMessages = { Mon: 'dayMon', Tue: 'dayTue', Wed: 'dayWed', Thu: 'dayThu', Fri: 'dayFri', Sat: 'daySat', Sun: 'daySun' };
 
@@ -299,7 +307,7 @@ function SiteHeader() {
                         onClick={() => resetSearch()}
                       >
                         {entry.image
-                          ? <img src={coverUrl(entry.image, 240)} alt="" loading="lazy" />
+                          ? <img src={coverUrl(entry.image, 240)} alt="" loading="lazy" decoding="async" />
                           : <span className="search-opt-blank" aria-hidden="true" />}
                         <span className="search-opt-copy">
                           <span className="search-opt-title" dir="auto">{highlightMatch(entry.title, search)}</span>
@@ -369,7 +377,7 @@ function AnimeCard({ item, rank }) {
     <article className="anime-card">
       {rank && <span className="card-rank">{padRank(rank, lang)}</span>}
       <Link className="anime-cover" to={href} aria-label={`${t(isManga ? 'breadcrumbManga' : 'breadcrumbAnime')}: ${title}`} onPointerEnter={isManga ? undefined : () => fetchAnimeFull(item.slug)} onFocus={isManga ? undefined : () => fetchAnimeFull(item.slug)}>
-        <img src={coverUrl(item.image, 360)} alt={title} loading="lazy" />
+        <img src={coverUrl(item.image, 360)} alt={title} loading="lazy" decoding="async" />
       </Link>
       <div className="anime-info">
         <Link to={href} className="anime-title">{title}</Link>
@@ -512,7 +520,7 @@ function SchedulePanel() {
           return (
             <li key={entry.slug} className={entry.day === today ? 'is-today' : undefined}>
               <span className="schedule-title">
-                <img className="schedule-cover" src={coverUrl(anime.image, 240)} alt="" loading="lazy" />
+                <img className="schedule-cover" src={coverUrl(anime.image, 240)} alt="" loading="lazy" decoding="async" />
                 <Link to={mediaHref(anime)} dir="auto">{entry.title}</Link>
               </span>
               <span className="day-badge">
@@ -588,7 +596,7 @@ function HomePage() {
             {featured && (
               <section className="hero panel" style={{ '--hero-image': `url("${featured.image}")` }}>
                 <div className="hero-poster" aria-hidden="true">
-                  <img src={coverUrl(featured.image, 480)} alt="" loading="lazy" />
+                  <img src={coverUrl(featured.image, 480)} alt="" loading="lazy" decoding="async" />
                 </div>
                 <div className="hero-content">
                   <Badge variant="secondary" className="hero-eyebrow">{t('featuredLabel')}</Badge>
@@ -681,7 +689,7 @@ function RankedList({ items, toPrefix }) {
         <li className="rank-row" key={item.slug}>
           <span className="rank-number">{padRank(index + 1, lang)}</span>
           <Link className="rank-cover" to={mediaHref(item, mediaType)} aria-label={item.title}>
-            <img src={coverUrl(item.image, 360)} alt={item.title} loading="lazy" />
+            <img src={coverUrl(item.image, 360)} alt={item.title} loading="lazy" decoding="async" />
           </Link>
           <div className="rank-copy">
             <Link className="rank-title" to={mediaHref(item, mediaType)} dir="auto">{item.title}</Link>
@@ -1175,33 +1183,37 @@ function DetailPage({ item, mediaType, theme, onThemeChange, pageData = null }) 
     rtl: lang === 'fa',
     tagline: t('cardTagline'),
   });
-  const cardDialog = card && <ShareCardDialog kind="title" data={card} fileName={`anitale-${item.slug}`} onClose={() => setCard(null)} />;
+  const cardDialog = card && (
+    <Suspense fallback={null}>
+      <ShareCardDialog kind="title" data={card} fileName={`anitale-${item.slug}`} onClose={() => setCard(null)} />
+    </Suspense>
+  );
 
   if (isMobile) {
     return (
-      <>
-      <MobileDetailPage
-        onShareCard={openCard}
-        item={item}
-        mediaType={mediaType}
-        related={related}
-        extras={extras}
-        informationRows={informationRows}
-        statisticsRows={statisticsRows}
-        alternativeTitles={alternativeTitles}
-        romajiTitle={romajiTitle}
-        isSaved={isSaved}
-        currentStatus={savedEntry?.status || 'watching'}
-        progress={savedEntry?.progress || 0}
-        listStatuses={listStatuses}
-        onToggleSaved={toggleSaved}
-        onSetStatus={(statusId) => user.setStatus(mediaType, item.slug, statusId)}
-        onShare={shareTitle}
-        shareNote={shareNote}
-        pageData={pageData}
-      />
-      {cardDialog}
-      </>
+      <Suspense fallback={<CatalogSkeleton />}>
+        <MobileDetailPage
+          onShareCard={openCard}
+          item={item}
+          mediaType={mediaType}
+          related={related}
+          extras={extras}
+          informationRows={informationRows}
+          statisticsRows={statisticsRows}
+          alternativeTitles={alternativeTitles}
+          romajiTitle={romajiTitle}
+          isSaved={isSaved}
+          currentStatus={savedEntry?.status || 'watching'}
+          progress={savedEntry?.progress || 0}
+          listStatuses={listStatuses}
+          onToggleSaved={toggleSaved}
+          onSetStatus={(statusId) => user.setStatus(mediaType, item.slug, statusId)}
+          onShare={shareTitle}
+          shareNote={shareNote}
+          pageData={pageData}
+        />
+        {cardDialog}
+      </Suspense>
     );
   }
 
@@ -1235,8 +1247,8 @@ function DetailPage({ item, mediaType, theme, onThemeChange, pageData = null }) 
         ]} />
         <main className="anime-detail-shell dx">
               <section className="anime-profile dx-hero">
-                <div className="detail-hero-backdrop" aria-hidden="true"><img src={coverUrl(item.image, 720)} alt="" /></div>
-                <figure className="dx-cover"><img src={coverUrl(item.image, 720)} alt={item.title} /></figure>
+                <div className="detail-hero-backdrop" aria-hidden="true"><img src={coverUrl(item.image, 720)} alt="" fetchPriority="high" decoding="async" /></div>
+                <figure className="dx-cover"><img src={coverUrl(item.image, 720)} alt={item.title} fetchPriority="high" decoding="async" /></figure>
                 <div className="detail-copy">
                   <h1>{item.title}</h1>
                   {romajiTitle && romajiTitle !== item.title && (
@@ -1567,38 +1579,40 @@ function AppRoutes({ theme, onThemeChange }) {
     try { navigator.sendBeacon?.('/api/hit', new Blob([JSON.stringify({ path: pathname })], { type: 'application/json' })); } catch { /* counting is optional */ }
   }, [pathname]);
   const routes = (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/admin/*" element={<Suspense fallback={<CatalogLoadingFallback />}><AdminApp theme={theme} onThemeChange={onThemeChange} /></Suspense>} />
-      <Route path="/anime/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} />} />
-      <Route path="/manga/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} mediaType="manga" />} />
-      <Route path="/pick" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PickPage /></WithHeader>} />
-      <Route path="/genres" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><GenresIndex /></WithHeader>} />
-      <Route path="/genre/:slug" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><BrowsePage kind="genre" /></WithHeader>} />
-      <Route path="/season/:year/:season" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><BrowsePage kind="season" /></WithHeader>} />
-      <Route path="/search" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><SearchPage /></WithHeader>} />
-      <Route path="/login" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="login" /></WithHeader>} />
-      <Route path="/register" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="register" /></WithHeader>} />
-      <Route path="/forgot" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ForgotPasswordPage /></WithHeader>} />
-      <Route path="/reset-password" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ResetPasswordPage /></WithHeader>} />
-      <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
-      <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
-      <Route path="/developers" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><DevelopersPage /></WithHeader>} />
-      <Route path="/notifications" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><NotificationsPage /></WithHeader>} />
-      <Route path="/suggestions" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><MySuggestions /></WithHeader>} />
-      <Route path="/stacks" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StacksBrowse /></WithHeader>} />
-      <Route path="/stacks/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StackView /></WithHeader>} />
-      <Route path="/studio/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="studio" /></WithHeader>} />
-      <Route path="/producer/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="producer" /></WithHeader>} />
-      <Route path="/magazine/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="magazine" /></WithHeader>} />
-      <Route path="/top/characters" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><TopCharactersPage /></WithHeader>} />
-      <Route path="/character/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="character" /></WithHeader>} />
-      <Route path="/person/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="person" /></WithHeader>} />
-      <Route path="/import-list" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ImportListPage /></WithHeader>} />
-      <Route path="/dashboard" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><UserDashboard /></WithHeader>} />
-      <Route path="/user/:username" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><UserPublicProfile /></WithHeader>} />
-      <Route path="*" element={<SectionPage theme={theme} onThemeChange={onThemeChange} />} />
-    </Routes>
+    <Suspense fallback={<CatalogSkeleton />}>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/admin/*" element={<AdminApp theme={theme} onThemeChange={onThemeChange} />} />
+        <Route path="/anime/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} />} />
+        <Route path="/manga/:idOrSlug/:title?" element={<AnimePage theme={theme} onThemeChange={onThemeChange} mediaType="manga" />} />
+        <Route path="/pick" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PickPage /></WithHeader>} />
+        <Route path="/genres" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><GenresIndex /></WithHeader>} />
+        <Route path="/genre/:slug" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><BrowsePage kind="genre" /></WithHeader>} />
+        <Route path="/season/:year/:season" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><BrowsePage kind="season" /></WithHeader>} />
+        <Route path="/search" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><SearchPage /></WithHeader>} />
+        <Route path="/login" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="login" /></WithHeader>} />
+        <Route path="/register" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AuthPage mode="register" /></WithHeader>} />
+        <Route path="/forgot" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ForgotPasswordPage /></WithHeader>} />
+        <Route path="/reset-password" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ResetPasswordPage /></WithHeader>} />
+        <Route path="/verify-email" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><VerifyEmailPage /></WithHeader>} />
+        <Route path="/account" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><AccountSecurityPage /></WithHeader>} />
+        <Route path="/developers" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><DevelopersPage /></WithHeader>} />
+        <Route path="/notifications" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><NotificationsPage /></WithHeader>} />
+        <Route path="/suggestions" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><MySuggestions /></WithHeader>} />
+        <Route path="/stacks" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StacksBrowse /></WithHeader>} />
+        <Route path="/stacks/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><StackView /></WithHeader>} />
+        <Route path="/studio/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="studio" /></WithHeader>} />
+        <Route path="/producer/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="producer" /></WithHeader>} />
+        <Route path="/magazine/:name" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><CompanyPage kind="magazine" /></WithHeader>} />
+        <Route path="/top/characters" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><TopCharactersPage /></WithHeader>} />
+        <Route path="/character/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="character" /></WithHeader>} />
+        <Route path="/person/:id" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><PeoplePage kind="person" /></WithHeader>} />
+        <Route path="/import-list" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><ImportListPage /></WithHeader>} />
+        <Route path="/dashboard" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><UserDashboard /></WithHeader>} />
+        <Route path="/user/:username" element={<WithHeader theme={theme} onThemeChange={onThemeChange}><UserPublicProfile /></WithHeader>} />
+        <Route path="*" element={<SectionPage theme={theme} onThemeChange={onThemeChange} />} />
+      </Routes>
+    </Suspense>
   );
   if (isMobile && !pathname.startsWith('/admin')) {
     return <><AnnouncementBar /><MobileShell>{routes}</MobileShell></>;

@@ -179,7 +179,7 @@ export default function MobileDetailPage({
     <div className="mobile-detail">
       <header className="mobile-detail__hero">
         <div className="mobile-detail__backdrop" aria-hidden="true">
-          <img src={coverUrl(item.image, 480)} alt="" />
+          <img src={coverUrl(item.image, 480)} alt="" fetchPriority="high" decoding="async" />
         </div>
         <div className="mobile-detail__actions">
           <button type="button" className="mobile-detail__glass" onClick={() => navigate(-1)} aria-label={t('mdBack')}>
@@ -195,7 +195,7 @@ export default function MobileDetailPage({
           />
         </div>
         <div className="mobile-detail__head">
-          <img className="mobile-detail__cover" src={coverUrl(item.image, 480)} alt={item.title} />
+          <img className="mobile-detail__cover" src={coverUrl(item.image, 480)} alt={item.title} fetchPriority="high" decoding="async" />
           <div className="mobile-detail__titles">
             <h1 dir="auto">{item.title}</h1>
             {romajiTitle && romajiTitle !== item.title && (

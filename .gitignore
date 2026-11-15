@@ -15,6 +15,7 @@ public/covers/
 # Local VPN proxy config (contains secrets)
 server/xray/
 server/xcache/
+backups/
 
 *.sync-conflict-*
 .stfolder/
