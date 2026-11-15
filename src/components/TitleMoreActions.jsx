@@ -30,7 +30,14 @@ export default function TitleMoreActions({ item, mediaType, onShare, onShareCard
     };
   }, [open]);
 
-  const handleOpenSuggest = (kind) => {
+  const handleAction = (action) => (e) => {
+    e?.stopPropagation?.();
+    setOpen(false);
+    action?.();
+  };
+
+  const handleOpenSuggest = (kind) => (e) => {
+    e?.stopPropagation?.();
     setOpen(false);
     if (!user.me) {
       window.location.href = '/login';
@@ -68,15 +75,16 @@ export default function TitleMoreActions({ item, mediaType, onShare, onShareCard
       )}
 
       {open && (
-        <div className="detail-more-actions-menu" role="menu">
+        <div
+          className="detail-more-actions-menu"
+          role="menu"
+          onPointerDown={(e) => e.stopPropagation()}
+        >
           <button
             type="button"
             role="menuitem"
             className="detail-more-actions-item"
-            onClick={() => {
-              setOpen(false);
-              onShare?.();
-            }}
+            onClick={handleAction(onShare)}
           >
             <Share2 width={15} height={15} aria-hidden="true" />
             <span>{t('shareTitle')}</span>
@@ -86,10 +94,7 @@ export default function TitleMoreActions({ item, mediaType, onShare, onShareCard
             type="button"
             role="menuitem"
             className="detail-more-actions-item"
-            onClick={() => {
-              setOpen(false);
-              onShareCard?.();
-            }}
+            onClick={handleAction(onShareCard)}
           >
             <Image width={15} height={15} aria-hidden="true" />
             <span>{t('cardOpen')}</span>
@@ -99,7 +104,7 @@ export default function TitleMoreActions({ item, mediaType, onShare, onShareCard
             type="button"
             role="menuitem"
             className="detail-more-actions-item"
-            onClick={() => handleOpenSuggest('synopsis')}
+            onClick={handleOpenSuggest('synopsis')}
           >
             <Edit3 width={15} height={15} aria-hidden="true" />
             <span>{t('sugButton')}</span>
@@ -109,7 +114,7 @@ export default function TitleMoreActions({ item, mediaType, onShare, onShareCard
             type="button"
             role="menuitem"
             className="detail-more-actions-item"
-            onClick={() => handleOpenSuggest('report')}
+            onClick={handleOpenSuggest('report')}
           >
             <AlertCircle width={15} height={15} aria-hidden="true" />
             <span>{t('sugKindReport')}</span>

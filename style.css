@@ -4981,6 +4981,10 @@ body[data-theme="dark"] .logo-on-light { display: none; }
 .detail-more-actions {
   position: relative;
   display: inline-flex;
+  z-index: 20;
+}
+.detail-more-actions.is-glass {
+  z-index: 30;
 }
 .detail-more-actions-btn {
   display: inline-flex;
@@ -4997,7 +5001,7 @@ body[data-theme="dark"] .logo-on-light { display: none; }
   border-radius: var(--radius, 8px);
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.25);
   padding: 0.35rem;
-  z-index: 50;
+  z-index: 100;
   display: flex;
   flex-direction: column;
   gap: 2px;
