@@ -20,7 +20,9 @@ import { infoLabel, infoValue } from '@/lib/info-labels.js';
 import CommunitySection from '../CommunitySection';
 import UserRecs from '../Recommendations.jsx';
 import { genreHref } from '@/lib/landing';
-import { hasAny, ExtrasSkeleton, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
+import { hasAny, ExtrasSkeleton, ExtrasError, Characters, Relations, Recommendations, Trailer, Themes, Staff } from '../TitleExtras.jsx';
+import TitleMoreActions from '@/components/TitleMoreActions';
+import JumpToTop from '@/components/JumpToTop';
 
 const TAB_IDS = ['summary', 'media', 'reviews', 'info', 'team', 'related'];
 const TAB_KEYS = { summary: 'mdSummary', media: 'mediaSection', reviews: 'mdReviews', info: 'information', team: 'staffSection', related: 'mdRelated' };
@@ -142,8 +144,14 @@ export default function MobileDetailPage({
   };
   const rankOf = (raw) => (num(raw) ? `#${formatNumber(num(raw), lang)}` : null);
   const scoreNum = num(item.statistics?.score) ?? (item.sampleScore > 0 ? item.sampleScore : null);
+  const scoredByCount = num(item.statistics?.scoredBy);
+  const isLowVotes = Boolean(scoreNum && scoredByCount != null && scoredByCount < 500);
   const stats = [
-    { label: t('scoreLabel'), value: scoreNum ? formatScore(scoreNum, lang) : null },
+    {
+      label: t('scoreLabel'),
+      value: scoreNum ? formatScore(scoreNum, lang) : null,
+      lowVotes: isLowVotes,
+    },
     { label: t('rankedLabel'), value: rankOf(item.rank || item.statistics?.ranked) },
     { label: t('popularity'), value: rankOf(item.statistics?.popularity) },
   ];
@@ -155,9 +163,16 @@ export default function MobileDetailPage({
   const synonyms = (alternativeTitles.synonyms || []).filter((name) => name.trim().toLowerCase() !== String(item.title).trim().toLowerCase()).join(lang === 'fa' ? '، ' : ', ');
   const hasAlt = synonyms || alternativeTitles.japanese || alternativeTitles.english || item.titleFa;
   const longSynopsis = (item.synopsis || '').length > 220;
-  // Type, episodes, status and genres are already in the hero; the info tab keeps only what it does not show.
-  const HERO_ROWS = ['type', 'episodes', 'chapters', 'status', 'genres', 'themes'];
-  const infoRows = informationRows.filter((row) => !HERO_ROWS.includes(String(row.label).toLowerCase()));
+  // Categorize information rows into Viewer and Production groups.
+  // Any miscellaneous row not explicitly in Production is retained under Viewer so nothing is dropped.
+  const PRODUCTION_LABELS = new Set(['studios', 'producers', 'licensors', 'source', 'premiered', 'serialization', 'authors']);
+  const isProductionRow = (row) => PRODUCTION_LABELS.has(String(row.label || '').trim().toLowerCase());
+  const viewerRows = informationRows.filter((row) => {
+    const key = String(row.label || '').trim().toLowerCase();
+    if (key === 'genres' || key === 'themes') return false;
+    return !isProductionRow(row);
+  });
+  const productionRows = informationRows.filter((row) => isProductionRow(row));
   const hasLinks = item.availableAt?.length > 0 || item.streamingPlatforms?.length > 0 || item.resources?.length > 0;
 
   return (
@@ -170,12 +185,14 @@ export default function MobileDetailPage({
           <button type="button" className="mobile-detail__glass" onClick={() => navigate(-1)} aria-label={t('mdBack')}>
             <ChevronRight width={20} height={20} aria-hidden="true" />
           </button>
-          <button type="button" className="mobile-detail__glass" onClick={onShare} aria-label={t('shareTitle')}>
-            <Share2 width={18} height={18} aria-hidden="true" />
-          </button>
-          <button type="button" className="mobile-detail__glass" onClick={onShareCard} aria-label={t('cardOpen')}>
-            <ImageDown width={18} height={18} aria-hidden="true" />
-          </button>
+          <TitleMoreActions
+            item={item}
+            mediaType={mediaType}
+            onShare={onShare}
+            onShareCard={onShareCard}
+            shareNote={shareNote}
+            glass
+          />
         </div>
         <div className="mobile-detail__head">
           <img className="mobile-detail__cover" src={coverUrl(item.image, 480)} alt={item.title} />
@@ -206,7 +223,10 @@ export default function MobileDetailPage({
       <div className="mobile-detail__stats" aria-label={t('statistics')}>
         {stats.map((stat) => (
           <div key={stat.label} className="mobile-detail__stat">
-            <strong dir="auto">{stat.value || '—'}</strong>
+            <strong dir="auto">
+              {stat.value || '—'}
+              {stat.lowVotes && <span className="detail-low-votes-badge">{t('lowVotes')}</span>}
+            </strong>
             <span>{stat.label}</span>
           </div>
         ))}
@@ -243,7 +263,7 @@ export default function MobileDetailPage({
               {item.synopsisAuto && <p className="synopsis-auto">{t('synopsisAuto')}</p>}
               {longSynopsis && !item.detailLoading && (
                 <button type="button" className="mobile-detail__more" aria-expanded={expanded} onClick={() => setExpanded((v) => !v)}>
-                  {expanded ? t('mdLess') : t('more')}
+                  {expanded ? t('synopsisLess') : t('synopsisMore')}
                 </button>
               )}
             </section>
@@ -267,7 +287,18 @@ export default function MobileDetailPage({
           <>
             <section>
               <h2 className="mobile-detail__h">{t('information')}</h2>
-              <FactGrid rows={infoRows} />
+              {viewerRows.length > 0 && (
+                <div className="mobile-info-group">
+                  <h3 className="mobile-info-subheading">{t('infoViewer')}</h3>
+                  <FactGrid rows={viewerRows} />
+                </div>
+              )}
+              {productionRows.length > 0 && (
+                <div className="mobile-info-group">
+                  <h3 className="mobile-info-subheading">{t('infoProduction')}</h3>
+                  <FactGrid rows={productionRows} />
+                </div>
+              )}
               <SuggestEdit item={item} mediaType={mediaType} />
             </section>
             <section>
@@ -319,6 +350,7 @@ export default function MobileDetailPage({
         {tab === 'team' && (
           <>
             {extras.status === 'loading' && <ExtrasSkeleton />}
+            {extras.status === 'unavailable' && <ExtrasError onRetry={extras.retry} />}
             {hasAny(extras, 'trailer') && (
               <section>
                 <h2 className="mobile-detail__h">{t('trailerTitle')}</h2>
@@ -348,6 +380,8 @@ export default function MobileDetailPage({
         {tab === 'media' && <MediaTabs item={item} mediaType={mediaType} />}
         {tab === 'related' && (
           <>
+            {extras.status === 'loading' && <ExtrasSkeleton />}
+            {extras.status === 'unavailable' && <ExtrasError onRetry={extras.retry} />}
             {hasAny(extras, 'relations') && (
               <section>
                 <h2 className="mobile-detail__h">{t('relatedEntries')}</h2>
@@ -408,6 +442,7 @@ export default function MobileDetailPage({
         onPick={onSetStatus}
         onRemove={onToggleSaved}
       />
+      <JumpToTop />
     </div>
   );
 }

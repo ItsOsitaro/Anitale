@@ -5091,5 +5091,30 @@ body[data-theme="dark"] .logo-on-light { display: none; }
     width: 40px;
     height: 40px;
   }
+  .mobile-detail .detail-jump-top {
+    bottom: calc(160px + env(safe-area-inset-bottom, 0px));
+  }
 }
+
+.detail-more-actions.is-glass .detail-more-actions-menu {
+  top: calc(100% + 8px);
+  inset-inline-end: 0;
+  inset-inline-start: auto;
+}
+
+.mobile-info-group {
+  margin-bottom: 1.25rem;
+}
+.mobile-info-group:last-of-type {
+  margin-bottom: 0.5rem;
+}
+.mobile-info-subheading {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--muted-foreground);
+  margin: 0.6rem 0 0.35rem;
+  padding-bottom: 0.25rem;
+  border-bottom: 1px solid var(--border);
+}
+
 

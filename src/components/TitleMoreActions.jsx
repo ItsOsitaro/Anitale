@@ -5,7 +5,7 @@ import { useUser } from '@/user.jsx';
 import { Button } from '@/components/ui/button';
 import { SuggestEditDialog } from './SuggestEdit.jsx';
 
-export default function TitleMoreActions({ item, mediaType, onShare, onShareCard, shareNote }) {
+export default function TitleMoreActions({ item, mediaType, onShare, onShareCard, shareNote, glass = false }) {
   const { t } = useSiteLang();
   const user = useUser();
   const [open, setOpen] = useState(false);
@@ -40,19 +40,32 @@ export default function TitleMoreActions({ item, mediaType, onShare, onShareCard
   };
 
   return (
-    <div className="detail-more-actions" ref={menuRef}>
-      <Button
-        className="detail-more-actions-btn"
-        variant="outline"
-        size="sm"
-        type="button"
-        aria-expanded={open}
-        aria-haspopup="menu"
-        onClick={() => setOpen((v) => !v)}
-      >
-        <MoreHorizontal width={16} height={16} aria-hidden="true" />
-        <span>{t('moreActions')}</span>
-      </Button>
+    <div className={`detail-more-actions${glass ? ' is-glass' : ''}`} ref={menuRef}>
+      {glass ? (
+        <button
+          className="mobile-detail__glass"
+          type="button"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          aria-label={t('moreActions')}
+          onClick={() => setOpen((v) => !v)}
+        >
+          <MoreHorizontal width={18} height={18} aria-hidden="true" />
+        </button>
+      ) : (
+        <Button
+          className="detail-more-actions-btn"
+          variant="outline"
+          size="sm"
+          type="button"
+          aria-expanded={open}
+          aria-haspopup="menu"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <MoreHorizontal width={16} height={16} aria-hidden="true" />
+          <span>{t('moreActions')}</span>
+        </Button>
+      )}
 
       {open && (
         <div className="detail-more-actions-menu" role="menu">

@@ -1199,7 +1199,6 @@ function DetailPage({ item, mediaType, theme, onThemeChange }) {
         onShare={shareTitle}
         shareNote={shareNote}
       />
-      <JumpToTop />
       {cardDialog}
       </>
     );
